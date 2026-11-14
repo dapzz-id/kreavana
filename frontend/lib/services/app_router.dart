@@ -303,6 +303,31 @@ final GoRouter appRouter = GoRouter(
       if (currentPath == AppRoutes.pengadaanVendor && isInst) {
         return AppRoutes.beranda;
       }
+
+      // Proteksi RBAC Karyawan / Staf Institusi:
+      // 1. Dilarang membuka Tim & Hak Akses serta Profil Institusi (Khusus Admin Institusi)
+      // 2. Dilarang membuka fitur yang tidak diizinkan oleh Admin (Redirect ke 404)
+      if (isInst && user.isInstitutionStaff) {
+        if (currentPath == AppRoutes.timHakAkses || currentPath == AppRoutes.profilInstitusi) {
+          return AppRoutes.notFound;
+        }
+
+        final staffPermRouteMap = <String, String>{
+          AppRoutes.proyek: 'program_magang',
+          AppRoutes.agenda: 'kegiatan_event',
+          AppRoutes.mitraIndustri: 'mitra_industri',
+          AppRoutes.karyaSiswa: 'karya_siswa',
+          AppRoutes.laporanKegiatan: 'laporan_kegiatan',
+          AppRoutes.monitoringEvaluasi: 'monitoring_evaluasi',
+          AppRoutes.dokumenInstitusi: 'dokumen_institusi',
+          AppRoutes.pengumumanInstitusi: 'pengumuman_institusi',
+        };
+
+        final requiredPerm = staffPermRouteMap[currentPath];
+        if (requiredPerm != null && !user.hasInstitutionPermission(requiredPerm)) {
+          return AppRoutes.notFound;
+        }
+      }
     }
 
     // 3. Rute Khusus Corporate / Perusahaan & Pemerintah

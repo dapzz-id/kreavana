@@ -107,15 +107,16 @@ class SchoolPdfService {
     stream.writeln('50 800 Td');
     stream.writeln('(KEMENTERIAN PENDIDIKAN, KEBUDAYAAN, RISET, DAN TEKNOLOGI) Tj');
 
+    final publisher = _escapePdf((attributes['Institusi Penerbit'] ?? 'INSTITUSI PENDIDIKAN').toUpperCase());
     stream.writeln('/F1 14 Tf');
     stream.writeln('0 -18 Td');
-    stream.writeln('(INSTITUT SENI & REKAYASA KREATIF NUSANTARA (ISRK)) Tj');
+    stream.writeln('($publisher) Tj');
 
     stream.writeln('/F2 9 Tf');
     stream.writeln('0 -14 Td');
-    stream.writeln('(Kampus Terpadu Vokasi Kreatif | NPSN: 20401829 | SK Pendirian: 842/E/O/2021) Tj');
+    stream.writeln('(Dokumen Resmi Ekosistem Kemitraan Kampus & Vokasi Terpadu Kreavana) Tj');
     stream.writeln('0 -12 Td');
-    stream.writeln('(Website: https://kreavana.id | Email: kemitraan@isrk.ac.id | Surabaya, Jawa Timur) Tj');
+    stream.writeln('(Website Resmi: https://kreavana.id | Dokumen Legalitas Digital Tervalidasi) Tj');
     stream.writeln('ET');
 
     // Garis Kop Surat

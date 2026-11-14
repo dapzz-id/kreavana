@@ -313,6 +313,24 @@ class _MainNavigationState extends State<MainNavigation> {
         );
         return;
       }
+      if (_currentUser.isInstitution && _currentUser.isInstitutionStaff) {
+        if (index == 2 && !_currentUser.hasInstitutionPermission('program_magang')) {
+          AppSweetAlert.error(
+            context,
+            'Anda tidak memiliki izin untuk mengakses fitur Program & Magang.',
+            title: 'Akses Ditolak (403)',
+          );
+          return;
+        }
+        if (index == 4 && !_currentUser.hasInstitutionPermission('kegiatan_event')) {
+          AppSweetAlert.error(
+            context,
+            'Anda tidak memiliki izin untuk mengakses fitur Kegiatan & Event.',
+            title: 'Akses Ditolak (403)',
+          );
+          return;
+        }
+      }
       if (index == 3 && !SystemSettingsService.isMarketplaceEnabled) {
         AppSweetAlert.warning(
           context,

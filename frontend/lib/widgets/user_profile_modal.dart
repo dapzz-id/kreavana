@@ -460,22 +460,32 @@ class _UserProfileModalState extends State<UserProfileModal>
           if (_tabController != null)
             TabBar(
               controller: _tabController,
+              isScrollable: (isInstitution && isCreator),
+              tabAlignment: (isInstitution && isCreator) ? TabAlignment.center : null,
               labelColor: isInstitution ? const Color(0xFF4F46E5) : AppTheme.primaryPurple,
               unselectedLabelColor: isDark ? AppTheme.textMuted : Colors.grey.shade600,
               indicatorColor: isInstitution ? const Color(0xFF4F46E5) : AppTheme.primaryPurple,
               labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-              tabs: isCreator
-                  ? const [
-                      Tab(text: 'Portofolio Pribadi'),
-                      Tab(text: 'Proyek di Kreavana'),
-                      Tab(text: 'Pengalaman Luar'),
-                      Tab(text: 'Ulasan & Reputasi'),
-                    ]
-                  : (isInstitution
+              tabs: isInstitution
+                  ? (isCreator
                       ? const [
-                          Tab(text: 'Profil & Legalitas'),
+                          Tab(text: 'Profil Institusi'),
+                          Tab(text: 'Portofolio Institusi'),
+                          Tab(text: 'Proyek di Kreavana'),
+                          Tab(text: 'Pengalaman Luar'),
+                          Tab(text: 'Ulasan & Reputasi'),
+                        ]
+                      : const [
+                          Tab(text: 'Profil Institusi'),
                           Tab(text: 'Program & Peluang'),
                           Tab(text: 'Dokumen & MoU'),
+                          Tab(text: 'Ulasan & Reputasi'),
+                        ])
+                  : (isCreator
+                      ? const [
+                          Tab(text: 'Portofolio Pribadi'),
+                          Tab(text: 'Proyek di Kreavana'),
+                          Tab(text: 'Pengalaman Luar'),
                           Tab(text: 'Ulasan & Reputasi'),
                         ]
                       : const [
@@ -493,18 +503,26 @@ class _UserProfileModalState extends State<UserProfileModal>
                     ? const SizedBox.shrink()
                     : TabBarView(
                         controller: _tabController,
-                        children: isCreator
-                            ? [
-                                _buildCreatorPortfolioTab(isDark),
-                                _buildCreatorInternalProjectsTab(isDark),
-                                _buildCreatorExternalExperienceTab(isDark),
-                                _buildReviewsTab(isDark),
-                              ]
-                            : (isInstitution
+                        children: isInstitution
+                            ? (isCreator
                                 ? [
+                                    _buildInstitutionInfoTab(isDark),
+                                    _buildCreatorPortfolioTab(isDark),
+                                    _buildCreatorInternalProjectsTab(isDark),
+                                    _buildCreatorExternalExperienceTab(isDark),
+                                    _buildReviewsTab(isDark),
+                                  ]
+                                : [
                                     _buildInstitutionInfoTab(isDark),
                                     _buildClientProjectsTab(isDark),
                                     _buildInstitutionDocumentsTab(isDark),
+                                    _buildReviewsTab(isDark),
+                                  ])
+                            : (isCreator
+                                ? [
+                                    _buildCreatorPortfolioTab(isDark),
+                                    _buildCreatorInternalProjectsTab(isDark),
+                                    _buildCreatorExternalExperienceTab(isDark),
                                     _buildReviewsTab(isDark),
                                   ]
                                 : [
@@ -519,14 +537,17 @@ class _UserProfileModalState extends State<UserProfileModal>
     );
   }
 
-  // ── Tab 1: Portofolio Pribadi Kreator ─────────────────────────────────────────
+  // ── Tab: Portofolio Kreator / Institusi ─────────────────────────────────────────
   Widget _buildCreatorPortfolioTab(bool isDark) {
+    final isInstitution = _isInstitutionProfile(_profile);
     final List list = _profile?['portfolio_pribadi'] ?? [];
     if (list.isEmpty) {
       return _buildEmptyState(
         icon: Icons.photo_library_outlined,
-        title: 'Belum Ada Portofolio Pribadi',
-        subtitle: 'Kreator ini belum mengunggah karya portofolio pribadi.',
+        title: isInstitution ? 'Belum Ada Portofolio Institusi' : 'Belum Ada Portofolio Pribadi',
+        subtitle: isInstitution
+            ? 'Institusi ini belum mengunggah karya portofolio institusi.'
+            : 'Kreator ini belum mengunggah karya portofolio pribadi.',
         isDark: isDark,
       );
     }
@@ -744,14 +765,17 @@ class _UserProfileModalState extends State<UserProfileModal>
     );
   }
 
-  // ── Tab 2: Proyek di App Kreavana (Internal Contracts) ───────────────────────
+  // ── Tab: Proyek di App Kreavana (Internal Contracts) ───────────────────────
   Widget _buildCreatorInternalProjectsTab(bool isDark) {
+    final isInstitution = _isInstitutionProfile(_profile);
     final List list = _profile?['proyek_internal'] ?? [];
     if (list.isEmpty) {
       return _buildEmptyState(
         icon: Icons.work_history_outlined,
-        title: 'Belum Ada Riwayat Proyek di Aplikasi',
-        subtitle: 'Kreator ini belum memiliki kontrak proyek selesai di Kreavana.',
+        title: isInstitution ? 'Belum Ada Riwayat Proyek Institusi' : 'Belum Ada Riwayat Proyek di Aplikasi',
+        subtitle: isInstitution
+            ? 'Institusi ini belum memiliki riwayat kontrak proyek di Kreavana.'
+            : 'Kreator ini belum memiliki kontrak proyek selesai di Kreavana.',
         isDark: isDark,
       );
     }
@@ -846,16 +870,19 @@ class _UserProfileModalState extends State<UserProfileModal>
     );
   }
 
-  // ── Tab 3: Proyek di Luar App (Eksternal) ───────────────────────────────────
+  // ── Tab: Proyek di Luar App (Eksternal) ───────────────────────────────────
   Widget _buildCreatorExternalExperienceTab(bool isDark) {
+    final isInstitution = _isInstitutionProfile(_profile);
     final List externalList = _profile?['proyek_eksternal'] ?? [];
     final experienceText = _profile?['external_experience_text']?.toString();
 
     if (externalList.isEmpty && (experienceText == null || experienceText.isEmpty)) {
       return _buildEmptyState(
         icon: Icons.public_outlined,
-        title: 'Belum Ada Riwayat Proyek Luar',
-        subtitle: 'Kreator belum mencantumkan riwayat proyek di luar platform.',
+        title: isInstitution ? 'Belum Ada Riwayat Kerjasama Luar' : 'Belum Ada Riwayat Proyek Luar',
+        subtitle: isInstitution
+            ? 'Institusi belum mencantumkan riwayat proyek atau kemitraan di luar platform.'
+            : 'Kreator belum mencantumkan riwayat proyek di luar platform.',
         isDark: isDark,
       );
     }
@@ -1071,21 +1098,47 @@ class _UserProfileModalState extends State<UserProfileModal>
   // ── Tab Institusi: Profil & Legalitas Pendidikan ──────────────────────────────
   Widget _buildInstitutionInfoTab(bool isDark) {
     final inst = _profile?['institution_profile'] as Map<String, dynamic>? ?? {};
-    final schoolName = inst['title']?.toString().isNotEmpty == true
-        ? inst['title'].toString()
-        : (_profile?['name'] ?? widget.initialName ?? 'Institusi Pendidikan');
-    final npsn = inst['npsn']?.toString() ?? '20401829';
-    final type = inst['institution_type']?.toString() ?? 'Perguruan Tinggi Vokasi / Institut Seni & Desain';
-    final accreditation = inst['accreditation']?.toString() ?? 'A (Unggul) - BAN-PT';
-    final permitNumber = inst['permit_number']?.toString() ?? '842/E/O/2021';
-    final headmaster = inst['headmaster_name']?.toString() ?? 'Prof. Dr. Ir. H. Bambang Sudarsono, M.Ds.';
-    final nip = inst['headmaster_nip']?.toString() ?? '19740512 199903 1 004';
-    final phone = inst['official_phone']?.toString() ?? '(021) 8849-201';
-    final email = inst['official_email']?.toString() ?? 'kemitraan@isrk.ac.id';
-    final website = inst['website']?.toString() ?? 'https://isrk.ac.id';
-    final city = inst['city']?.toString() ?? 'Jakarta Selatan, DKI Jakarta';
-    final address = inst['address']?.toString() ?? 'Jl. Pendidikan Kreatif No. 45, Kampus Budaya Vokasi Terpadu';
-    final desc = inst['description']?.toString() ?? _profile?['bio']?.toString() ?? 'Institusi pendidikan tinggi vokasi seni, animasi 3D, DKV, dan rekayasa kreatif nusantara yang terakreditasi Unggul.';
+    final schoolName = (inst['title'] != null && inst['title'].toString().trim().isNotEmpty)
+        ? inst['title'].toString().trim()
+        : (_profile?['name']?.toString().trim().isNotEmpty == true
+            ? _profile!['name'].toString().trim()
+            : (widget.initialName ?? 'Institusi'));
+    final npsn = (inst['npsn'] != null && inst['npsn'].toString().trim().isNotEmpty)
+        ? inst['npsn'].toString().trim()
+        : '-';
+    final type = (inst['institution_type'] != null && inst['institution_type'].toString().trim().isNotEmpty)
+        ? inst['institution_type'].toString().trim()
+        : '-';
+    final accreditation = (inst['accreditation'] != null && inst['accreditation'].toString().trim().isNotEmpty)
+        ? inst['accreditation'].toString().trim()
+        : '-';
+    final permitNumber = (inst['permit_number'] != null && inst['permit_number'].toString().trim().isNotEmpty)
+        ? inst['permit_number'].toString().trim()
+        : '-';
+    final headmaster = (inst['headmaster_name'] != null && inst['headmaster_name'].toString().trim().isNotEmpty)
+        ? inst['headmaster_name'].toString().trim()
+        : '-';
+    final nip = (inst['headmaster_nip'] != null && inst['headmaster_nip'].toString().trim().isNotEmpty)
+        ? inst['headmaster_nip'].toString().trim()
+        : null;
+    final phone = (inst['official_phone'] != null && inst['official_phone'].toString().trim().isNotEmpty)
+        ? inst['official_phone'].toString().trim()
+        : (_profile?['phone']?.toString().trim().isNotEmpty == true ? _profile!['phone'].toString().trim() : '-');
+    final email = (inst['official_email'] != null && inst['official_email'].toString().trim().isNotEmpty)
+        ? inst['official_email'].toString().trim()
+        : (_profile?['email']?.toString().trim().isNotEmpty == true ? _profile!['email'].toString().trim() : '-');
+    final website = (inst['website'] != null && inst['website'].toString().trim().isNotEmpty)
+        ? inst['website'].toString().trim()
+        : '-';
+    final city = (inst['city'] != null && inst['city'].toString().trim().isNotEmpty)
+        ? inst['city'].toString().trim()
+        : (_profile?['location']?.toString().trim().isNotEmpty == true ? _profile!['location'].toString().trim() : '-');
+    final address = (inst['address'] != null && inst['address'].toString().trim().isNotEmpty)
+        ? inst['address'].toString().trim()
+        : (_profile?['location']?.toString().trim().isNotEmpty == true ? _profile!['location'].toString().trim() : '-');
+    final desc = (inst['description'] != null && inst['description'].toString().trim().isNotEmpty)
+        ? inst['description'].toString().trim()
+        : (_profile?['bio']?.toString().trim().isNotEmpty == true ? _profile!['bio'].toString().trim() : '-');
 
     const primaryColor = Color(0xFF4F46E5);
 

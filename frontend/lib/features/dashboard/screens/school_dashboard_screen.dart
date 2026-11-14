@@ -113,7 +113,7 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
 
         final locName = (opp.location != null && opp.location!.isNotEmpty)
             ? opp.location!
-            : (opp.address != null && opp.address!.isNotEmpty ? opp.address! : 'Kampus Terpadu ISRK');
+            : (opp.address != null && opp.address!.isNotEmpty ? opp.address! : (widget.user.location ?? 'Lokasi Kampus'));
 
         if (isEvent) {
           loadedResources.add({
@@ -192,29 +192,8 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
         }
       }
 
-      // Fallback jika agenda kosong dari database
-      if (loadedAgenda.isEmpty) {
-        loadedAgenda.addAll([
-          {
-            'date': '24 NOV 2026',
-            'title': 'Kreavana Annual Student Showcase & Expo 2026',
-            'time': '09:00 - 16:00 WIB',
-          },
-          {
-            'date': '15 DES 2026',
-            'title': 'Batas Pengajuan Berkas Magang MBKM Batch I',
-            'time': 'Tenggat: 23:59 WIB',
-          },
-          {
-            'date': '05 JAN 2027',
-            'title': 'Evaluasi & Verifikasi MoU Mitra DUDI Tahap II',
-            'time': '10:00 - 12:00 WIB',
-          },
-        ]);
-      }
-
       setState(() {
-        _resources = loadedResources.isNotEmpty ? loadedResources : _getFallbackDummyResources();
+        _resources = loadedResources;
         _recentProjects = loadedProjects;
         _upcomingAgenda = loadedAgenda;
         _isLoading = false;
@@ -222,22 +201,26 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
     } catch (_) {
       if (mounted) {
         setState(() {
-          _resources = _getFallbackDummyResources();
+          _resources = [];
           _isLoading = false;
         });
       }
     }
   }
 
+  Map<String, dynamic>? get _profileResource {
+    for (final r in _resources) {
+      if (r['resource_type'] == 'profile') return r;
+    }
+    return null;
+  }
+
   // ── GETTERS DATA PER RESOURCE TYPE ─────────────────────────────────────────
   List<Map<String, dynamic>> get _studyPrograms =>
       _resources.where((r) => r['resource_type'] == 'study_programs').toList();
 
-  List<Map<String, dynamic>> get _events {
-    final evs = _resources.where((r) => r['resource_type'] == 'events').toList();
-    if (evs.isNotEmpty) return evs;
-    return _getDefaultEvents();
-  }
+  List<Map<String, dynamic>> get _events =>
+      _resources.where((r) => r['resource_type'] == 'events').toList();
 
   List<Map<String, dynamic>> get _opportunities =>
       _resources.where((r) => r['resource_type'] == 'tenders').toList();
@@ -248,17 +231,11 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
   List<Map<String, dynamic>> get _talents =>
       _resources.where((r) => r['resource_type'] == 'talents').toList();
 
-  List<Map<String, dynamic>> get _reports {
-    final reps = _resources.where((r) => r['resource_type'] == 'reports').toList();
-    if (reps.isNotEmpty) return reps;
-    return _getDefaultReports();
-  }
+  List<Map<String, dynamic>> get _reports =>
+      _resources.where((r) => r['resource_type'] == 'reports').toList();
 
-  List<Map<String, dynamic>> get _documents {
-    final docs = _resources.where((r) => r['resource_type'] == 'documents').toList();
-    if (docs.isNotEmpty) return docs;
-    return _getDefaultDocuments();
-  }
+  List<Map<String, dynamic>> get _documents =>
+      _resources.where((r) => r['resource_type'] == 'documents').toList();
 
   List<Map<String, dynamic>> get _showcases =>
       _resources.where((r) => r['resource_type'] == 'showcases').toList();
@@ -1400,12 +1377,29 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Institut Seni & Rekayasa Kreatif Nusantara (ISRK)',
-                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                          Text(
+                            _profileResource?['title']?.toString().isNotEmpty == true
+                                ? _profileResource!['title'].toString()
+                                : widget.user.name,
+                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                           ),
                           Text(
-                            'NPSN: 20401829 • SK Pendirian: 842/E/O/2021 • Surabaya, Jawa Timur',
+                            () {
+                              final meta = _profileResource?['metadata'] as Map<String, dynamic>? ?? {};
+                              final npsn = meta['npsn']?.toString();
+                              final permit = meta['permit_number']?.toString();
+                              final city = meta['city']?.toString() ?? widget.user.location;
+                              final parts = [
+                                if (npsn != null && npsn.isNotEmpty) 'NPSN: $npsn',
+                                if (permit != null && permit.isNotEmpty) 'SK: $permit',
+                                if (city != null && city.isNotEmpty) city,
+                              ];
+                              return parts.isNotEmpty
+                                  ? parts.join(' • ')
+                                  : ((widget.user.subRole != null && widget.user.subRole!.isNotEmpty)
+                                      ? widget.user.subRole!
+                                      : 'Institusi Pendidikan');
+                            }(),
                             style: TextStyle(fontSize: 11, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
                           ),
                         ],
@@ -1429,16 +1423,30 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
               const SizedBox(height: 14),
               const Divider(),
               const SizedBox(height: 8),
-              Wrap(
-                spacing: 20,
-                runSpacing: 8,
-                children: [
-                  _buildProfilePill(Icons.verified, 'Akreditasi Institusi: Unggul'),
-                  _buildProfilePill(Icons.people, 'Total Mahasiswa: 1.170 Mahasiswa'),
-                  _buildProfilePill(Icons.work, 'Tingkat Serapan Kerja: 92.8% (< 3 Bulan)'),
-                  _buildProfilePill(Icons.email, 'kemitraan@isrk.ac.id'),
-                ],
-              ),
+              () {
+                final pMeta = _profileResource?['metadata'] as Map<String, dynamic>? ?? {};
+                final acc = pMeta['accreditation']?.toString();
+                final email = pMeta['official_email']?.toString() ?? widget.user.email;
+                final phone = pMeta['official_phone']?.toString() ?? widget.user.phone;
+                final npsn = pMeta['npsn']?.toString();
+
+                final pills = [
+                  if (acc != null && acc.isNotEmpty) _buildProfilePill(Icons.verified, 'Akreditasi: $acc'),
+                  if (npsn != null && npsn.isNotEmpty) _buildProfilePill(Icons.badge, 'NPSN: $npsn'),
+                  if (email.isNotEmpty) _buildProfilePill(Icons.email, email),
+                  if (phone != null && phone.isNotEmpty) _buildProfilePill(Icons.phone, phone),
+                ];
+
+                if (pills.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+
+                return Wrap(
+                  spacing: 20,
+                  runSpacing: 8,
+                  children: pills,
+                );
+              }(),
             ],
           ),
         ),
@@ -1460,94 +1468,116 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
         ),
         const SizedBox(height: 12),
 
-        ..._studyPrograms.map((prodi) {
-          final meta = prodi['metadata'] as Map<String, dynamic>? ?? {};
-          final degree = meta['degree']?.toString() ?? 'Sarjana Terapan';
-          final acc = meta['accreditation']?.toString() ?? 'Unggul';
-          final students = meta['total_students']?.toString() ?? '200+';
-          final rate = meta['employment_rate']?.toString() ?? '90%';
-          final skills = (meta['featured_skills'] as List?)?.join(', ') ?? 'Creative Skills';
-
-          return Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(18),
+        if (_studyPrograms.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF1E293B) : Colors.white,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: _schoolColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
+            child: Center(
+              child: Column(
+                children: [
+                  Icon(Icons.school_outlined, size: 36, color: isDark ? Colors.grey.shade600 : Colors.grey.shade400),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Belum ada data program studi dari database',
+                    style: TextStyle(fontSize: 12.5, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
                   ),
-                  child: const Icon(Icons.school, color: _schoolColor, size: 22),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              prodi['title'] ?? 'Program Studi',
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: _schoolColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              'Akreditasi $acc',
-                              style: const TextStyle(color: _schoolColor, fontSize: 10, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        prodi['description'] ?? '',
-                        style: TextStyle(fontSize: 11.5, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
-                      ),
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 14,
-                        runSpacing: 4,
-                        children: [
-                          _buildSmallInfo(Icons.school, degree),
-                          _buildSmallInfo(Icons.groups, '$students Mahasiswa Aktif'),
-                          _buildSmallInfo(Icons.trending_up, 'Serapan Kerja: $rate'),
-                          _buildSmallInfo(Icons.stars, 'Skill: $skills'),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 10),
-                OutlinedButton(
-                  onPressed: () => _showStudyProgramDetail(prodi),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: _schoolColor),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: const Text('Detail', style: TextStyle(color: _schoolColor, fontSize: 11)),
-                ),
-              ],
+                ],
+              ),
             ),
-          );
-        }),
+          )
+        else
+          ..._studyPrograms.map((prodi) {
+            final meta = prodi['metadata'] as Map<String, dynamic>? ?? {};
+            final degree = meta['degree']?.toString() ?? '-';
+            final acc = meta['accreditation']?.toString() ?? '-';
+            final students = meta['total_students']?.toString() ?? '-';
+            final rate = meta['employment_rate']?.toString() ?? '-';
+            final skills = (meta['featured_skills'] as List?)?.join(', ') ?? '-';
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: _schoolColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.school, color: _schoolColor, size: 22),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                prodi['title'] ?? 'Program Studi',
+                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: _schoolColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                'Akreditasi $acc',
+                                style: const TextStyle(color: _schoolColor, fontSize: 10, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          prodi['description'] ?? '',
+                          style: TextStyle(fontSize: 11.5, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                        ),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 14,
+                          runSpacing: 4,
+                          children: [
+                            _buildSmallInfo(Icons.school, degree),
+                            _buildSmallInfo(Icons.groups, '$students Mahasiswa Aktif'),
+                            _buildSmallInfo(Icons.trending_up, 'Serapan Kerja: $rate'),
+                            _buildSmallInfo(Icons.stars, 'Skill: $skills'),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  OutlinedButton(
+                    onPressed: () => _showStudyProgramDetail(prodi),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: _schoolColor),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: const Text('Detail', style: TextStyle(color: _schoolColor, fontSize: 11)),
+                  ),
+                ],
+              ),
+            );
+          }),
       ],
     );
   }
@@ -1635,13 +1665,35 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
         const SizedBox(height: 16),
 
         // Event List
-        ...filteredEvents.map((ev) {
-          final meta = ev['metadata'] as Map<String, dynamic>? ?? {};
-          final date = meta['event_date']?.toString() ?? 'TBA';
-          final loc = meta['location']?.toString() ?? 'Kampus ISRK';
-          final participants = meta['registered_participants']?.toString() ?? '0';
-          final category = meta['category']?.toString() ?? 'Event';
-          final isComp = meta['is_competition'] == true;
+        if (filteredEvents.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(28),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+            ),
+            child: Center(
+              child: Column(
+                children: [
+                  Icon(Icons.event_busy_rounded, size: 36, color: isDark ? Colors.grey.shade600 : Colors.grey.shade400),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Belum ada kegiatan atau event terdaftar.',
+                    style: TextStyle(fontSize: 13, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          ...filteredEvents.map((ev) {
+            final meta = ev['metadata'] as Map<String, dynamic>? ?? {};
+            final date = meta['event_date']?.toString() ?? 'TBA';
+            final loc = meta['location']?.toString() ?? (widget.user.location ?? 'Kampus');
+            final participants = meta['registered_participants']?.toString() ?? '0';
+            final category = meta['category']?.toString() ?? 'Event';
+            final isComp = meta['is_competition'] == true;
 
           return Container(
             margin: const EdgeInsets.only(bottom: 12),
@@ -2359,54 +2411,70 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
         ),
         const SizedBox(height: 10),
 
-        ..._reports.map((rep) {
-          final meta = rep['metadata'] as Map<String, dynamic>? ?? {};
-          final period = meta['period']?.toString() ?? '2026';
-          final cat = meta['category']?.toString() ?? 'Laporan Kinerja';
-
-          return Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(16),
+        if (_reports.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF1E293B) : Colors.white,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
             ),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: _schoolColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.picture_as_pdf_outlined, color: _schoolColor, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(rep['title'] ?? '', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 2),
-                      Text('$cat • Periode $period', style: TextStyle(fontSize: 10.5, color: Colors.grey.shade600)),
-                    ],
-                  ),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () => _downloadReport(title: rep['title'], rawDoc: rep),
-                  icon: const Icon(Icons.download_rounded, size: 14, color: _schoolColor),
-                  label: const Text('Unduh PDF', style: TextStyle(color: _schoolColor, fontSize: 11, fontWeight: FontWeight.bold)),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: _schoolColor),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                ),
-              ],
+            child: Center(
+              child: Text(
+                'Belum ada dokumen laporan akuntabilitas yang tersimpan.',
+                style: TextStyle(fontSize: 12, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+              ),
             ),
-          );
-        }),
+          )
+        else
+          ..._reports.map((rep) {
+            final meta = rep['metadata'] as Map<String, dynamic>? ?? {};
+            final period = meta['period']?.toString() ?? '2026';
+            final cat = meta['category']?.toString() ?? 'Laporan Kinerja';
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: _schoolColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.picture_as_pdf_outlined, color: _schoolColor, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(rep['title'] ?? '', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 2),
+                        Text('$cat • Periode $period', style: TextStyle(fontSize: 10.5, color: Colors.grey.shade600)),
+                      ],
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () => _downloadReport(title: rep['title'], rawDoc: rep),
+                    icon: const Icon(Icons.download_rounded, size: 14, color: _schoolColor),
+                    label: const Text('Unduh PDF', style: TextStyle(color: _schoolColor, fontSize: 11, fontWeight: FontWeight.bold)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: _schoolColor),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
         const SizedBox(height: 20),
 
         // Dokumen Legalitas & MoU Kemitraan
@@ -2416,7 +2484,23 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
         ),
         const SizedBox(height: 10),
 
-        ..._documents.map((doc) {
+        if (_documents.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+            ),
+            child: Center(
+              child: Text(
+                'Belum ada dokumen MoU atau legalitas kemitraan yang tersimpan.',
+                style: TextStyle(fontSize: 12, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+              ),
+            ),
+          )
+        else
+          ..._documents.map((doc) {
           final meta = doc['metadata'] as Map<String, dynamic>? ?? {};
           final num = meta['document_number'] ?? meta['sk_number'] ?? '-';
           return Container(
@@ -2559,14 +2643,14 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
     final titleCtrl = TextEditingController();
     String category = 'Pameran & Expo';
     final descCtrl = TextEditingController();
-    final locCtrl = TextEditingController(text: 'Grand Hall Kampus Terpadu ISRK');
+    final locCtrl = TextEditingController(text: widget.user.location ?? '');
     final quotaCtrl = TextEditingController(text: '100');
     DateTime selectedDate = DateTime.now().add(const Duration(days: 14));
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) {
+        builder: (dialogCtx, setDialogState) {
           return AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             title: const Text('Buat Kegiatan / Lomba Baru', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -2626,7 +2710,7 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
                     controller: locCtrl,
                     decoration: const InputDecoration(
                       labelText: 'Lokasi / Venue Pelaksanaan',
-                      hintText: 'Contoh: Grand Hall Kampus Terpadu ISRK',
+                      hintText: 'Contoh: Aula Kampus / Virtual',
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -2669,28 +2753,26 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
                     'metadata': {
                       'category': category,
                       'event_date': dateStr,
-                      'location': locCtrl.text.trim().isNotEmpty ? locCtrl.text.trim() : 'Kampus Terpadu ISRK',
+                      'location': locCtrl.text.trim().isNotEmpty ? locCtrl.text.trim() : (widget.user.location ?? '-'),
                       'registered_participants': quotaInt,
                       'is_competition': isComp,
                     },
                   };
 
-                  final parentContext = context;
                   try {
                     await ApiService.post('institution/resources', newRecord);
                   } catch (_) {}
 
-                  if (mounted) {
-                    setState(() {
-                      _resources.insert(0, newRecord);
-                    });
+                  if (!mounted) return;
+                  setState(() {
+                    _resources.insert(0, newRecord);
+                  });
 
-                    AppSweetAlert.success(
-                      parentContext,
-                      'Event "${titleCtrl.text}" berhasil dipublikasikan dan tersimpan di database.',
-                      title: 'Event Berhasil Dibuat',
-                    );
-                  }
+                  AppSweetAlert.success(
+                    context,
+                    'Event "${titleCtrl.text}" berhasil dipublikasikan dan tersimpan di database.',
+                    title: 'Event Berhasil Dibuat',
+                  );
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: _schoolColor, foregroundColor: Colors.white),
                 child: const Text('Simpan & Publikasikan'),
@@ -3057,14 +3139,14 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
   void _showTalentDetail(Map<String, dynamic> t) {
     final meta = t['metadata'] as Map<String, dynamic>? ?? {};
     final title = t['title']?.toString() ?? 'Talenta';
-    final role = meta['role_label']?.toString() ?? 'Mahasiswa Berprestasi';
-    final prodi = meta['study_program']?.toString() ?? 'Program Studi';
-    final gpa = meta['gpa']?.toString() ?? '3.8';
-    final status = meta['status_talent']?.toString() ?? 'Siap Magang';
-    final skills = (meta['skills'] as List?)?.join(', ') ?? 'Creative Skills & Pipeline';
-    final email = meta['email']?.toString() ?? 'talenta@isrk.ac.id';
-    final phone = meta['phone']?.toString() ?? '+62 812-3456-7890';
-    final achievements = meta['achievements']?.toString() ?? 'Juara Kompetisi Desain Kreatif & Sertifikasi BNSP';
+    final role = meta['role_label']?.toString() ?? 'Talenta Siswa';
+    final prodi = meta['study_program']?.toString() ?? '-';
+    final gpa = meta['gpa']?.toString() ?? '-';
+    final status = meta['status_talent']?.toString() ?? 'Aktif';
+    final skills = (meta['skills'] as List?)?.join(', ') ?? '-';
+    final email = meta['email']?.toString() ?? '-';
+    final phone = meta['phone']?.toString() ?? '-';
+    final achievements = meta['achievements']?.toString() ?? '-';
 
     showModalBottomSheet(
       context: context,
@@ -3322,13 +3404,21 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
   }
 
   void _downloadReport({String? title, Map<String, dynamic>? rawDoc}) {
-    final doc = rawDoc ?? (_reports.isNotEmpty ? _reports.first : _getDefaultReports().first);
+    final doc = rawDoc ?? (_reports.isNotEmpty ? _reports.first : <String, dynamic>{});
+    if (doc.isEmpty) {
+      AppSweetAlert.info(
+        context,
+        'Belum ada data laporan resmi yang tersimpan di sistem.',
+        title: 'Laporan Belum Tersedia',
+      );
+      return;
+    }
     final meta = (doc['metadata'] as Map<String, dynamic>?) ?? {};
-    final docTitle = title ?? doc['title']?.toString() ?? 'Laporan Akuntabilitas Kinerja Serapan Magang MBKM 2025/2026';
+    final docTitle = title ?? doc['title']?.toString() ?? 'Laporan Akuntabilitas Kampus';
     final docNum = meta['document_number']?.toString() ??
         meta['sk_number']?.toString() ??
         meta['doc_number']?.toString() ??
-        '048/SK-MUTU/ISRK/2026';
+        '-';
     final cat = meta['category']?.toString() ?? 'Laporan Akuntabilitas & Mutu';
     final desc = doc['description']?.toString() ??
         'Dokumen resmi terverifikasi sistem akreditasi vokasi Kreavana.';
@@ -3336,8 +3426,10 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
     final attributes = <String, String>{
       'Nomor Dokumen / SK': docNum,
       'Kategori Dokumen': cat,
-      'Institusi Penerbit': 'Institut Seni & Rekayasa Kreatif Nusantara (ISRK)',
-      'Akreditasi Institusi': 'Predikat UNGGUL (BAN-PT)',
+      'Institusi Penerbit': _profileResource?['title']?.toString().isNotEmpty == true
+          ? _profileResource!['title'].toString()
+          : widget.user.name,
+      'Akreditasi Institusi': (_profileResource?['metadata'] as Map?)?['accreditation']?.toString() ?? 'Terakreditasi Resmi',
       'Status Verifikasi': 'Terverifikasi Resmi di Sistem',
     };
     if (meta.containsKey('period')) attributes['Periode Akademik'] = meta['period'].toString();
@@ -3359,149 +3451,7 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
     );
   }
 
-  List<Map<String, dynamic>> _getDefaultDocuments() {
-    return [
-      {
-        'id': 'doc_1',
-        'resource_type': 'documents',
-        'title': 'Perjanjian Kerjasama (MoU) Induk Kemitraan Kampus - DUDI 2025-2028',
-        'description': 'Dokumen resmi legalitas kerjasama strategis pelaksanaan magang bersertifikat, kurikulum bersama, dan riset kolaborasi industri.',
-        'status': 'published',
-        'metadata': {
-          'document_number': '001/MOU-ISRK/DIR/2025',
-          'category': 'MoU Kemitraan Industri',
-          'valid_until': '2028-12-31',
-          'file_format': 'PDF',
-          'file_size': '2.4 MB',
-          'verified': true,
-        },
-      },
-      {
-        'id': 'doc_2',
-        'resource_type': 'documents',
-        'title': 'Sertifikat Akreditasi Institusi Predikat Unggul (BAN-PT)',
-        'description': 'Surat Keputusan Badan Akreditasi Nasional Perguruan Tinggi Nomor 412/SK/BAN-PT/Ak/PT/2024 tentang Akreditasi Institusi Pendidikan Vokasi.',
-        'status': 'published',
-        'metadata': {
-          'document_number': '412/SK/BAN-PT/Ak/PT/2024',
-          'sk_number': '412/SK/BAN-PT/Ak/PT/2024',
-          'category': 'Akreditasi Institusi',
-          'valid_until': '2029-08-15',
-          'grade': 'Unggul',
-          'file_format': 'PDF',
-          'file_size': '1.8 MB',
-        },
-      },
-      {
-        'id': 'doc_3',
-        'resource_type': 'documents',
-        'title': 'Pedoman Teknis Magang PKL & Skema Konversi 20 SKS MBKM',
-        'description': 'Buku panduan lengkap alur pendaftaran, pembimbingan dosen, logbook harian, dan evaluasi nilai industri untuk konversi SKS kurikulum.',
-        'status': 'published',
-        'metadata': {
-          'document_number': '024/PED-MBKM/ISRK/2026',
-          'category': 'Pedoman Akademik',
-          'edition': 'Edisi Revisi 2026',
-          'pages': 48,
-          'file_format': 'PDF',
-          'file_size': '3.2 MB',
-        },
-      },
-      {
-        'id': 'doc_4',
-        'resource_type': 'documents',
-        'title': 'Surat Keputusan Rektor tentang Penetapan Kurikulum Berbasis Kemitraan DUDI',
-        'description': 'Pemberlakuan modul ajar praktikum terintegrasi dengan kebutuhan industri animasi, desain, software, dan audio multimedia.',
-        'status': 'published',
-        'metadata': {
-          'document_number': '088/SK-REK/ISRK/2026',
-          'category': 'Surat Keputusan (SK)',
-          'valid_until': '2027-12-31',
-          'file_format': 'PDF',
-          'file_size': '1.5 MB',
-        },
-      },
-    ];
-  }
 
-  List<Map<String, dynamic>> _getDefaultEvents() {
-    return [
-      {
-        'id': 'ev_default_1',
-        'resource_type': 'events',
-        'title': 'Kreavana Annual Creative Showcase & Expo 2026',
-        'description': 'Pameran akbar 150+ portofolio karya tugas akhir mahasiswa, temu praktisi industri, dan pitching proyek kreatif ke calon investor & studio partner.',
-        'status': 'open',
-        'metadata': {
-          'category': 'Pameran & Expo',
-          'event_date': '2026-11-24',
-          'location': 'Grand Exhibition Hall Kampus Terpadu ISRK & Virtual Room',
-          'registered_participants': 450,
-          'is_competition': false,
-        },
-      },
-      {
-        'id': 'ev_default_2',
-        'resource_type': 'events',
-        'title': 'National Creative Hackathon & Game Jam 2026',
-        'description': 'Kompetisi 48 jam pembuatan prototipe game edukasi bertema kearifan lokal nusantara, kolaborasi tim developer, 3D artist, dan audio designer.',
-        'status': 'open',
-        'metadata': {
-          'category': 'Kompetisi & Lomba',
-          'event_date': '2026-12-15',
-          'location': 'Inkubator Kreatif Lantai 4 ISRK & Hybrid Online',
-          'registered_participants': 78,
-          'is_competition': true,
-        },
-      },
-    ];
-  }
-
-  List<Map<String, dynamic>> _getDefaultReports() {
-    return [
-      {
-        'id': 'rep_1',
-        'resource_type': 'reports',
-        'title': 'Laporan Akuntabilitas Kinerja Serapan Magang MBKM 2025/2026',
-        'description': 'Evaluasi capaian penempatan 168 mahasiswa pada 24 industri mitra dengan tingkat keberhasilan penyelesaian magang mencapai 98.2%.',
-        'status': 'published',
-        'metadata': {
-          'period': 'TA 2025/2026',
-          'category': 'Laporan Evaluasi MBKM',
-          'doc_number': '048/LAP-MBKM/ISRK/2026',
-          'total_interns': 168,
-          'completion_rate': '98.2%',
-          'partner_satisfaction': '4.9 / 5.0',
-        },
-      },
-      {
-        'id': 'rep_2',
-        'resource_type': 'reports',
-        'title': 'Survei Kepuasan Industri Terhadap Kualitas Lulusan & Talenta Vokasi',
-        'description': 'Hasil survei umpan balik dari 32 industri mitra yang mempekerjakan lulusan ISRK di bidang software, animasi, dan desain.',
-        'status': 'published',
-        'metadata': {
-          'period': 'Semester Genap 2025',
-          'category': 'Survei Kepuasan Pengguna',
-          'doc_number': '052/SURV-DUDI/ISRK/2025',
-          'satisfaction_score': '94.6%',
-        },
-      },
-      {
-        'id': 'rep_3',
-        'resource_type': 'reports',
-        'title': 'Laporan Capaian Akreditasi Institusi & Kemitraan DUDI Berkelanjutan',
-        'description': 'Rangkuman pemenuhan 9 kriteria akreditasi unggul BAN-PT serta dampak kemitraan industri terhadap peningkatan kompetensi pendidik.',
-        'status': 'published',
-        'metadata': {
-          'period': 'Triwulan III 2026',
-          'category': 'Laporan Akreditasi & Mutu',
-          'doc_number': '061/LAP-MUTU/ISRK/2026',
-          'criteria_met': '9 dari 9 Kriteria',
-        },
-      },
-    ];
-  }
 
   void _handleLogout() async {
     await AuthService.logout();
@@ -3511,290 +3461,5 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
         (route) => false,
       );
     }
-  }
-
-  // ── FALLBACK DUMMY DATA LENGKAP ───────────────────────────────────────────
-  List<Map<String, dynamic>> _getFallbackDummyResources() {
-    return [
-      // Program Studi
-      {
-        'resource_type': 'study_programs',
-        'title': 'S1 / D4 Desain Komunikasi Visual (DKV)',
-        'description': 'Program studi unggulan fokus pada Brand Identity, UI/UX Design, Motion Graphics, dan Desain Interaktif.',
-        'status': 'published',
-        'metadata': {
-          'degree': 'D4 / Sarjana Terapan',
-          'accreditation': 'Unggul (BAN-PT)',
-          'total_students': 340,
-          'employment_rate': '94.2%',
-          'head_of_program': 'Dr. Maya Kartika, M.Ds.',
-          'featured_skills': ['UI/UX Design', 'Brand Identity', 'Motion Graphics'],
-        },
-      },
-      {
-        'resource_type': 'study_programs',
-        'title': 'D4 Animasi & Pemodelan 3D',
-        'description': 'Mencetak profesional 3D Artist, Character Rigger, dan Animator dengan pipeline standar studio film global.',
-        'status': 'published',
-        'metadata': {
-          'degree': 'D4 / Sarjana Terapan',
-          'accreditation': 'Unggul (BAN-PT)',
-          'total_students': 220,
-          'employment_rate': '96.5%',
-          'head_of_program': 'Budi Wicaksono, M.Sn.',
-          'featured_skills': ['Maya', 'Blender', 'ZBrush', 'Character Rigging'],
-        },
-      },
-      {
-        'resource_type': 'study_programs',
-        'title': 'D4 Rekayasa Perangkat Lunak Aplikasi (RPL)',
-        'description': 'Pengembangan software modern, mobile app multiplatform, web engineering, dan kecerdasan buatan terapan.',
-        'status': 'published',
-        'metadata': {
-          'degree': 'D4 / Sarjana Terapan',
-          'accreditation': 'A',
-          'total_students': 280,
-          'employment_rate': '92.8%',
-          'head_of_program': 'Ahmad Fauzi, S.Kom., M.T.',
-          'featured_skills': ['Flutter', 'Laravel', 'React', 'DevOps'],
-        },
-      },
-      // Events
-      {
-        'resource_type': 'events',
-        'title': 'Kreavana Annual Creative Showcase & Expo 2026',
-        'description': 'Pameran akbar 150+ portofolio karya tugas akhir mahasiswa, temu praktisi industri, dan pitching proyek kreatif.',
-        'status': 'open',
-        'metadata': {
-          'category': 'Pameran & Expo',
-          'event_date': '2026-11-24',
-          'location': 'Grand Exhibition Hall ISRK',
-          'registered_participants': 450,
-          'is_competition': false,
-        },
-      },
-      {
-        'resource_type': 'events',
-        'title': 'National Creative Hackathon & Game Jam 2026',
-        'description': 'Kompetisi 48 jam pembuatan prototipe game edukasi bertema kearifan lokal nusantara.',
-        'status': 'open',
-        'metadata': {
-          'category': 'Kompetisi & Lomba',
-          'event_date': '2026-12-15',
-          'location': 'Inkubator Kreatif Lantai 4 ISRK',
-          'registered_participants': 78,
-          'is_competition': true,
-        },
-      },
-      // Opportunities
-      {
-        'resource_type': 'tenders',
-        'title': 'Program Magang MBKM 3D Modeler Batch I 2026',
-        'description':
-            'Kerja sama penempatan 10 siswa vokasi magang pada produksi serial animasi nusantara.',
-        'status': 'open',
-        'metadata': {
-          'category': 'Magang',
-          'industry_partner': 'PT Studio Animasi Nusantara',
-          'period': '21 Sep 2026',
-          'deadline': '2026-09-21',
-          'quota_text': '4 dari 10 posisi',
-          'quota': '10 Mahasiswa',
-          'allowance': 'Rp 3.500.000 / bulan',
-          'duration': '6 Bulan',
-          'applicants_count': 6,
-          'requirements': [
-            'Siswa SMK jurusan terkait',
-            'Menguasai dasar 3D Modeling',
-            'Memiliki portofolio karya',
-          ],
-        },
-      },
-      {
-        'resource_type': 'tenders',
-        'title': 'Program Magang MBKM UI/UX & Digital Product Design',
-        'description':
-            'Kerja sama penempatan 8 siswa vokasi magang pada perancangan produk digital kreatif.',
-        'status': 'open',
-        'metadata': {
-          'category': 'Magang',
-          'industry_partner': 'PT Teknologi Kreatif Nusantara',
-          'period': '1 Feb – 1 Mar 2027',
-          'quota_text': '3 dari 8 posisi',
-          'quota': '8 Mahasiswa',
-          'allowance': 'Rp 3.000.000 / bulan',
-          'duration': '6 Bulan',
-          'applicants_count': 5,
-          'requirements': [
-            'Siswa SMK / Mahasiswa DKV & RPL',
-            'Menguasai Figma & Design System',
-            'Memiliki portofolio studi kasus',
-          ],
-        },
-      },
-      {
-        'resource_type': 'tenders',
-        'title': 'Riset Terapan: Penerapan Fotogrametri 3D untuk Cagar Budaya',
-        'description':
-            'Hibah penelitian kolaboratif dosen dan mahasiswa bersama instansi kebudayaan dalam mendokumentasikan artefak bersejarah.',
-        'status': 'in_progress',
-        'metadata': {
-          'category': 'Riset Kolaboratif',
-          'industry_partner': 'Balai Pelestarian Kebudayaan',
-          'period': '15 Feb – 15 Okt 2027',
-          'quota_text': '2 dari 5 posisi',
-          'budget': 65000000,
-          'duration': '8 Bulan',
-          'applicants_count': 4,
-          'requirements': [
-            'Dosen & Mahasiswa Program Studi Terkait',
-            'Memahami fotogrametri & pemodelan 3D',
-            'Bersedia melakukan survei lapangan',
-          ],
-        },
-      },
-      // Partners
-      {
-        'resource_type': 'partners',
-        'title': 'PT Studio Animasi Nusantara',
-        'description': 'Studio animasi 3D spesialis feature film dan serial animasi internasional. Mitra strategis penyedia tempat magang PKL.',
-        'status': 'published',
-        'metadata': {
-          'category': 'Studio Animasi & Game',
-          'mou_period': '2025 - 2028 (Aktif)',
-          'pic_name': 'Hendra Gunawan, S.Sn.',
-          'contact': 'kemitraan@animasinusantara.id',
-          'internship_quota_yearly': 15,
-        },
-      },
-      {
-        'resource_type': 'partners',
-        'title': 'Pixel Creative Agency',
-        'description': 'Digital agency terkemuka berfokus pada visual branding, UI/UX mobile apps, dan kampanye media interaktif.',
-        'status': 'published',
-        'metadata': {
-          'category': 'Creative & Digital Agency',
-          'mou_period': '2025 - 2027 (Aktif)',
-          'pic_name': 'Maya Angelia, M.Ds.',
-          'contact': 'partner@pixelcreatives.id',
-          'internship_quota_yearly': 10,
-        },
-      },
-      // Talents
-      {
-        'resource_type': 'talents',
-        'title': 'Arya Bagaskara',
-        'description': 'Mahasiswa Semester 6 S1 Animasi 3D berfokus pada Character Modeling, Hard Surface Asset, dan Texturing.',
-        'status': 'published',
-        'metadata': {
-          'role_label': 'Mahasiswa Tingkat Akhir',
-          'study_program': 'D4 Animasi & Pemodelan 3D',
-          'gpa': '3.88',
-          'status_talent': 'Siap Magang',
-          'rating': 4.9,
-          'skills': ['Blender', 'Autodesk Maya', 'ZBrush'],
-        },
-      },
-      {
-        'resource_type': 'talents',
-        'title': 'Nadia Safitri',
-        'description': 'Mahasiswa Semester 7 D4 DKV dengan keahlian mendalam di bidang UI/UX Design dan Design System.',
-        'status': 'published',
-        'metadata': {
-          'role_label': 'Mahasiswa Tingkat Akhir',
-          'study_program': 'S1 / D4 Desain Komunikasi Visual',
-          'gpa': '3.92',
-          'status_talent': 'Siap Magang',
-          'rating': 5.0,
-          'skills': ['UI/UX Design', 'Figma', 'Prototyping'],
-        },
-      },
-      // Reports
-      {
-        'resource_type': 'reports',
-        'title': 'Laporan Akuntabilitas Kinerja Serapan Magang MBKM 2025/2026',
-        'description': 'Evaluasi capaian penempatan 168 mahasiswa pada 24 industri mitra dengan tingkat keberhasilan 98.2%.',
-        'status': 'published',
-        'metadata': {
-          'period': 'TA 2025/2026',
-          'category': 'Laporan Evaluasi MBKM',
-          'doc_number': '048/LAP-MBKM/ISRK/2026',
-          'total_interns': 168,
-          'completion_rate': '98.2%',
-          'partner_satisfaction': '4.9 / 5.0',
-        },
-      },
-      {
-        'resource_type': 'reports',
-        'title': 'Survei Kepuasan Industri Terhadap Kualitas Lulusan & Talenta Vokasi',
-        'description': 'Hasil survei umpan balik dari 32 industri mitra yang mempekerjakan lulusan ISRK di bidang software, animasi, dan desain.',
-        'status': 'published',
-        'metadata': {
-          'period': 'Semester Genap 2025',
-          'category': 'Survei Kepuasan Pengguna',
-          'doc_number': '052/SURV-DUDI/ISRK/2025',
-          'satisfaction_score': '94.6%',
-        },
-      },
-      {
-        'resource_type': 'reports',
-        'title': 'Laporan Capaian Akreditasi Institusi & Kemitraan DUDI Berkelanjutan',
-        'description': 'Rangkuman pemenuhan 9 kriteria akreditasi unggul BAN-PT serta dampak kemitraan industri.',
-        'status': 'published',
-        'metadata': {
-          'period': 'Triwulan III 2026',
-          'category': 'Laporan Akreditasi & Mutu',
-          'doc_number': '061/LAP-MUTU/ISRK/2026',
-          'criteria_met': '9 dari 9 Kriteria',
-        },
-      },
-      // Documents
-      {
-        'resource_type': 'documents',
-        'title': 'Perjanjian Kerjasama (MoU) Induk Kemitraan Kampus - DUDI 2025-2028',
-        'description': 'Dokumen resmi legalitas kerjasama strategis pelaksanaan magang bersertifikat dan kurikulum bersama.',
-        'status': 'published',
-        'metadata': {
-          'document_number': '001/MOU-ISRK/DIR/2025',
-          'category': 'MoU Kemitraan Industri',
-          'valid_until': '2028-12-31',
-        },
-      },
-      {
-        'resource_type': 'documents',
-        'title': 'Sertifikat Akreditasi Institusi Predikat Unggul (BAN-PT)',
-        'description': 'Surat Keputusan Badan Akreditasi Nasional Perguruan Tinggi Nomor 412/SK/BAN-PT/Ak/PT/2024.',
-        'status': 'published',
-        'metadata': {
-          'document_number': '412/SK/BAN-PT/Ak/PT/2024',
-          'sk_number': '412/SK/BAN-PT/Ak/PT/2024',
-          'category': 'Akreditasi Institusi',
-          'valid_until': '2029-08-15',
-          'grade': 'Unggul',
-        },
-      },
-      {
-        'resource_type': 'documents',
-        'title': 'Pedoman Teknis Magang PKL & Skema Konversi 20 SKS MBKM',
-        'description': 'Buku panduan lengkap alur pendaftaran, pembimbingan dosen, logbook harian, dan evaluasi nilai industri.',
-        'status': 'published',
-        'metadata': {
-          'document_number': '024/PED-MBKM/ISRK/2026',
-          'category': 'Pedoman Akademik',
-          'edition': 'Edisi Revisi 2026',
-        },
-      },
-      {
-        'resource_type': 'documents',
-        'title': 'Surat Keputusan Rektor tentang Penetapan Kurikulum Berbasis Kemitraan DUDI',
-        'description': 'Pemberlakuan modul ajar praktikum terintegrasi dengan kebutuhan industri kreatif.',
-        'status': 'published',
-        'metadata': {
-          'document_number': '088/SK-REK/ISRK/2026',
-          'category': 'Surat Keputusan (SK)',
-          'valid_until': '2027-12-31',
-        },
-      },
-    ];
   }
 }

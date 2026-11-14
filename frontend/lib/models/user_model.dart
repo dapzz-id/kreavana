@@ -29,6 +29,20 @@ class UserModel {
   final String? ktpPhotoUrl;
   final String? nibNumber;
   final String? nibFileUrl;
+  final String? institutionRole; // 'admin' or 'staff'
+  final List<String> institutionPermissions;
+  final String? parentInstitutionId;
+
+  static const List<String> defaultInstitutionPermissions = [
+    'program_magang',
+    'kegiatan_event',
+    'mitra_industri',
+    'karya_siswa',
+    'laporan_kegiatan',
+    'monitoring_evaluasi',
+    'dokumen_institusi',
+    'pengumuman_institusi',
+  ];
 
   UserModel({
     this.id,
@@ -49,6 +63,9 @@ class UserModel {
     this.ktpPhotoUrl,
     this.nibNumber,
     this.nibFileUrl,
+    this.institutionRole,
+    this.institutionPermissions = const [],
+    this.parentInstitutionId,
     this.createdAt,
     this.balance = 0.0,
     this.followersCount = 0,
@@ -117,6 +134,19 @@ class UserModel {
 
   bool get isSchool => isInstitution;
 
+  bool get isInstitutionAdmin => isInstitution && !isInstitutionStaff;
+  bool get isInstitutionStaff {
+    if (!isInstitution) return false;
+    final r = (institutionRole ?? '').toLowerCase().trim();
+    return r == 'staff' || r == 'karyawan' || r == 'karyawan / staf' || r == 'editor' || r == 'viewer';
+  }
+
+  bool hasInstitutionPermission(String slug) {
+    if (!isInstitution) return false;
+    if (isAdmin || isInstitutionAdmin) return true;
+    return institutionPermissions.contains(slug);
+  }
+
   bool get isGovernment {
     if (isAdmin) return false;
     final r = role.toLowerCase().trim();
@@ -184,6 +214,16 @@ class UserModel {
         mail.startsWith('smk@') ||
         mail.startsWith('sekolah@');
 
+    final instRole = json['institution_role']?.toString();
+    final rawPerms = json['institution_permissions'];
+    List<String> parsedPerms = [];
+    if (rawPerms is List) {
+      parsedPerms = rawPerms.map((e) => e.toString()).toList();
+    } else if (isInst && (instRole == null || instRole == 'admin')) {
+      parsedPerms = List<String>.from(defaultInstitutionPermissions);
+    }
+    final parentInstId = json['parent_institution_id']?.toString();
+
     return UserModel(
       id: json['id']?.toString(),
       name: json['name'] ?? '',
@@ -213,6 +253,9 @@ class UserModel {
       ktpPhotoUrl: json['ktp_photo_url']?.toString(),
       nibNumber: json['nib_number']?.toString(),
       nibFileUrl: json['nib_file_url']?.toString(),
+      institutionRole: instRole ?? (isInst ? 'admin' : null),
+      institutionPermissions: parsedPerms,
+      parentInstitutionId: parentInstId ?? (isInst ? json['id']?.toString() : null),
       createdAt: json['created_at'],
       balance: json['balance'] != null
           ? double.parse(json['balance'].toString())
@@ -259,6 +302,9 @@ class UserModel {
       'max_voice_call_duration_seconds': maxVoiceCallDurationSeconds,
       'max_video_call_duration_seconds': maxVideoCallDurationSeconds,
       'performance_boost': performanceBoost,
+      'institution_role': institutionRole,
+      'institution_permissions': institutionPermissions,
+      'parent_institution_id': parentInstitutionId,
     };
   }
 
@@ -283,6 +329,9 @@ class UserModel {
     int? maxVoiceCallDurationSeconds,
     int? maxVideoCallDurationSeconds,
     double? performanceBoost,
+    String? institutionRole,
+    List<String>? institutionPermissions,
+    String? parentInstitutionId,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -308,6 +357,10 @@ class UserModel {
       maxVideoCallDurationSeconds:
           maxVideoCallDurationSeconds ?? this.maxVideoCallDurationSeconds,
       performanceBoost: performanceBoost ?? this.performanceBoost,
+      institutionRole: institutionRole ?? this.institutionRole,
+      institutionPermissions:
+          institutionPermissions ?? this.institutionPermissions,
+      parentInstitutionId: parentInstitutionId ?? this.parentInstitutionId,
     );
   }
 

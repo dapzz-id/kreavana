@@ -46,6 +46,83 @@ class InstitutionResourceController extends Controller
         'rejected',
     ];
 
+    public const ALL_INSTITUTION_PERMISSIONS = [
+        'program_magang',
+        'kegiatan_event',
+        'mitra_industri',
+        'karya_siswa',
+        'laporan_kegiatan',
+        'monitoring_evaluasi',
+        'dokumen_institusi',
+        'pengumuman_institusi',
+    ];
+
+    private const TYPE_TO_PERMISSION = [
+        'tenders' => 'program_magang',
+        'programs' => 'program_magang',
+        'internships' => 'program_magang',
+        'events' => 'kegiatan_event',
+        'partners' => 'mitra_industri',
+        'showcases' => 'karya_siswa',
+        'reports' => 'laporan_kegiatan',
+        'monitoring' => 'monitoring_evaluasi',
+        'documents' => 'dokumen_institusi',
+        'announcements' => 'pengumuman_institusi',
+    ];
+
+    /**
+     * Resolve the institution multi-tenant context for the authenticated user.
+     * Prevents data leakage: a staff user operates exclusively within their parent institution.
+     */
+    private function resolveInstitutionContext(Request $request): array
+    {
+        $user = $request->user();
+        if (!$user) {
+            return [
+                'owner_id' => null,
+                'is_staff' => false,
+                'role' => 'admin',
+                'permissions' => self::ALL_INSTITUTION_PERMISSIONS,
+            ];
+        }
+
+        $ownerId = $user->id;
+        $isStaff = false;
+        $role = 'admin';
+        $permissions = self::ALL_INSTITUTION_PERMISSIONS;
+
+        $memberRecord = InstitutionResource::where('resource_type', 'members')
+            ->where(function ($q) use ($user) {
+                $q->where('metadata->email', $user->email)
+                  ->orWhere('metadata->user_id', $user->id)
+                  ->orWhere('metadata->username', $user->username);
+            })->first();
+
+        if ($memberRecord && $memberRecord->user_id !== $user->id) {
+            $meta = is_array($memberRecord->metadata) ? $memberRecord->metadata : [];
+            $rawRole = strtolower(trim((string) ($meta['role'] ?? 'karyawan / staf')));
+            $ownerId = $memberRecord->user_id;
+
+            if ($rawRole === 'admin') {
+                $role = 'admin';
+                $isStaff = false;
+                $permissions = self::ALL_INSTITUTION_PERMISSIONS;
+            } else {
+                $isStaff = true;
+                $role = 'staff';
+                $rawPerms = $meta['permissions'] ?? [];
+                $permissions = is_array($rawPerms) ? array_values($rawPerms) : [];
+            }
+        }
+
+        return [
+            'owner_id' => $ownerId,
+            'is_staff' => $isStaff,
+            'role' => $role,
+            'permissions' => $permissions,
+        ];
+    }
+
     public function searchCorporates(Request $request)
     {
         $q = trim((string) $request->query('q', ''));
@@ -196,6 +273,24 @@ class InstitutionResourceController extends Controller
             'type' => 'nullable|string|in:' . implode(',', self::TYPES),
         ]);
 
+        $ctx = $this->resolveInstitutionContext($request);
+        $ownerId = $ctx['owner_id'] ?: $request->user()->id;
+        $isStaff = $ctx['is_staff'];
+        $type = $validated['type'] ?? null;
+
+        // Strict RBAC: Staff cannot access members (Tim & Hak Akses) or profile (Profil Institusi)
+        if ($isStaff && in_array($type, ['members', 'team', 'profile'], true)) {
+            return $this->errorResponse('Akses ditolak. Fitur Tim & Hak Akses dan Profil Institusi hanya dapat dikelola oleh Admin Institusi.', 403);
+        }
+
+        // Strict RBAC: Staff can only access features present in their granted permissions
+        if ($isStaff && $type && isset(self::TYPE_TO_PERMISSION[$type])) {
+            $requiredPerm = self::TYPE_TO_PERMISSION[$type];
+            if (!in_array($requiredPerm, $ctx['permissions'], true)) {
+                return $this->errorResponse('Akses ditolak. Anda tidak memiliki izin untuk mengakses fitur ini.', 403);
+            }
+        }
+
         $user = $request->user();
         if ($user) {
             $subRole = $user->sub_role instanceof \BackedEnum ? $user->sub_role->value : $user->sub_role;
@@ -207,24 +302,23 @@ class InstitutionResourceController extends Controller
             $isGovernment = in_array($subRoleLower, [
                 'government', 'pemerintah', 'instansi', 'dinas', 'bumn', 'kementerian'
             ], true);
-
             $isSchool = in_array($subRoleLower, [
                 'institution', 'school', 'sekolah', 'kampus', 'education', 'institusi', 'smk', 'universitas'
             ], true);
-            if ($isCorporate && InstitutionResource::where('user_id', $user->id)->count() === 0) {
+
+            if ($isCorporate && InstitutionResource::where('user_id', $ownerId)->count() === 0) {
                 \Database\Seeders\CorporateDummySeeder::seedForUser($user);
-            } elseif ($isGovernment && InstitutionResource::where('user_id', $user->id)->count() === 0) {
+            } elseif ($isGovernment && InstitutionResource::where('user_id', $ownerId)->count() === 0) {
                 \Database\Seeders\GovernmentDummySeeder::seedForUser($user);
-            } elseif ($isSchool && InstitutionResource::where('user_id', $user->id)->count() === 0) {
+            } elseif ($isSchool && InstitutionResource::where('user_id', $ownerId)->count() === 0) {
                 \Database\Seeders\SchoolDummySeeder::seedForUser($user);
             }
 
-            if ($isSchool && ($validated['type'] ?? null) === 'tenders') {
+            if ($isSchool && $type === 'tenders') {
                 return $this->errorResponse('Fitur Pengadaan & Vendor hanya tersedia untuk akun Corporate / Perusahaan.', 403);
             }
         }
 
-        $type = $validated['type'] ?? null;
         $isCorporate = isset($subRoleLower) && in_array($subRoleLower, [
             'corporate', 'company', 'business', 'perusahaan', 'bisnis'
         ], true);
@@ -232,13 +326,14 @@ class InstitutionResourceController extends Controller
         $query = InstitutionResource::query();
 
         if ($type === 'partners' && $isCorporate) {
-            $query->where(function ($q) use ($request) {
-                $q->where('user_id', $request->user()->id)
+            $query->where(function ($q) use ($ownerId, $request) {
+                $q->where('user_id', $ownerId)
                   ->orWhere('metadata->corporate_user_id', $request->user()->id)
                   ->orWhere('metadata->corporate_username', $request->user()->username);
             });
         } else {
-            $query->where('user_id', $request->user()->id);
+            // CRITICAL: Scope strictly to the parent institution owner to prevent data leak!
+            $query->where('user_id', $ownerId);
         }
 
         if ($type) {
@@ -247,12 +342,41 @@ class InstitutionResourceController extends Controller
 
         $resources = $query->latest()->get();
 
+        // If staff requests without type filter, filter out unpermitted resources
+        if ($isStaff && empty($type)) {
+            $resources = $resources->filter(function ($item) use ($ctx) {
+                if (in_array($item->resource_type, ['members', 'team', 'profile'], true)) {
+                    return false;
+                }
+                $requiredPerm = self::TYPE_TO_PERMISSION[$item->resource_type] ?? null;
+                return $requiredPerm === null || in_array($requiredPerm, $ctx['permissions'], true);
+            })->values();
+        }
+
         return $this->successResponse('Data instansi berhasil diambil.', $resources);
     }
 
     public function store(Request $request)
     {
         $this->ensureInstitutionAccount($request);
+        $ctx = $this->resolveInstitutionContext($request);
+        $ownerId = $ctx['owner_id'] ?: $request->user()->id;
+        $isStaff = $ctx['is_staff'];
+
+        $validated = $this->validateResource($request);
+        $resType = $validated['resource_type'];
+
+        // Strict RBAC checks for Staff
+        if ($isStaff) {
+            if (in_array($resType, ['members', 'team', 'profile'], true)) {
+                return $this->errorResponse('Akses ditolak. Fitur ini hanya dapat dikelola oleh Admin Institusi.', 403);
+            }
+            $requiredPerm = self::TYPE_TO_PERMISSION[$resType] ?? null;
+            if ($requiredPerm && !in_array($requiredPerm, $ctx['permissions'], true)) {
+                return $this->errorResponse('Akses ditolak. Anda tidak memiliki izin untuk menambah data fitur ini.', 403);
+            }
+        }
+
         $user = $request->user();
         $subRole = $user?->sub_role instanceof \BackedEnum ? $user->sub_role->value : $user?->sub_role;
         $subRoleLower = strtolower((string) ($subRole ?? ''));
@@ -260,21 +384,79 @@ class InstitutionResourceController extends Controller
             'institution', 'school', 'sekolah', 'kampus', 'education', 'institusi', 'smk', 'universitas'
         ], true);
 
-        $validated = $this->validateResource($request);
-
-        if ($isSchool && ($validated['resource_type'] ?? null) === 'tenders') {
+        if ($isSchool && $resType === 'tenders') {
             return $this->errorResponse('Fitur Pengadaan & Vendor hanya tersedia untuk akun Corporate / Perusahaan.', 403);
         }
 
-        if ($isSchool && ($validated['resource_type'] ?? null) === 'partners') {
+        if ($isSchool && $resType === 'partners') {
             if (empty($validated['status'])) {
                 $validated['status'] = 'pending';
             }
         }
 
+        $meta = $validated['metadata'] ?? [];
+
+        // If creating a team member (staff or co-admin)
+        if ($resType === 'members') {
+            $memberEmail = strtolower(trim((string) ($meta['email'] ?? '')));
+            $memberName = trim((string) ($validated['title'] ?? ''));
+            $memberPassword = $meta['password'] ?? 'Kreavana123!';
+            $memberRole = $meta['role'] ?? 'Karyawan / Staf';
+            $memberDept = $meta['department'] ?? $validated['description'] ?? 'Staf Lembaga';
+            $memberPerms = $meta['permissions'] ?? [];
+
+            if (empty($memberEmail) || empty($memberName)) {
+                return $this->errorResponse('Nama lengkap dan email anggota tim wajib diisi.', 422);
+            }
+
+            // Sync or create user account so they can log in
+            $staffUser = \App\Models\User::where('email', $memberEmail)->first();
+            if (!$staffUser) {
+                $cleanBase = preg_replace('/[^a-zA-Z0-9]/', '', strtolower(explode('@', $memberEmail)[0]));
+                $username = substr($cleanBase, 0, 20) . '_' . rand(100, 999);
+
+                if (\App\Services\UsersApiClient::isEnabled()) {
+                    try {
+                        \App\Services\UsersApiClient::register([
+                            'name' => $memberName,
+                            'username' => $username,
+                            'email' => $memberEmail,
+                            'password' => $memberPassword,
+                        ]);
+                    } catch (\Throwable $e) {
+                        \Illuminate\Support\Facades\Log::warning('UsersApiClient register staff error: ' . $e->getMessage());
+                    }
+                }
+
+                $staffUser = \App\Models\User::create([
+                    'name' => $memberName,
+                    'username' => $username,
+                    'email' => $memberEmail,
+                    'role' => \App\Enums\RoleType::User,
+                    'sub_role' => 'institution',
+                    'is_verified' => true,
+                    'verification_type' => 'institution',
+                    'email_verified_at' => now(),
+                ]);
+            }
+
+            $meta['user_id'] = $staffUser->id;
+            $meta['username'] = $staffUser->username;
+            $meta['email'] = $memberEmail;
+            $meta['role'] = $memberRole;
+            $meta['permissions'] = is_array($memberPerms) ? array_values($memberPerms) : [];
+            $meta['department'] = $memberDept;
+            $meta['joined_at'] = now()->format('d M Y');
+            $meta['created_by'] = $user->id;
+            $meta['is_online'] = false;
+            unset($meta['password']);
+
+            $validated['metadata'] = $meta;
+        }
+
         $resource = InstitutionResource::create([
             ...$validated,
-            'user_id' => $request->user()->id,
+            'user_id' => $ownerId,
             'published_at' => ($validated['status'] ?? 'draft') === 'published' ? now() : null,
         ]);
 
@@ -288,15 +470,29 @@ class InstitutionResourceController extends Controller
     public function update(Request $request, string $id)
     {
         $this->ensureInstitutionAccount($request);
+        $ctx = $this->resolveInstitutionContext($request);
+        $ownerId = $ctx['owner_id'] ?: $request->user()->id;
+        $isStaff = $ctx['is_staff'];
+
         $resource = InstitutionResource::query()
-            ->where(function ($q) use ($request) {
-                $q->where('user_id', $request->user()->id)
+            ->where(function ($q) use ($ownerId, $request) {
+                $q->where('user_id', $ownerId)
                   ->orWhere('metadata->corporate_user_id', $request->user()->id);
             })
             ->find($id);
 
         if (!$resource) {
             return $this->errorResponse('Data tidak ditemukan.', 404);
+        }
+
+        if ($isStaff) {
+            if (in_array($resource->resource_type, ['members', 'team', 'profile'], true)) {
+                return $this->errorResponse('Akses ditolak. Fitur ini hanya dapat dikelola oleh Admin Institusi.', 403);
+            }
+            $requiredPerm = self::TYPE_TO_PERMISSION[$resource->resource_type] ?? null;
+            if ($requiredPerm && !in_array($requiredPerm, $ctx['permissions'], true)) {
+                return $this->errorResponse('Akses ditolak. Anda tidak memiliki izin untuk mengubah data fitur ini.', 403);
+            }
         }
 
         $user = $request->user();
@@ -311,6 +507,40 @@ class InstitutionResourceController extends Controller
         if ($isSchool && ($resource->resource_type === 'tenders' || ($validated['resource_type'] ?? null) === 'tenders')) {
             return $this->errorResponse('Fitur Pengadaan & Vendor hanya tersedia untuk akun Corporate / Perusahaan.', 403);
         }
+
+        if ($resource->resource_type === 'members' && isset($validated['metadata'])) {
+            $oldMeta = is_array($resource->metadata) ? $resource->metadata : [];
+            $newMeta = array_merge($oldMeta, $validated['metadata']);
+            $staffPassword = $validated['metadata']['password'] ?? $request->input('metadata.password');
+            if (isset($newMeta['password'])) {
+                unset($newMeta['password']);
+            }
+            if (isset($newMeta['permissions']) && is_array($newMeta['permissions'])) {
+                $newMeta['permissions'] = array_values($newMeta['permissions']);
+            }
+            $validated['metadata'] = $newMeta;
+
+            // Sync with User table if user exists
+            $memberUserId = $newMeta['user_id'] ?? null;
+            $memberEmail = $newMeta['email'] ?? null;
+            $targetUser = $memberUserId
+                ? \App\Models\User::find($memberUserId)
+                : ($memberEmail ? \App\Models\User::where('email', $memberEmail)->first() : null);
+
+            if ($targetUser) {
+                $userUpdates = [];
+                if (!empty($validated['title']) && $targetUser->name !== $validated['title']) {
+                    $userUpdates['name'] = $validated['title'];
+                }
+                if (!empty($staffPassword) && strlen((string) $staffPassword) >= 6) {
+                    $userUpdates['password'] = \Illuminate\Support\Facades\Hash::make($staffPassword);
+                }
+                if (!empty($userUpdates)) {
+                    $targetUser->update($userUpdates);
+                }
+            }
+        }
+
         $status = $validated['status'] ?? $resource->status;
         if ($status === 'published' && !$resource->published_at) {
             $validated['published_at'] = now();
@@ -369,12 +599,26 @@ class InstitutionResourceController extends Controller
     public function destroy(Request $request, string $id)
     {
         $this->ensureInstitutionAccount($request);
+        $ctx = $this->resolveInstitutionContext($request);
+        $ownerId = $ctx['owner_id'] ?: $request->user()->id;
+        $isStaff = $ctx['is_staff'];
+
         $resource = InstitutionResource::query()
-            ->where('user_id', $request->user()->id)
+            ->where('user_id', $ownerId)
             ->find($id);
 
         if (!$resource) {
             return $this->errorResponse('Data tidak ditemukan.', 404);
+        }
+
+        if ($isStaff) {
+            if (in_array($resource->resource_type, ['members', 'team', 'profile'], true)) {
+                return $this->errorResponse('Akses ditolak. Fitur ini hanya dapat dikelola oleh Admin Institusi.', 403);
+            }
+            $requiredPerm = self::TYPE_TO_PERMISSION[$resource->resource_type] ?? null;
+            if ($requiredPerm && !in_array($requiredPerm, $ctx['permissions'], true)) {
+                return $this->errorResponse('Akses ditolak. Anda tidak memiliki izin untuk menghapus data fitur ini.', 403);
+            }
         }
 
         $resource->delete();
@@ -410,9 +654,18 @@ class InstitutionResourceController extends Controller
     private function ensureInstitutionAccount(Request $request): void
     {
         $user = $request->user();
-        $subRole = $user?->sub_role instanceof \BackedEnum ? $user->sub_role->value : $user?->sub_role;
+        if (!$user) {
+            abort(401, 'Unauthenticated.');
+        }
+
+        $ctx = $this->resolveInstitutionContext($request);
+        if ($ctx['is_staff'] || ($ctx['owner_id'] && $ctx['owner_id'] !== $user->id)) {
+            return;
+        }
+
+        $subRole = $user->sub_role instanceof \BackedEnum ? $user->sub_role->value : $user->sub_role;
         abort_unless(
-            $user && in_array($subRole, [
+            in_array($subRole, [
                 'institution', 'government', 'pemerintah', 'instansi', 'school', 'sekolah',
                 'corporate', 'company', 'business', 'perusahaan', 'bisnis',
             ], true),
