@@ -53,6 +53,7 @@ class SchoolDummySeeder extends Seeder
         // 1. Update Profile Sekolah / Perguruan Tinggi
         $school->update([
             'name' => $schoolName,
+            'phone' => '(021) 8849-201',
             'role' => RoleType::Creator,
             'sub_role' => 'institution',
             'is_verified' => 1,
@@ -73,6 +74,50 @@ class SchoolDummySeeder extends Seeder
 
         // Hapus data lama agar ter-update bersih
         InstitutionResource::where('user_id', $school->id)->delete();
+
+        // ── FITUR 0: PROFIL RESMI INSTITUSI PENDIDIKAN & NPSN ────────────────────
+        $schoolProfileResource = [
+            [
+                'resource_type' => 'profile',
+                'title' => $schoolName,
+                'description' => 'Institut pendidikan tinggi vokasi seni, animasi 3D, DKV, dan rekayasa kreatif nusantara yang terakreditasi Unggul oleh BAN-PT dan berstandar internasional.',
+                'status' => 'published',
+                'metadata' => [
+                    'npsn' => match ($school->username) {
+                        'smk_demo' => '20108942',
+                        'sekolah_demo' => '20104521',
+                        default => '20401829',
+                    },
+                    'institution_type' => match ($school->username) {
+                        'smk_demo', 'sekolah_demo' => 'Sekolah Menengah Kejuruan (SMK Vokasi)',
+                        default => 'Perguruan Tinggi Vokasi / Institut Seni & Desain',
+                    },
+                    'accreditation' => 'A (Unggul)',
+                    'permit_number' => '842/E/O/2021',
+                    'headmaster_name' => match ($school->username) {
+                        'smk_demo' => 'Drs. H. Hendra Setiawan, M.Pd.',
+                        default => 'Prof. Dr. Ir. H. Bambang Sudarsono, M.Ds.',
+                    },
+                    'headmaster_nip' => '19740512 199903 1 004',
+                    'official_phone' => '(021) 8849-201',
+                    'official_email' => match ($school->username) {
+                        'smk_demo' => 'info@smkn1kreasi.sch.id',
+                        default => 'kemitraan@isrk.ac.id',
+                    },
+                    'website' => match ($school->username) {
+                        'smk_demo' => 'https://smkn1kreasi.sch.id',
+                        default => 'https://isrk.ac.id',
+                    },
+                    'address' => 'Jl. Pendidikan Kreatif No. 45, Kampus Budaya Vokasi Terpadu, Jakarta Selatan',
+                    'city' => 'Jakarta Selatan, DKI Jakarta',
+                    'postal_code' => '12340',
+                    'total_students' => '1.250',
+                    'total_prodi' => '5 Program Keahlian',
+                    'industry_partners_count' => '24 Mitra Industri',
+                ],
+                'published_at' => Carbon::now(),
+            ],
+        ];
 
         // ── FITUR 1: PROFIL INSTITUSI & PROGRAM STUDI ────────────────────────────
         $studyPrograms = [
@@ -886,6 +931,7 @@ class SchoolDummySeeder extends Seeder
 
         // Gabungkan semua resource dan simpan ke database
         $allResources = array_merge(
+            $schoolProfileResource,
             $studyPrograms,
             $events,
             $partners,
