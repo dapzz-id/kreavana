@@ -1636,26 +1636,83 @@ class _InstitutionWorkspaceScreenState
     return null;
   }
 
-  Widget _buildPartnerLogoWidget(String? logoPath, String initials, List<Color> gradientColors) {
+  String? _resolvePartnerNetworkLogo(String title, Map<String, dynamic> meta) {
+    if ((meta['logo_url'] ?? '').toString().isNotEmpty) {
+      return meta['logo_url'].toString();
+    }
+    final t = title.toLowerCase();
+    if (t.contains('google')) {
+      return 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/240px-Google_%22G%22_logo.svg.png';
+    }
+    if (t.contains('animasi') || t.contains('animation')) {
+      return 'https://cdn-icons-png.flaticon.com/512/3845/3845868.png';
+    }
+    if (t.contains('pixel') || t.contains('creative') || t.contains('desain')) {
+      return 'https://cdn-icons-png.flaticon.com/512/3233/3233483.png';
+    }
+    if (t.contains('svara') || t.contains('audio') || t.contains('sound')) {
+      return 'https://cdn-icons-png.flaticon.com/512/2983/2983780.png';
+    }
+    if (t.contains('cakrawala') || t.contains('media') || t.contains('siber')) {
+      return 'https://cdn-icons-png.flaticon.com/512/2983/2983803.png';
+    }
+    if (t.contains('adgi')) {
+      return 'https://cdn-icons-png.flaticon.com/512/1055/1055666.png';
+    }
+    if (t.contains('game') || t.contains('guild')) {
+      return 'https://cdn-icons-png.flaticon.com/512/686/686589.png';
+    }
+    return null;
+  }
+
+  Widget _buildPartnerLogoWidget({
+    required String? logoPath,
+    required String? networkFallbackUrl,
+    required String initials,
+    required List<Color> gradientColors,
+  }) {
     if (logoPath != null && logoPath.isNotEmpty) {
       if (logoPath.startsWith('http://') || logoPath.startsWith('https://')) {
         return ClipRRect(
-          borderRadius: BorderRadius.circular(9),
+          borderRadius: BorderRadius.circular(10),
           child: Image.network(
             logoPath,
-            width: 38,
-            height: 38,
+            width: 40,
+            height: 40,
             fit: BoxFit.contain,
             errorBuilder: (_, _, _) => _buildMonogramFallback(initials, gradientColors),
           ),
         );
       }
       return ClipRRect(
-        borderRadius: BorderRadius.circular(9),
+        borderRadius: BorderRadius.circular(10),
         child: Image.asset(
           logoPath,
-          width: 38,
-          height: 38,
+          width: 40,
+          height: 40,
+          fit: BoxFit.contain,
+          errorBuilder: (_, _, _) {
+            if (networkFallbackUrl != null && networkFallbackUrl.isNotEmpty) {
+              return Image.network(
+                networkFallbackUrl,
+                width: 40,
+                height: 40,
+                fit: BoxFit.contain,
+                errorBuilder: (_, _, _) => _buildMonogramFallback(initials, gradientColors),
+              );
+            }
+            return _buildMonogramFallback(initials, gradientColors);
+          },
+        ),
+      );
+    }
+    if (networkFallbackUrl != null && networkFallbackUrl.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Image.network(
+          networkFallbackUrl,
+          width: 40,
+          height: 40,
           fit: BoxFit.contain,
           errorBuilder: (_, _, _) => _buildMonogramFallback(initials, gradientColors),
         ),
@@ -1786,6 +1843,7 @@ class _InstitutionWorkspaceScreenState
     final gradientColors = _getPartnerGradient(category, title);
     final categoryIcon = _getCategoryIcon(category);
     final logoPath = _resolvePartnerLogo(title, meta);
+    final networkUrl = _resolvePartnerNetworkLogo(title, meta);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -1822,7 +1880,7 @@ class _InstitutionWorkspaceScreenState
                     borderRadius: BorderRadius.circular(15),
                     border: Border.all(color: const Color(0xFFE2E8F0)),
                     boxShadow: [
-                      BoxShadow(
+          BoxShadow(
                         color: const Color(0xFF0F172A).withValues(alpha: 0.05),
                         blurRadius: 10,
                         offset: const Offset(0, 3),
@@ -1830,7 +1888,12 @@ class _InstitutionWorkspaceScreenState
                     ],
                   ),
                   child: Center(
-                    child: _buildPartnerLogoWidget(logoPath, initials, gradientColors),
+                    child: _buildPartnerLogoWidget(
+                      logoPath: logoPath,
+                      networkFallbackUrl: networkUrl,
+                      initials: initials,
+                      gradientColors: gradientColors,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -4155,6 +4218,11 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
   late String _status;
   bool _isSaving = false;
 
+  // Tag Fields State (Dynamic Tags on Enter)
+  final Map<String, List<String>> _fieldTags = {};
+  final Map<String, TextEditingController> _tagInputControllers = {};
+  final Map<String, FocusNode> _tagFocusNodes = {};
+
   // Corporate Search State
   Map<String, dynamic>? _selectedCorporate;
   List<Map<String, dynamic>> _corporateList = [];
@@ -4169,6 +4237,53 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
   String? _mouFilesize;
   bool _isUploadingMou = false;
 
+  bool _isTagField(_WorkspaceField field) {
+    final key = field.key.toLowerCase();
+    return key.contains('category') || key.contains('kategori') || key.contains('spesialisasi') || key.contains('tag');
+  }
+
+  void _addTag(String fieldKey) {
+    final inputCtrl = _tagInputControllers[fieldKey];
+    if (inputCtrl == null) return;
+    final raw = inputCtrl.text.trim();
+    if (raw.isEmpty) return;
+
+    final currentList = List<String>.from(_fieldTags[fieldKey] ?? <String>[]);
+    final candidates = raw
+        .split(',')
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty);
+
+    bool added = false;
+    for (final c in candidates) {
+      if (!currentList.any((t) => t.toLowerCase() == c.toLowerCase())) {
+        currentList.add(c);
+        added = true;
+      }
+    }
+
+    if (added) {
+      setState(() {
+        _fieldTags[fieldKey] = currentList;
+        inputCtrl.clear();
+        _controllers[fieldKey]?.text = currentList.join(', ');
+      });
+    } else {
+      inputCtrl.clear();
+    }
+
+    _tagFocusNodes[fieldKey]?.requestFocus();
+  }
+
+  void _removeTag(String fieldKey, String tag) {
+    final currentList = List<String>.from(_fieldTags[fieldKey] ?? <String>[]);
+    setState(() {
+      currentList.removeWhere((t) => t.toLowerCase() == tag.toLowerCase());
+      _fieldTags[fieldKey] = currentList;
+      _controllers[fieldKey]?.text = currentList.join(', ');
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -4176,12 +4291,24 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
     _titleController = TextEditingController(text: existing?['title']?.toString() ?? '');
     _descriptionController = TextEditingController(text: existing?['description']?.toString() ?? '');
 
-    final rawMeta = existing?['metadata'];
+    final rawMeta = existing?['metadata'] ?? existing?['meta'];
     final meta = rawMeta is Map ? Map<String, dynamic>.from(rawMeta) : <String, dynamic>{};
     _controllers = {
       for (final f in widget.fields)
-        f.key: TextEditingController(text: meta[f.key]?.toString() ?? ''),
+        f.key: TextEditingController(text: (meta[f.key] ?? existing?[f.key])?.toString() ?? ''),
     };
+
+    for (final f in widget.fields) {
+      if (_isTagField(f)) {
+        final existingVal = (meta[f.key] ?? existing?[f.key])?.toString() ?? '';
+        final parsed = existingVal.isNotEmpty
+            ? existingVal.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList()
+            : <String>[];
+        _fieldTags[f.key] = parsed;
+        _tagInputControllers[f.key] = TextEditingController();
+        _tagFocusNodes[f.key] = FocusNode();
+      }
+    }
 
     final currentStatus = existing?['status']?.toString();
     _status = (currentStatus != null && widget.statuses.contains(currentStatus))
@@ -4213,6 +4340,12 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
     _corpSearchController.dispose();
     for (final c in _controllers.values) {
       c.dispose();
+    }
+    for (final c in _tagInputControllers.values) {
+      c.dispose();
+    }
+    for (final fn in _tagFocusNodes.values) {
+      fn.dispose();
     }
     super.dispose();
   }
@@ -4303,6 +4436,16 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
   }
 
   Future<void> _submit() async {
+    // Automatically commit any pending tag input before validating
+    for (final f in widget.fields) {
+      if (_isTagField(f)) {
+        final inputCtrl = _tagInputControllers[f.key];
+        if (inputCtrl != null && inputCtrl.text.trim().isNotEmpty) {
+          _addTag(f.key);
+        }
+      }
+    }
+
     if (!_formKey.currentState!.validate() || _isSaving) return;
 
     final isPartnerResource = widget.resourceType == 'partners';
@@ -4410,9 +4553,9 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
     if (key.contains('category') || key.contains('spesialisasi')) {
       return {
         'label': '${field.label} *',
-        'caption': 'Bidang industri utama mitra yang relevan dengan keahlian siswa.',
-        'hint': field.hint ?? 'Contoh: Animasi 3D, Desain Grafis, Production House',
-        'chips': ['Animasi 3D', 'Desain & UI/UX', 'Video & Media', 'Software & IT', 'Marketing Digital'],
+        'caption': 'Ketik bidang spesialisasi / kategori lalu tekan Enter untuk membuat tag.',
+        'hint': 'Ketik kategori lalu tekan Enter (contoh: Animasi 3D)...',
+        'chips': <String>[],
       };
     }
     if (key.contains('contact') || key.contains('pic') || key.contains('email')) {
@@ -4573,8 +4716,6 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
     required String label,
     required String caption,
     required Widget child,
-    List<String> chips = const [],
-    TextEditingController? targetController,
     double? minHeaderHeight,
   }) {
     final headerContent = Column(
@@ -4617,65 +4758,125 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
           headerContent,
         const SizedBox(height: 8),
         child,
-        if (chips.isNotEmpty && targetController != null) ...[
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: chips.map((chipText) {
-              return InkWell(
-                borderRadius: BorderRadius.circular(20),
-                onTap: () {
-                  setState(() {
-                    targetController.text = chipText;
-                  });
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _isDark ? const Color(0xFF201D35) : Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: _isDark ? const Color(0xFF383457) : const Color(0xFFCBD5E1),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.add_rounded,
-                        size: 13,
-                        color: _isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        chipText,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: _isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ],
       ],
     );
   }
 
   Widget _buildFieldWidget(_WorkspaceField field, {double? minHeaderHeight}) {
     final meta = _getFieldMeta(field);
-    final ctrl = _controllers[field.key]!;
 
+    if (_isTagField(field)) {
+      final inputCtrl = _tagInputControllers[field.key] ?? _controllers[field.key]!;
+      final focusNode = _tagFocusNodes[field.key];
+      final currentTags = _fieldTags[field.key] ?? <String>[];
+
+      return _buildFieldWithHeader(
+        label: meta['label'] as String,
+        caption: meta['caption'] as String,
+        minHeaderHeight: minHeaderHeight,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextFormField(
+              controller: inputCtrl,
+              focusNode: focusNode,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => _addTag(field.key),
+              onChanged: (val) {
+                if (val.contains(',')) {
+                  _addTag(field.key);
+                }
+              },
+              decoration: _inputDecoration(
+                hint: meta['hint'] as String,
+                prefixIcon: _getFieldIcon(field),
+                suffixIcon: Tooltip(
+                  message: 'Tekan Enter untuk membuat tag',
+                  child: IconButton(
+                    icon: Icon(
+                      Icons.keyboard_return_rounded,
+                      size: 18,
+                      color: _isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
+                    ),
+                    onPressed: () => _addTag(field.key),
+                  ),
+                ),
+              ),
+              validator: (val) {
+                final tags = _fieldTags[field.key] ?? [];
+                final pending = val?.trim() ?? '';
+                if (tags.isEmpty && pending.isEmpty) {
+                  return '${(meta['label'] as String).replaceAll('*', '').trim()} wajib diisi minimal 1';
+                }
+                return null;
+              },
+            ),
+            if (currentTags.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: currentTags.map((tag) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: _isDark ? const Color(0xFF201D35) : Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: _isDark ? const Color(0xFF383457) : const Color(0xFFCBD5E1),
+                        width: 1.2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0F172A).withValues(alpha: _isDark ? 0.2 : 0.04),
+                          blurRadius: 4,
+                          offset: const Offset(0, 1.5),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          tag,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: _isDark ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        InkWell(
+                          borderRadius: BorderRadius.circular(10),
+                          onTap: () => _removeTag(field.key, tag),
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: _isDark ? const Color(0xFF2A2742) : const Color(0xFFF1F5F9),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.close_rounded,
+                              size: 13,
+                              color: _isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
+    final ctrl = _controllers[field.key]!;
     return _buildFieldWithHeader(
       label: meta['label'] as String,
       caption: meta['caption'] as String,
-      chips: (meta['chips'] as List<dynamic>).cast<String>(),
-      targetController: ctrl,
       minHeaderHeight: minHeaderHeight,
       child: TextFormField(
         controller: ctrl,
@@ -4702,10 +4903,11 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
 
     return _buildFieldWithHeader(
       label: 'Status Kemitraan & Akses *',
-      caption: 'Tentukan status keaktifan mitra penempatan magang siswa.',
+      caption: 'Tentukan status keaktifan mitra untuk penempatan magang siswa.',
       minHeaderHeight: minHeaderHeight,
       child: DropdownButtonFormField<String>(
         isExpanded: true,
+        isDense: true,
         initialValue: _status,
         dropdownColor: _isDark ? const Color(0xFF1E1B32) : Colors.white,
         style: TextStyle(
@@ -4771,7 +4973,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
     return _buildFieldCardContainer(
       title: 'Cari & Hubungkan Akun Corporate Mitra *',
       subtitle: 'Tautkan pengajuan kemitraan ini ke entitas akun Corporate / Perusahaan resmi di Kreavana.',
-      icon: Icons.domain_verification_rounded,
+      icon: Icons.apartment_rounded,
       children: [
         if (_selectedCorporate != null) ...[
           Container(
@@ -4854,9 +5056,8 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                     setState(() {
                       _selectedCorporate = null;
                       _corpSearchController.clear();
-                      _showCorpDropdown = true;
+                      _showCorpDropdown = false;
                     });
-                    _fetchCorporates('');
                   },
                 ),
               ],
@@ -4866,13 +5067,17 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
           TextField(
             controller: _corpSearchController,
             onChanged: (val) {
-              _fetchCorporates(val);
-              if (!_showCorpDropdown) setState(() => _showCorpDropdown = true);
+              final query = val.trim();
+              if (query.isNotEmpty) {
+                _fetchCorporates(query);
+                if (!_showCorpDropdown) setState(() => _showCorpDropdown = true);
+              } else {
+                setState(() => _showCorpDropdown = false);
+              }
             },
             onTap: () {
-              if (!_showCorpDropdown) {
+              if (_corpSearchController.text.trim().isNotEmpty) {
                 setState(() => _showCorpDropdown = true);
-                if (_corporateList.isEmpty) _fetchCorporates('');
               }
             },
             decoration: _inputDecoration(
@@ -4888,16 +5093,16 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                           icon: const Icon(Icons.clear_rounded, size: 18),
                           onPressed: () {
                             _corpSearchController.clear();
-                            _fetchCorporates('');
+                            setState(() => _showCorpDropdown = false);
                           },
                         )
                       : null),
             ),
           ),
-          if (_showCorpDropdown && _corporateList.isNotEmpty) ...[
+          if (_showCorpDropdown && _corpSearchController.text.trim().isNotEmpty && _corporateList.isNotEmpty) ...[
             const SizedBox(height: 8),
             Container(
-              constraints: const BoxConstraints(maxHeight: 200),
+              constraints: const BoxConstraints(maxHeight: 180),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
