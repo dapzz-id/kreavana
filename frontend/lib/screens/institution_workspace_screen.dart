@@ -677,22 +677,35 @@ class _InstitutionWorkspaceScreenState
   Future<void> _deleteRecord(Map<String, dynamic> record) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Hapus Data Permanen?'),
-        content: Text('Data "${record['title']}" akan dihapus permanen dari sistem.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return AlertDialog(
+          backgroundColor: isDark ? const Color(0xFF1A182A) : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            'Hapus Data Permanen?',
+            style: TextStyle(color: isDark ? Colors.white : Colors.black87),
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
-            child: const Text('Hapus Permanen'),
+          content: Text(
+            'Data "${record['title']}" akan dihapus permanen dari sistem.',
+            style: TextStyle(color: isDark ? AppTheme.textMuted : Colors.black54),
           ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(
+                'Batal',
+                style: TextStyle(color: isDark ? AppTheme.textMuted : Colors.grey.shade700),
+              ),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
+              child: const Text('Hapus Permanen'),
+            ),
+          ],
+        );
+      },
     );
     if (confirmed != true || !mounted) return;
     final response = await ApiService.delete(
@@ -2956,6 +2969,8 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
     };
   }
 
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+
   InputDecoration _inputDecoration({
     required String hint,
     IconData? prefixIcon,
@@ -2965,23 +2980,39 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
     return InputDecoration(
       hintText: hint,
       prefixText: prefixText,
-      prefixIcon: prefixIcon != null ? Icon(prefixIcon, size: 20, color: const Color(0xFF2563EB)) : null,
+      prefixIcon: prefixIcon != null
+          ? Icon(
+              prefixIcon,
+              size: 20,
+              color: _isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
+            )
+          : null,
       suffixIcon: suffixIcon,
       filled: true,
-      fillColor: Colors.white,
-      hintStyle: TextStyle(fontSize: 13, color: Colors.grey.shade400),
+      fillColor: _isDark ? const Color(0xFF141224) : Colors.white,
+      hintStyle: TextStyle(
+        fontSize: 13,
+        color: _isDark ? const Color(0xFF64748B) : Colors.grey.shade400,
+      ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade300),
+        borderSide: BorderSide(
+          color: _isDark ? const Color(0xFF2D2A45) : Colors.grey.shade300,
+        ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+        borderSide: BorderSide(
+          color: _isDark ? const Color(0xFF2D2A45) : const Color(0xFFE2E8F0),
+        ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.8),
+        borderSide: BorderSide(
+          color: _isDark ? const Color(0xFF3B82F6) : const Color(0xFF2563EB),
+          width: 1.8,
+        ),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -2999,9 +3030,11 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: _isDark ? const Color(0xFF161426) : const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(
+          color: _isDark ? const Color(0xFF2B2844) : const Color(0xFFE2E8F0),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3011,11 +3044,21 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEFF6FF),
+                  color: _isDark
+                      ? const Color(0xFF2563EB).withValues(alpha: 0.2)
+                      : const Color(0xFFEFF6FF),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                  border: Border.all(
+                    color: _isDark
+                        ? const Color(0xFF2563EB).withValues(alpha: 0.4)
+                        : const Color(0xFFBFDBFE),
+                  ),
                 ),
-                child: Icon(icon, size: 18, color: const Color(0xFF2563EB)),
+                child: Icon(
+                  icon,
+                  size: 18,
+                  color: _isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -3024,10 +3067,10 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0F172A),
+                        color: _isDark ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A),
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -3035,7 +3078,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                       subtitle,
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey.shade600,
+                        color: _isDark ? const Color(0xFF94A3B8) : Colors.grey.shade600,
                       ),
                     ),
                   ],
@@ -3044,7 +3087,11 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
             ],
           ),
           const SizedBox(height: 14),
-          const Divider(height: 1, thickness: 1, color: Color(0xFFE2E8F0)),
+          Divider(
+            height: 1,
+            thickness: 1,
+            color: _isDark ? const Color(0xFF28253E) : const Color(0xFFE2E8F0),
+          ),
           const SizedBox(height: 16),
           ...children,
         ],
@@ -3067,10 +3114,10 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
           children: [
             Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF1E293B),
+                color: _isDark ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B),
               ),
             ),
           ],
@@ -3080,7 +3127,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
           caption,
           style: TextStyle(
             fontSize: 11.5,
-            color: Colors.grey.shade600,
+            color: _isDark ? const Color(0xFF94A3B8) : Colors.grey.shade600,
             height: 1.3,
           ),
         ),
@@ -3102,21 +3149,27 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: _isDark ? const Color(0xFF201D35) : Colors.white,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFCBD5E1)),
+                    border: Border.all(
+                      color: _isDark ? const Color(0xFF383457) : const Color(0xFFCBD5E1),
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.add_rounded, size: 13, color: Color(0xFF2563EB)),
+                      Icon(
+                        Icons.add_rounded,
+                        size: 13,
+                        color: _isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         chipText,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF334155),
+                          color: _isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
                         ),
                       ),
                     ],
@@ -3141,6 +3194,10 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
       targetController: ctrl,
       child: TextFormField(
         controller: ctrl,
+        style: TextStyle(
+          fontSize: 13.5,
+          color: _isDark ? Colors.white : const Color(0xFF0F172A),
+        ),
         keyboardType: field.kind == _FieldKind.number
             ? TextInputType.number
             : (field.kind == _FieldKind.url ? TextInputType.url : TextInputType.text),
@@ -3159,6 +3216,11 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
       caption: 'Tentukan status keaktifan mitra untuk keperluan penempatan magang siswa.',
       child: DropdownButtonFormField<String>(
         initialValue: _status,
+        dropdownColor: _isDark ? const Color(0xFF1E1B32) : Colors.white,
+        style: TextStyle(
+          fontSize: 13,
+          color: _isDark ? Colors.white : const Color(0xFF0F172A),
+        ),
         decoration: _inputDecoration(
           hint: 'Pilih status...',
           prefixIcon: Icons.verified_user_outlined,
@@ -3183,14 +3245,21 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                     const SizedBox(width: 10),
                     Text(
                       widget.statusLabel(value),
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: _isDark ? Colors.white : const Color(0xFF0F172A),
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       value == 'active' || value == 'published'
                           ? '(Siap Kerjasama)'
                           : (value == 'draft' ? '(Tahap Inisiasi)' : '(Arsip)'),
-                      style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: _isDark ? const Color(0xFF94A3B8) : Colors.grey.shade500,
+                      ),
                     ),
                   ],
                 ),
@@ -3215,7 +3284,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
       titlePadding: EdgeInsets.zero,
       contentPadding: const EdgeInsets.fromLTRB(28, 20, 28, 12),
       actionsPadding: const EdgeInsets.fromLTRB(28, 16, 28, 24),
-      backgroundColor: Colors.white,
+      backgroundColor: _isDark ? const Color(0xFF1A182A) : Colors.white,
       title: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -3248,7 +3317,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF2563EB).withValues(alpha: 0.3),
+                        color: const Color(0xFF2563EB).withValues(alpha: _isDark ? 0.4 : 0.3),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -3265,11 +3334,11 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                         children: [
                           Flexible(
                             child: Text(
-                              widget.existing == null ? widget.action : 'Edit ${widget.title}',
-                              style: const TextStyle(
+                              widget.existing == null ? widget.action : 'Edit ',
+                              style: TextStyle(
                                 fontSize: 19,
                                 fontWeight: FontWeight.w800,
-                                color: Color(0xFF0F172A),
+                                color: _isDark ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A),
                                 letterSpacing: -0.3,
                               ),
                               overflow: TextOverflow.ellipsis,
@@ -3279,13 +3348,23 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFEFF6FF),
+                              color: _isDark
+                                  ? const Color(0xFF2563EB).withValues(alpha: 0.22)
+                                  : const Color(0xFFEFF6FF),
                               borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: const Color(0xFFBFDBFE)),
+                              border: Border.all(
+                                color: _isDark
+                                    ? const Color(0xFF3B82F6).withValues(alpha: 0.4)
+                                    : const Color(0xFFBFDBFE),
+                              ),
                             ),
-                            child: const Text(
+                            child: Text(
                               'B2B Governance',
-                              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF2563EB)),
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w700,
+                                color: _isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
+                              ),
                             ),
                           ),
                         ],
@@ -3295,24 +3374,36 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                         isPartnerResource
                             ? 'Lengkapi profil rekanan industri untuk program magang, guru tamu, dan sertifikasi kejuruan.'
                             : 'Tersimpan aman di pangkalan data instansi Kreavana untuk tata kelola resmi.',
-                        style: TextStyle(fontSize: 12.5, color: Colors.grey.shade600, height: 1.3),
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: _isDark ? const Color(0xFF94A3B8) : Colors.grey.shade600,
+                          height: 1.3,
+                        ),
                       ),
                     ],
                   ),
                 ),
                 IconButton(
                   onPressed: () => Navigator.of(context).pop(false),
-                  icon: const Icon(Icons.close_rounded, size: 20, color: Color(0xFF64748B)),
+                  icon: Icon(
+                    Icons.close_rounded,
+                    size: 20,
+                    color: _isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                  ),
                   tooltip: 'Tutup Dialog',
                   style: IconButton.styleFrom(
-                    backgroundColor: const Color(0xFFF1F5F9),
+                    backgroundColor: _isDark ? const Color(0xFF27243C) : const Color(0xFFF1F5F9),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
               ],
             ),
           ),
-          const Divider(height: 1, thickness: 1, color: Color(0xFFE2E8F0)),
+          Divider(
+            height: 1,
+            thickness: 1,
+            color: _isDark ? const Color(0xFF2D2A42) : const Color(0xFFE2E8F0),
+          ),
         ],
       ),
       content: SizedBox(
@@ -3367,20 +3458,34 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEFF6FF),
+                        color: _isDark
+                            ? const Color(0xFF1E283D).withValues(alpha: 0.7)
+                            : const Color(0xFFEFF6FF),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                        border: Border.all(
+                          color: _isDark
+                              ? const Color(0xFF2563EB).withValues(alpha: 0.45)
+                              : const Color(0xFFBFDBFE),
+                        ),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.info_outline_rounded, color: Color(0xFF2563EB), size: 20),
+                          Icon(
+                            Icons.info_outline_rounded,
+                            color: _isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
+                            size: 20,
+                          ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               isPartnerResource
                                   ? 'Panduan: Masukkan nama resmi instansi/studio mitra beserta kontak PIC. Data ini akan otomatis tampil di direktori kemitraan sekolah dan dapat ditautkan ke program magang siswa.'
                                   : 'Panduan: Lengkapi seluruh kolom wajib bertanda bintang (*) untuk menjaga keabsahan arsip instansi.',
-                              style: const TextStyle(fontSize: 12, color: Color(0xFF1E40AF), height: 1.4),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: _isDark ? const Color(0xFF93C5FD) : const Color(0xFF1E40AF),
+                                height: 1.4,
+                              ),
                             ),
                           ),
                         ],
@@ -3403,6 +3508,10 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                               : 'Nama identitas resmi dokumen atau aset.',
                           child: TextFormField(
                             controller: _titleController,
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              color: _isDark ? Colors.white : const Color(0xFF0F172A),
+                            ),
                             decoration: _inputDecoration(
                               hint: isPartnerResource
                                   ? 'Contoh: PT Studio Animasi Nusantara, Google Indonesia, Agensi Desain'
@@ -3425,6 +3534,10 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                             controller: _descriptionController,
                             minLines: 3,
                             maxLines: 4,
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              color: _isDark ? Colors.white : const Color(0xFF0F172A),
+                            ),
                             decoration: _inputDecoration(
                               hint: isPartnerResource
                                   ? 'Contoh: Kerjasama strategis penempatan magang siswa SMK jurusan Animasi 3D dan DKV, penyelarasan kurikulum industri, dan sertifikasi kejuruan...'
@@ -3461,11 +3574,18 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
           children: [
             Row(
               children: [
-                const Icon(Icons.shield_outlined, size: 16, color: Color(0xFF64748B)),
+                Icon(
+                  Icons.shield_outlined,
+                  size: 16,
+                  color: _isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                ),
                 const SizedBox(width: 6),
                 Text(
                   'Tervalidasi Sistem Instansi Kreavana',
-                  style: TextStyle(fontSize: 11.5, color: Colors.grey.shade600),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: _isDark ? const Color(0xFF94A3B8) : Colors.grey.shade600,
+                  ),
                 ),
               ],
             ),
@@ -3474,8 +3594,11 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                 OutlinedButton(
                   onPressed: () => Navigator.of(context).pop(false),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF64748B),
-                    side: const BorderSide(color: Color(0xFFCBD5E1)),
+                    foregroundColor: _isDark ? const Color(0xFFE2E8F0) : const Color(0xFF64748B),
+                    side: BorderSide(
+                      color: _isDark ? const Color(0xFF383457) : const Color(0xFFCBD5E1),
+                    ),
+                    backgroundColor: _isDark ? const Color(0xFF221F3A) : Colors.transparent,
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
@@ -3511,4 +3634,3 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
     );
   }
 }
-
