@@ -8,6 +8,7 @@ import '../widgets/app_breadcrumbs.dart';
 import '../widgets/desktop_sidebar_layout.dart';
 import '../widgets/program_magang_card.dart';
 import '../widgets/app_sweet_alert.dart';
+import '../utils/currency_formatter.dart';
 import 'detail_kebutuhan_screen.dart';
 
 class CorporateApplicant {
@@ -1493,9 +1494,11 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _titleController;
   late final TextEditingController _descriptionController;
-  late final TextEditingController _allowanceController;
+  late final TextEditingController _minSalaryController;
+  late final TextEditingController _maxSalaryController;
   late final TextEditingController _newRequirementController;
 
+  bool _isSalaryRange = true;
   String _category = 'magang'; // 'magang' or 'job'
   DateTime _selectedDeadline = DateTime(2026, 9, 21);
   bool _isSaving = false;
@@ -1510,7 +1513,8 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
     _descriptionController = TextEditingController(
       text: 'Kerja sama penempatan talenta vokasi dan mahasiswa magang pada lini produksi kreatif berstandar industri internasional.',
     );
-    _allowanceController = TextEditingController(text: 'Rp 3.500.000 / bulan');
+    _minSalaryController = TextEditingController(text: '2.500.000');
+    _maxSalaryController = TextEditingController(text: '3.500.000');
     _newRequirementController = TextEditingController();
 
     // Default 2 specializations demonstrating multi-specialization quota calculation:
@@ -1547,13 +1551,34 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
-    _allowanceController.dispose();
+    _minSalaryController.dispose();
+    _maxSalaryController.dispose();
     _newRequirementController.dispose();
     for (final s in _specializations) {
       s.quotaController.removeListener(_onQuotaChanged);
       s.dispose();
     }
     super.dispose();
+  }
+
+  String get currentAllowanceText {
+    final min = _minSalaryController.text.trim();
+    final max = _maxSalaryController.text.trim();
+    if (_isSalaryRange) {
+      if (min.isNotEmpty && max.isNotEmpty) {
+        return 'Rp $min - Rp $max / bulan';
+      } else if (min.isNotEmpty) {
+        return 'Mulai dari Rp $min / bulan';
+      } else if (max.isNotEmpty) {
+        return 'Hingga Rp $max / bulan';
+      }
+      return 'Rp 2.500.000 - Rp 3.500.000 / bulan';
+    } else {
+      if (min.isNotEmpty) {
+        return 'Rp $min / bulan';
+      }
+      return 'Rp 3.500.000 / bulan';
+    }
   }
 
   int get totalQuota {
@@ -1684,12 +1709,32 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
       return;
     }
 
+    if (_isSalaryRange) {
+      if (_minSalaryController.text.trim().isEmpty || _maxSalaryController.text.trim().isEmpty) {
+        AppSweetAlert.warning(
+          context,
+          'Harap tentukan nominal minimum dan maksimum rentang gaji.',
+          title: 'Rentang Gaji Belum Lengkap',
+        );
+        return;
+      }
+    } else {
+      if (_minSalaryController.text.trim().isEmpty) {
+        AppSweetAlert.warning(
+          context,
+          'Harap tentukan nominal gaji / uang saku.',
+          title: 'Nominal Gaji Kosong',
+        );
+        return;
+      }
+    }
+
     setState(() => _isSaving = true);
 
     final isMagang = _category == 'magang';
     final title = _titleController.text.trim();
     final description = _descriptionController.text.trim();
-    final allowance = _allowanceController.text.trim();
+    final allowance = currentAllowanceText;
     final deadlineIso = _selectedDeadline.toIso8601String();
     final formattedDeadline = _formattedDeadline;
 
@@ -1762,6 +1807,7 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
     String? prefixText,
     String? suffixText,
     Widget? suffixIcon,
+    EdgeInsetsGeometry? contentPadding,
   }) {
     return InputDecoration(
       hintText: hint,
@@ -1772,7 +1818,7 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
       filled: true,
       fillColor: Colors.white,
       hintStyle: TextStyle(fontSize: 13, color: Colors.grey.shade400),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+      contentPadding: contentPadding ?? const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: Colors.grey.shade300),
@@ -1882,6 +1928,254 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
         const SizedBox(height: 8),
         child,
       ],
+    );
+  }
+
+  Widget _buildSalaryField() {
+    return _buildFieldWithHeader(
+      label: 'Estimasi Gaji / Uang Saku *',
+      caption: 'Tentukan rentang nominal (minimum s/d maksimum) atau nominal tetap per bulan.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Mode Selector: Rentang vs Tetap
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              InkWell(
+                onTap: () {
+                  setState(() {
+                    _isSalaryRange = true;
+                    if (_maxSalaryController.text.isEmpty) {
+                      _maxSalaryController.text = _category == 'magang' ? '3.500.000' : '18.000.000';
+                    }
+                  });
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: _isSalaryRange ? const Color(0xFFEFF6FF) : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: _isSalaryRange ? const Color(0xFF93C5FD) : const Color(0xFFE2E8F0),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.linear_scale_rounded,
+                        size: 14,
+                        color: _isSalaryRange ? const Color(0xFF2563EB) : const Color(0xFF64748B),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Rentang Gaji',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: _isSalaryRange ? const Color(0xFF2563EB) : const Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              InkWell(
+                onTap: () {
+                  setState(() {
+                    _isSalaryRange = false;
+                  });
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: !_isSalaryRange ? const Color(0xFFEFF6FF) : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: !_isSalaryRange ? const Color(0xFF93C5FD) : const Color(0xFFE2E8F0),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.attach_money_rounded,
+                        size: 14,
+                        color: !_isSalaryRange ? const Color(0xFF2563EB) : const Color(0xFF64748B),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Nominal Tetap',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: !_isSalaryRange ? const Color(0xFF2563EB) : const Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Input Controls
+          if (_isSalaryRange)
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _minSalaryController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [const IndonesianCurrencyInputFormatter()],
+                    onChanged: (_) => setState(() {}),
+                    decoration: _inputDecoration(
+                      hint: 'Min: 2.500.000',
+                      prefixText: 'Rp ',
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                    ),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'Min wajib';
+                      return null;
+                    },
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4),
+                  child: Text(
+                    's/d',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: TextFormField(
+                    controller: _maxSalaryController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [const IndonesianCurrencyInputFormatter()],
+                    onChanged: (_) => setState(() {}),
+                    decoration: _inputDecoration(
+                      hint: 'Maks: 3.500.000',
+                      prefixText: 'Rp ',
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                    ),
+                    validator: (v) {
+                      if (_isSalaryRange && (v == null || v.trim().isEmpty)) {
+                        return 'Maks wajib';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+              ],
+            )
+          else
+            TextFormField(
+              controller: _minSalaryController,
+              keyboardType: TextInputType.number,
+              inputFormatters: [const IndonesianCurrencyInputFormatter()],
+              onChanged: (_) => setState(() {}),
+              decoration: _inputDecoration(
+                hint: 'Contoh: 3.500.000',
+                prefixText: 'Rp ',
+                prefixIcon: Icons.payments_outlined,
+              ),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return 'Nominal wajib diisi';
+                return null;
+              },
+            ),
+          const SizedBox(height: 6),
+
+          // Live Preview Badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: const Color(0xFFBFDBFE)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.remove_red_eye_outlined, size: 12, color: Color(0xFF2563EB)),
+                const SizedBox(width: 5),
+                Flexible(
+                  child: Text(
+                    'Pratinjau: $currentAllowanceText',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1E40AF),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDeadlineField() {
+    return _buildFieldWithHeader(
+      label: 'Batas Periode Pendaftaran *',
+      caption: 'Batas akhir pengajuan berkas pelamar (format: 21 Sep 2026).',
+      child: InkWell(
+        onTap: _pickDeadlineDate,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.calendar_today_outlined,
+                  size: 20, color: Color(0xFF2563EB)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  _formattedDeadline,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'Pilih Tanggal',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2563EB),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -2053,7 +2347,8 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
                                           _titleController.text =
                                               'Program Magang MBKM 3D Modeler Batch I 2026';
                                         }
-                                        _allowanceController.text = 'Rp 3.500.000 / bulan';
+                                        _minSalaryController.text = '2.500.000';
+                                        _maxSalaryController.text = '3.500.000';
                                       });
                                     },
                                     borderRadius: BorderRadius.circular(12),
@@ -2121,7 +2416,8 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
                                           _titleController.text =
                                               'Senior Creative Director & Brand Strategist';
                                         }
-                                        _allowanceController.text = 'Rp 15.000.000 / bulan';
+                                        _minSalaryController.text = '12.000.000';
+                                        _maxSalaryController.text = '18.000.000';
                                       });
                                     },
                                     borderRadius: BorderRadius.circular(12),
@@ -2222,141 +2518,15 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
-                                  child: _buildFieldWithHeader(
-                                    label: 'Estimasi Gaji / Uang Saku *',
-                                    caption: 'Uang saku bulanan magang atau rentang gaji yang ditawarkan.',
-                                    child: TextFormField(
-                                      controller: _allowanceController,
-                                      decoration: _inputDecoration(
-                                        hint: 'Contoh: Rp 3.500.000 / bulan',
-                                        prefixIcon: Icons.payments_outlined,
-                                      ),
-                                      validator: (v) => v == null || v.trim().isEmpty
-                                          ? 'Estimasi gaji wajib diisi'
-                                          : null,
-                                    ),
-                                  ),
-                                ),
+                                Expanded(child: _buildSalaryField()),
                                 const SizedBox(width: 16),
-                                Expanded(
-                                  child: _buildFieldWithHeader(
-                                    label: 'Batas Periode Pendaftaran *',
-                                    caption: 'Batas akhir pengajuan berkas pelamar (format: 21 Sep 2026).',
-                                    child: InkWell(
-                                      onTap: _pickDeadlineDate,
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(12),
-                                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            const Icon(Icons.calendar_today_outlined,
-                                                size: 20, color: Color(0xFF2563EB)),
-                                            const SizedBox(width: 12),
-                                            Expanded(
-                                              child: Text(
-                                                _formattedDeadline,
-                                                style: const TextStyle(
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.w700,
-                                                  color: Color(0xFF0F172A),
-                                                ),
-                                              ),
-                                            ),
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                  horizontal: 8, vertical: 4),
-                                              decoration: BoxDecoration(
-                                                color: const Color(0xFFEFF6FF),
-                                                borderRadius: BorderRadius.circular(8),
-                                              ),
-                                              child: const Text(
-                                                'Pilih Tanggal',
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: Color(0xFF2563EB),
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
+                                Expanded(child: _buildDeadlineField()),
                               ],
                             )
                           else ...[
-                            _buildFieldWithHeader(
-                              label: 'Estimasi Gaji / Uang Saku *',
-                              caption: 'Uang saku bulanan magang atau rentang gaji yang ditawarkan.',
-                              child: TextFormField(
-                                controller: _allowanceController,
-                                decoration: _inputDecoration(
-                                  hint: 'Contoh: Rp 3.500.000 / bulan',
-                                  prefixIcon: Icons.payments_outlined,
-                                ),
-                                validator: (v) => v == null || v.trim().isEmpty
-                                    ? 'Estimasi gaji wajib diisi'
-                                    : null,
-                              ),
-                            ),
+                            _buildSalaryField(),
                             const SizedBox(height: 16),
-                            _buildFieldWithHeader(
-                              label: 'Batas Periode Pendaftaran *',
-                              caption: 'Batas akhir pengajuan berkas pelamar (format: 21 Sep 2026).',
-                              child: InkWell(
-                                onTap: _pickDeadlineDate,
-                                borderRadius: BorderRadius.circular(12),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.calendar_today_outlined,
-                                          size: 20, color: Color(0xFF2563EB)),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Text(
-                                          _formattedDeadline,
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w700,
-                                            color: Color(0xFF0F172A),
-                                          ),
-                                        ),
-                                      ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFEFF6FF),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: const Text(
-                                          'Pilih Tanggal',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w600,
-                                            color: Color(0xFF2563EB),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
+                            _buildDeadlineField(),
                           ],
                         ],
                       ),
