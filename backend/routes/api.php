@@ -115,6 +115,10 @@ Route::middleware(['auth:api', 'user.not_suspended'])->group(function () {
 
     // Institution workspace resources
     Route::prefix('institution/resources')->group(function () {
+        Route::get('corporate-search', [\App\Http\Controllers\InstitutionResourceController::class, 'searchCorporates']);
+        Route::post('upload-mou', [\App\Http\Controllers\InstitutionResourceController::class, 'uploadMou']);
+        Route::post('{id}/approve', [\App\Http\Controllers\InstitutionResourceController::class, 'approve']);
+        Route::post('{id}/reject', [\App\Http\Controllers\InstitutionResourceController::class, 'reject']);
         Route::get('/', [\App\Http\Controllers\InstitutionResourceController::class, 'index']);
         Route::post('/', [\App\Http\Controllers\InstitutionResourceController::class, 'store']);
         Route::put('{id}', [\App\Http\Controllers\InstitutionResourceController::class, 'update']);
