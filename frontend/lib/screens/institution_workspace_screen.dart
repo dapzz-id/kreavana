@@ -4138,7 +4138,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                           Expanded(
                             child: Text(
                               isPartnerResource
-                                  ? 'Panduan: Masukkan nama resmi instansi/studio mitra beserta kontak PIC. Data ini akan otomatis tampil di direktori kemitraan sekolah dan dapat ditautkan ke program magang siswa.'
+                                  ? 'Panduan: Pilih akun Corporate mitra, lengkapi profil industri, dan unggah berkas draf MoU. Pengajuan kemitraan akan dikirim dengan status Menunggu Persetujuan Corporate.'
                                   : 'Panduan: Lengkapi seluruh kolom wajib bertanda bintang (*) untuk menjaga keabsahan arsip instansi.',
                               style: const TextStyle(fontSize: 12, color: Color(0xFF1E40AF), height: 1.4),
                             ),
@@ -4147,6 +4147,12 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                       ),
                     ),
                     const SizedBox(height: 16),
+
+                    // Corporate Account Selection (Partners Only)
+                    if (isPartnerResource) ...[
+                      _buildCorporateSearchSection(),
+                      const SizedBox(height: 16),
+                    ],
 
                     // Section 1: Profil & Identitas Utama
                     _buildFieldCardContainer(
@@ -4208,6 +4214,12 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                         children: gridRows,
                       ),
                     ],
+
+                    // MoU Upload Section (Partners Only)
+                    if (isPartnerResource) ...[
+                      const SizedBox(height: 16),
+                      _buildMouUploadSection(),
+                    ],
                   ],
                 );
               },
@@ -4249,7 +4261,9 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                           height: 16,
                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
-                      : const Icon(Icons.check_circle_outline_rounded, size: 18),
+                      : (isPartnerResource && widget.existing == null
+                          ? const Icon(Icons.send_rounded, size: 17)
+                          : const Icon(Icons.check_circle_outline_rounded, size: 18)),
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF2563EB),
                     foregroundColor: Colors.white,
@@ -4259,8 +4273,12 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                   ),
                   onPressed: _isSaving ? null : _submit,
                   label: Text(
-                    _isSaving ? 'Menyimpan...' : (isPartnerResource ? 'Simpan Mitra Industri' : 'Simpan Data'),
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    _isSaving
+                        ? 'Memproses...'
+                        : (isPartnerResource
+                            ? (widget.existing == null ? 'Ajukan Kemitraan' : 'Simpan Perubahan')
+                            : 'Simpan Data'),
+                    style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
               ],
