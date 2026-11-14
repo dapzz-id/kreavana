@@ -3140,7 +3140,6 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
       final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'doc', 'docx'],
-        withData: true,
       );
 
       if (result == null || result.files.isEmpty) return;
@@ -3151,22 +3150,21 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
         _isUploadingMou = true;
       });
 
-      final formData = FormData();
-      if (file.bytes != null) {
-        formData.files.add(
-          MapEntry(
-            'mou_file',
-            MultipartFile.fromBytes(file.bytes!, filename: file.name),
-          ),
-        );
-      } else if (file.path != null) {
-        formData.files.add(
-          MapEntry(
-            'mou_file',
-            await MultipartFile.fromFile(file.path!, filename: file.name),
-          ),
-        );
+      final fileBytes = await file.readAsBytes();
+      if (fileBytes.isEmpty) {
+        if (!mounted) return;
+        setState(() => _isUploadingMou = false);
+        AppSweetAlert.error(context, 'Berkas kosong atau tidak dapat dibaca.');
+        return;
       }
+
+      final formData = FormData();
+      formData.files.add(
+        MapEntry(
+          'mou_file',
+          MultipartFile.fromBytes(fileBytes, filename: file.name),
+        ),
+      );
 
       final res = await ApiService.postFormData('institution/resources/upload-mou', formData);
       if (!mounted) return;
@@ -3546,7 +3544,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
       label: 'Status Kemitraan & Akses *',
       caption: 'Tentukan status keaktifan mitra untuk keperluan penempatan magang siswa.',
       child: DropdownButtonFormField<String>(
-        value: _status,
+        initialValue: _status,
         dropdownColor: Colors.white,
         decoration: _inputDecoration(
           hint: 'Pilih status...',
@@ -3745,7 +3743,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
               child: ListView.separated(
                 shrinkWrap: true,
                 itemCount: _corporateList.length,
-                separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFF1F5F9)),
                 itemBuilder: (context, idx) {
                   final corp = _corporateList[idx];
                   final corpName = corp['name']?.toString() ?? 'Perusahaan';
