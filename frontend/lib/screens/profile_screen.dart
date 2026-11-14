@@ -649,20 +649,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
     );
 
-    final isGovOrSchool =
-        (_currentUser.role == 'user' || _currentUser.role == 'creator') &&
-        const [
-          'government',
-          'pemerintah',
-          'instansi',
-          'school',
-          'education',
-          'campus',
-          'sekolah',
-          'kampus',
-          'institution',
-          'institusi',
-        ].contains(_currentUser.subRole?.toLowerCase().trim());
+    final isGovOrSchool = _isSchool ||
+        _currentUser.isInstitution ||
+        _isGovernment ||
+        ((_currentUser.role == 'user' || _currentUser.role == 'creator') &&
+            const [
+              'government',
+              'pemerintah',
+              'instansi',
+              'school',
+              'education',
+              'campus',
+              'sekolah',
+              'kampus',
+              'institution',
+              'institusi',
+            ].contains(_currentUser.subRole?.toLowerCase().trim()));
 
     if (isDesktop && widget.showSidebar && !_currentUser.isAdmin) {
       return DesktopSidebarLayout(

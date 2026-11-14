@@ -42,6 +42,7 @@ import '../services/system_settings_service.dart';
 import '../widgets/feature_disabled_view.dart';
 import '../widgets/app_sweet_alert.dart';
 import '../widgets/sidebar_hover_tile.dart';
+import '../services/sidebar_scroll_manager.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'corporate_lowongan_screen.dart';
 
@@ -68,23 +69,21 @@ class _MainNavigationState extends State<MainNavigation> {
   final Set<int> _loadedScreenIndices = {};
   final Map<int, Widget> _screenCache = {};
   String? _activeGovRoute;
-  final ScrollController _sidebarScrollController = ScrollController();
-  static double _savedSidebarScrollOffset = 0;
+  late final ScrollController _sidebarScrollController;
 
   @override
   void initState() {
     super.initState();
+    _sidebarScrollController = SidebarScrollManager.createController();
     _currentUser = widget.initialUser;
     _currentIndex = widget.initialIndex;
     _loadedScreenIndices.add(widget.initialIndex);
     SystemSettingsService.moduleStatuses.addListener(_onModuleStatusesChanged);
     currentUserNotifier.addListener(_onUserNotifierChanged);
+    SidebarScrollManager.restoreScroll(_sidebarScrollController);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _refreshProfile();
-        if (_sidebarScrollController.hasClients) {
-          _sidebarScrollController.jumpTo(_savedSidebarScrollOffset);
-        }
       }
     });
   }
@@ -362,7 +361,7 @@ class _MainNavigationState extends State<MainNavigation> {
       Navigator.of(context).popUntil((route) => route.isFirst);
     }
     if (_sidebarScrollController.hasClients) {
-      _savedSidebarScrollOffset = _sidebarScrollController.offset;
+      SidebarScrollManager.savedOffset = _sidebarScrollController.offset;
     }
     setState(() {
       _currentIndex = index;
@@ -661,7 +660,7 @@ class _MainNavigationState extends State<MainNavigation> {
 
   void _pushGovScreen(Widget destination) {
     if (_sidebarScrollController.hasClients) {
-      _savedSidebarScrollOffset = _sidebarScrollController.offset;
+      SidebarScrollManager.savedOffset = _sidebarScrollController.offset;
     }
     Navigator.push(
       context,
@@ -675,6 +674,7 @@ class _MainNavigationState extends State<MainNavigation> {
     ).then((_) {
       if (mounted) {
         setState(() => _activeGovRoute = null);
+        SidebarScrollManager.restoreScroll(_sidebarScrollController);
       }
     });
   }
@@ -2357,24 +2357,35 @@ class _MainNavigationState extends State<MainNavigation> {
                             PointerDeviceKind.trackpad,
                           },
                         ),
-                        child: RawScrollbar(
-                          controller: _sidebarScrollController,
-                          thumbVisibility: false,
-                          thickness: 4,
-                          radius: const Radius.circular(4),
-                          thumbColor: isDark
-                              ? Colors.white.withValues(alpha: 0.25)
-                              : Colors.black.withValues(alpha: 0.2),
-                          child: ListView(
+                        child: NotificationListener<ScrollNotification>(
+                          onNotification: (notification) {
+                            if (notification is ScrollUpdateNotification) {
+                              if (notification.metrics.axis == Axis.vertical) {
+                                SidebarScrollManager.savedOffset =
+                                    notification.metrics.pixels;
+                              }
+                            }
+                            return false;
+                          },
+                          child: RawScrollbar(
                             controller: _sidebarScrollController,
-                            physics: const AlwaysScrollableScrollPhysics(
-                              parent: BouncingScrollPhysics(),
-                            ),
-                            padding: const EdgeInsets.only(top: 12, bottom: 20),
-                            children: _buildSidebarItemsList(
-                              theme: theme,
-                              isDark: isDark,
-                              isCollapsed: _isSidebarCollapsed,
+                            thumbVisibility: false,
+                            thickness: 4,
+                            radius: const Radius.circular(4),
+                            thumbColor: isDark
+                                ? Colors.white.withValues(alpha: 0.25)
+                                : Colors.black.withValues(alpha: 0.2),
+                            child: ListView(
+                              controller: _sidebarScrollController,
+                              physics: const AlwaysScrollableScrollPhysics(
+                                parent: BouncingScrollPhysics(),
+                              ),
+                              padding: const EdgeInsets.only(top: 12, bottom: 20),
+                              children: _buildSidebarItemsList(
+                                theme: theme,
+                                isDark: isDark,
+                                isCollapsed: _isSidebarCollapsed,
+                              ),
                             ),
                           ),
                         ),

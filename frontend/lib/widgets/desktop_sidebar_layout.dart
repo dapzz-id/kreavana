@@ -30,6 +30,7 @@ import 'creator_sidebar_menus.dart';
 import 'kreavana_ai_floating_widget.dart';
 import 'app_sweet_alert.dart';
 import '../services/system_settings_service.dart';
+import '../services/sidebar_scroll_manager.dart';
 import 'sidebar_hover_tile.dart';
 
 class DesktopSidebarLayout extends StatefulWidget {
@@ -54,19 +55,15 @@ class DesktopSidebarLayout extends StatefulWidget {
 
 class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
   bool _isSidebarCollapsed = false;
-  final ScrollController _sidebarScrollController = ScrollController();
-  static double _savedSidebarScrollOffset = 0;
+  late final ScrollController _sidebarScrollController;
 
   @override
   void initState() {
     super.initState();
+    _sidebarScrollController = SidebarScrollManager.createController();
     SystemSettingsService.moduleStatuses.addListener(_onModuleStatusesChanged);
     currentUserNotifier.addListener(_onUserChanged);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _sidebarScrollController.hasClients) {
-        _sidebarScrollController.jumpTo(_savedSidebarScrollOffset);
-      }
-    });
+    SidebarScrollManager.restoreScroll(_sidebarScrollController);
   }
 
   @override
@@ -132,7 +129,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
 
   void _pushNoAnimation(Widget destination) {
     if (_sidebarScrollController.hasClients) {
-      _savedSidebarScrollOffset = _sidebarScrollController.offset;
+      SidebarScrollManager.savedOffset = _sidebarScrollController.offset;
     }
     Navigator.pushReplacement(
       context,
@@ -406,7 +403,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
       return;
     }
     if (_sidebarScrollController.hasClients) {
-      _savedSidebarScrollOffset = _sidebarScrollController.offset;
+      SidebarScrollManager.savedOffset = _sidebarScrollController.offset;
     }
     final targetRoute = AppRoutes.getRouteForIndex(
       index,
@@ -419,6 +416,9 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
   }
 
   void _pushService(String serviceKey) {
+    if (_sidebarScrollController.hasClients) {
+      SidebarScrollManager.savedOffset = _sidebarScrollController.offset;
+    }
     if (widget.user.isGuest) {
       AuthGuardDialog.show(
         context,
@@ -449,6 +449,9 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
   }
 
   void _pushLink(String route) {
+    if (_sidebarScrollController.hasClients) {
+      SidebarScrollManager.savedOffset = _sidebarScrollController.offset;
+    }
     if (widget.user.isGuest) {
       const guestBlockedRoutes = {
         'kolaborasi': 'mengakses ruang kolaborasi',
@@ -1365,21 +1368,31 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                           PointerDeviceKind.trackpad,
                         },
                       ),
-                      child: RawScrollbar(
-                        controller: _sidebarScrollController,
-                        thumbVisibility: false,
-                        thickness: 4,
-                        radius: const Radius.circular(4),
-                        thumbColor: isDark
-                            ? Colors.white.withValues(alpha: 0.25)
-                            : Colors.black.withValues(alpha: 0.2),
-                        child: ListView(
+                      child: NotificationListener<ScrollNotification>(
+                        onNotification: (notification) {
+                          if (notification is ScrollUpdateNotification) {
+                            if (notification.metrics.axis == Axis.vertical) {
+                              SidebarScrollManager.savedOffset =
+                                  notification.metrics.pixels;
+                            }
+                          }
+                          return false;
+                        },
+                        child: RawScrollbar(
                           controller: _sidebarScrollController,
-                          physics: const AlwaysScrollableScrollPhysics(
-                            parent: BouncingScrollPhysics(),
-                          ),
-                          padding: const EdgeInsets.only(top: 12, bottom: 20),
-                      children: [
+                          thumbVisibility: false,
+                          thickness: 4,
+                          radius: const Radius.circular(4),
+                          thumbColor: isDark
+                              ? Colors.white.withValues(alpha: 0.25)
+                              : Colors.black.withValues(alpha: 0.2),
+                          child: ListView(
+                            controller: _sidebarScrollController,
+                            physics: const AlwaysScrollableScrollPhysics(
+                              parent: BouncingScrollPhysics(),
+                            ),
+                            padding: const EdgeInsets.only(top: 12, bottom: 20),
+                            children: [
                         _buildNavRow(
                           icon: Icons.home_outlined,
                           label: 'Beranda',
@@ -1867,6 +1880,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                   ),
                 ),
               ),
+            ),
 
                   // ── Bottom user card ───────────────────────────────
                   Divider(
