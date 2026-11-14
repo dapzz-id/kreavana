@@ -3596,8 +3596,8 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
         'metadata': {
           'category': 'Magang',
           'industry_partner': 'PT Studio Animasi Nusantara',
-          'period': '2026-12-23',
-          'deadline': '2026-12-23',
+          'period': '21 Sep 2026',
+          'deadline': '2026-09-21',
           'quota_text': '4 dari 10 posisi',
           'quota': '10 Mahasiswa',
           'allowance': 'Rp 3.500.000 / bulan',

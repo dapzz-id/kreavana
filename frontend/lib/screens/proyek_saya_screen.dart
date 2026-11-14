@@ -272,8 +272,8 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
         subRoleSlug: 'animator',
         type: 'project',
         status: 'open',
-        deadline: '2026-12-23',
-        eventStartDate: '2026-12-23',
+        deadline: '2026-09-21',
+        eventStartDate: '2026-09-21',
         eventEndDate: '2027-02-23',
         budgetRange: 'Rp 3.500.000 / bulan',
         requirements: [
@@ -1555,11 +1555,10 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                       ? 'Pendaftaran Ditutup'
                       : item.statusLabel)),
           statusBadgeColor: item.statusColor,
-          registrationPeriod: item.deadline != null && item.deadline != '-'
-              ? (item.deadline!.trim().length >= 10 && RegExp(r'^\d{4}-\d{2}-\d{2}').hasMatch(item.deadline!.trim())
-                  ? item.deadline!.trim().substring(0, 10)
-                  : item.deadline!)
-              : '2026-12-23',
+          registrationPeriod: ProgramMagangCard.formatDateDisplay(
+            item.deadline != '-' ? item.deadline : null,
+            defaultFallback: '21 Sep 2026',
+          ),
           quotaText: '4 dari 10 posisi',
           requirements: const [
             'Siswa SMK jurusan terkait',

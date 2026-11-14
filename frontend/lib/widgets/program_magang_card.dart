@@ -36,6 +36,36 @@ class ProgramMagangCard extends StatelessWidget {
     this.opportunity,
   });
 
+  /// Formats raw date string (e.g. "2026-09-21" or "2026-12-23") to "21 Sep 2026" / "d MMM yyyy"
+  static String formatDateDisplay(
+    String? rawDate, {
+    String defaultFallback = '21 Sep 2026',
+  }) {
+    if (rawDate == null || rawDate.trim().isEmpty) return defaultFallback;
+    final trimmed = rawDate.trim();
+
+    // If already in "d MMM yyyy" format (e.g. "21 Sep 2026")
+    if (RegExp(r'^\d{1,2}\s+[A-Za-z]{3,4}\s+\d{4}$').hasMatch(trimmed)) {
+      return trimmed;
+    }
+
+    try {
+      final parsed = DateTime.tryParse(trimmed);
+      if (parsed != null) {
+        return DateFormat('d MMM yyyy', 'id_ID').format(parsed);
+      }
+    } catch (_) {}
+
+    if (RegExp(r'^\d{4}-\d{2}-\d{2}').hasMatch(trimmed)) {
+      try {
+        final parsed = DateTime.parse(trimmed.substring(0, 10));
+        return DateFormat('d MMM yyyy', 'id_ID').format(parsed);
+      } catch (_) {}
+    }
+
+    return trimmed;
+  }
+
   /// Factory constructor to create ProgramMagangCard directly from an OpportunityModel
   factory ProgramMagangCard.fromOpportunity(
     OpportunityModel opp, {
@@ -67,20 +97,9 @@ class ProgramMagangCard extends StatelessWidget {
       statusBg = const Color(0xFFDBEAFE);
     }
 
-    // 3. Registration period (format: YYYY-MM-DD, e.g. 2026-12-23)
-    String period = '2026-12-23';
+    // 3. Registration period (format: 21 Sep 2026)
     final rawDate = opp.deadline ?? opp.eventDate ?? opp.eventStartDate;
-    if (rawDate != null && rawDate.trim().isNotEmpty) {
-      final trimmed = rawDate.trim();
-      final parsed = DateTime.tryParse(trimmed);
-      if (parsed != null) {
-        period = DateFormat('yyyy-MM-dd').format(parsed);
-      } else if (trimmed.length >= 10 && RegExp(r'^\d{4}-\d{2}-\d{2}').hasMatch(trimmed)) {
-        period = trimmed.substring(0, 10);
-      } else {
-        period = trimmed;
-      }
-    }
+    final period = formatDateDisplay(rawDate, defaultFallback: '21 Sep 2026');
 
     // 4. Quota text
     int totalQuota = 0;
@@ -161,18 +180,9 @@ class ProgramMagangCard extends StatelessWidget {
     final rawPeriod = meta['deadline']?.toString() ??
         meta['period']?.toString() ??
         meta['registration_period']?.toString() ??
-        data['deadline']?.toString() ??
-        '2026-12-23';
+        data['deadline']?.toString();
 
-    String period = '2026-12-23';
-    final parsed = DateTime.tryParse(rawPeriod.trim());
-    if (parsed != null) {
-      period = DateFormat('yyyy-MM-dd').format(parsed);
-    } else if (rawPeriod.trim().length >= 10 && RegExp(r'^\d{4}-\d{2}-\d{2}').hasMatch(rawPeriod.trim())) {
-      period = rawPeriod.trim().substring(0, 10);
-    } else {
-      period = rawPeriod.trim();
-    }
+    final period = formatDateDisplay(rawPeriod, defaultFallback: '21 Sep 2026');
 
     final quota = meta['quota_text']?.toString() ??
         meta['quota']?.toString() ??
@@ -348,7 +358,7 @@ class ProgramMagangCard extends StatelessWidget {
               _buildInfoRow(
                 icon: Icons.calendar_month_outlined,
                 label: 'Periode pendaftaran',
-                value: registrationPeriod ?? '2026-12-23',
+                value: registrationPeriod ?? '21 Sep 2026',
                 isDark: isDark,
               ),
               const SizedBox(height: 16),
