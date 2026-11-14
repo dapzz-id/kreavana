@@ -2217,7 +2217,11 @@ class _DashboardScreenState extends State<DashboardScreen>
       case 'Cari Mitra Industri':
       case 'Kurasi Talenta':
       case 'Kurasi Talenta Daerah':
-        context.go(AppRoutes.explore);
+        if (widget.user.isSchool || widget.user.isInstitution) {
+          context.go(AppRoutes.mitraIndustri);
+        } else {
+          context.go(AppRoutes.explore);
+        }
         break;
       case 'Alokasi Anggaran':
       case 'Anggaran Dikelola':
@@ -2276,6 +2280,9 @@ class _DashboardScreenState extends State<DashboardScreen>
       case 'Event Berjalan':
       case 'Total Wedding':
       case 'Kampanye Aktif':
+      case 'Program Magang':
+      case 'Program & Magang':
+      case 'Program dan Magang':
         if (widget.user.isGuest) {
           AuthGuardDialog.show(context, actionName: 'mengakses manajemen proyek');
           return;

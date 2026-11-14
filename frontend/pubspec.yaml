@@ -108,6 +108,7 @@ flutter:
     - assets/
     - assets/partners/
     - assets/events/
+    - assets/showcases/
     - .env.development
     - .env.staging
 

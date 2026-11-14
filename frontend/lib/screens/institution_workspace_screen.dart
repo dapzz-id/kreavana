@@ -124,7 +124,7 @@ class _InstitutionWorkspaceScreenState
     'monitoring': Icons.monitor_heart_outlined,
     'documents': Icons.folder_outlined,
     'announcements': Icons.campaign_outlined,
-    'showcases': Icons.palette_outlined,
+    'showcases': Icons.collections_bookmark_rounded,
     'study_programs': Icons.school_outlined,
     'events': Icons.event_outlined,
     'talents': Icons.person_search_outlined,
@@ -728,8 +728,8 @@ class _InstitutionWorkspaceScreenState
       'anggaran': 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=1600&q=80',
       'audits': 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1600&q=80',
       'laporan': 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1600&q=80',
-      'showcases': 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80',
-      'karya': 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80',
+      'showcases': 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=1600&q=80',
+      'karya': 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=1600&q=80',
     };
     if (map.containsKey(resourceType)) {
       return map[resourceType]!;
@@ -843,6 +843,7 @@ class _InstitutionWorkspaceScreenState
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final isCompact = constraints.maxWidth < 650;
+                final isShowcase = widget.resourceType == 'showcases';
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -859,9 +860,15 @@ class _InstitutionWorkspaceScreenState
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.22),
+                                      color: isShowcase
+                                          ? const Color(0xFFF59E0B).withValues(alpha: 0.28)
+                                          : Colors.white.withValues(alpha: 0.22),
                                       borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+                                      border: Border.all(
+                                        color: isShowcase
+                                            ? const Color(0xFFFDE68A).withValues(alpha: 0.5)
+                                            : Colors.white.withValues(alpha: 0.35),
+                                      ),
                                       boxShadow: [
                                         BoxShadow(
                                           color: Colors.black.withValues(alpha: 0.15),
@@ -873,12 +880,18 @@ class _InstitutionWorkspaceScreenState
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        const Icon(Icons.verified_user_rounded, color: Colors.amberAccent, size: 14),
+                                        Icon(
+                                          isShowcase ? Icons.auto_awesome_rounded : Icons.verified_user_rounded,
+                                          color: isShowcase ? const Color(0xFFFDE047) : Colors.amberAccent,
+                                          size: 14,
+                                        ),
                                         const SizedBox(width: 6),
                                         Text(
-                                          _isGovernment
-                                              ? 'Tata Kelola Kedinasan & LPSE'
-                                              : 'Enterprise B2B Governance',
+                                          isShowcase
+                                              ? 'Galeri Talenta & Kurasi Karya Vokasi'
+                                              : (_isGovernment
+                                                  ? 'Tata Kelola Kedinasan & LPSE'
+                                                  : 'Enterprise B2B Governance'),
                                           style: const TextStyle(
                                             color: Colors.white,
                                             fontSize: 11,
@@ -898,28 +911,55 @@ class _InstitutionWorkspaceScreenState
                                       border: Border.all(color: Colors.white.withValues(alpha: 0.20)),
                                     ),
                                     child: Text(
-                                      '${_records.length} Arsip Terverifikasi',
+                                      isShowcase
+                                          ? '${_records.length} Portofolio Terkurasi'
+                                          : '${_records.length} Arsip Terverifikasi',
                                       style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
                                     ),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 12),
-                              Text(
-                                _title,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: -0.5,
-                                  shadows: [
-                                    Shadow(
-                                      color: Colors.black87,
-                                      offset: Offset(0, 2),
-                                      blurRadius: 8,
+                              Row(
+                                children: [
+                                  if (isShowcase) ...[
+                                    Container(
+                                      padding: const EdgeInsets.all(7),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(alpha: 0.2),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(alpha: 0.2),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: const Icon(Icons.collections_bookmark_rounded, color: Colors.white, size: 22),
                                     ),
+                                    const SizedBox(width: 12),
                                   ],
-                                ),
+                                  Flexible(
+                                    child: Text(
+                                      _title,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: -0.5,
+                                        shadows: [
+                                          Shadow(
+                                            color: Colors.black87,
+                                            offset: Offset(0, 2),
+                                            blurRadius: 8,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                               const SizedBox(height: 6),
                               Text(
@@ -3098,6 +3138,147 @@ class _InstitutionWorkspaceScreenState
     );
   }
 
+  Widget _buildShowcaseMediaThumbnail({
+    required Map<String, dynamic> record,
+    required String title,
+    required String category,
+    required Color discColor,
+    required List<Color> discGradient,
+    required IconData discIcon,
+    required bool isDark,
+  }) {
+    final meta = _metadata(record);
+    final titleLower = title.toLowerCase();
+
+    // 1. Resolve Project Thumbnail Asset & Network URL
+    String? assetPath;
+    String? networkUrl;
+
+    if ((meta['image_url'] ?? '').toString().isNotEmpty) {
+      networkUrl = meta['image_url'].toString();
+    } else if ((meta['thumbnail'] ?? '').toString().isNotEmpty) {
+      final t = meta['thumbnail'].toString();
+      if (t.startsWith('http')) {
+        networkUrl = t;
+      } else {
+        assetPath = t;
+      }
+    }
+
+    if (titleLower.contains('nusantara heritage') || titleLower.contains('animasi')) {
+      assetPath = 'assets/showcases/nusantara_heritage_3d.jpg';
+      networkUrl ??= 'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?auto=format&fit=crop&w=400&q=80';
+    } else if (titleLower.contains('rempah') || titleLower.contains('kemasan') || titleLower.contains('branding')) {
+      assetPath = 'assets/showcases/rempah_nusantara_branding.jpg';
+      networkUrl ??= 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&w=400&q=80';
+    } else if (titleLower.contains('kreasibudaya') || titleLower.contains('mobile') || titleLower.contains('flutter') || titleLower.contains('aplikasi')) {
+      assetPath = 'assets/showcases/kreasibudaya_mobile.jpg';
+      networkUrl ??= 'https://images.unsplash.com/photo-1551650975-87deedd944c3?auto=format&fit=crop&w=400&q=80';
+    }
+
+    return Container(
+      width: 72,
+      height: 72,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1B32) : const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : const Color(0xFFCBD5E1),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: isDark ? 0.35 : 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(15),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Thumbnail Image Layer (Asset -> Network -> Elegant Graphic Fallback)
+            if (assetPath != null)
+              Image.asset(
+                assetPath,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) {
+                  if (networkUrl != null && networkUrl.isNotEmpty) {
+                    return Image.network(
+                      networkUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => _buildDisciplineHeroFallback(discGradient, discIcon, discColor),
+                    );
+                  }
+                  return _buildDisciplineHeroFallback(discGradient, discIcon, discColor);
+                },
+              )
+            else if (networkUrl != null && networkUrl.isNotEmpty)
+              Image.network(
+                networkUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => _buildDisciplineHeroFallback(discGradient, discIcon, discColor),
+              )
+            else
+              _buildDisciplineHeroFallback(discGradient, discIcon, discColor),
+
+            // Subtle gradient overlay at bottom
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: 28,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.70),
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
+              ),
+            ),
+
+            // Mini Badge in bottom-right corner indicating discipline
+            Positioned(
+              right: 5,
+              bottom: 5,
+              child: Container(
+                padding: const EdgeInsets.all(3.5),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.75),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 0.8),
+                ),
+                child: Icon(discIcon, color: Colors.white, size: 10),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDisciplineHeroFallback(List<Color> gradient, IconData icon, Color accentColor) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: gradient,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Center(
+        child: Icon(icon, color: Colors.white, size: 28),
+      ),
+    );
+  }
+
   Widget _buildShowcaseCard(Map<String, dynamic> record, bool isDark) {
     final meta = _metadata(record);
     final status = record['status']?.toString().toLowerCase() ?? 'published';
@@ -3128,15 +3309,15 @@ class _InstitutionWorkspaceScreenState
     if (catLower.contains('animasi') || catLower.contains('3d') || catLower.contains('cgi')) {
       discColor = const Color(0xFF6366F1); // Indigo
       discGradient = const [Color(0xFF6366F1), Color(0xFF8B5CF6)];
-      discIcon = Icons.view_in_ar_rounded;
+      discIcon = Icons.movie_creation_rounded;
     } else if (catLower.contains('brand') || catLower.contains('dkv') || catLower.contains('ui') || catLower.contains('ux') || catLower.contains('desain')) {
       discColor = const Color(0xFFEC4899); // Rose / Pink
       discGradient = const [Color(0xFFEC4899), Color(0xFFF43F5E)];
-      discIcon = Icons.palette_rounded;
+      discIcon = Icons.auto_awesome_rounded;
     } else if (catLower.contains('mobile') || catLower.contains('software') || catLower.contains('rpl') || catLower.contains('web') || catLower.contains('flutter') || catLower.contains('app')) {
       discColor = const Color(0xFF0284C7); // Sky / Blue
       discGradient = const [Color(0xFF0284C7), Color(0xFF2563EB)];
-      discIcon = Icons.phone_iphone_rounded;
+      discIcon = Icons.smartphone_rounded;
     } else if (catLower.contains('film') || catLower.contains('video') || catLower.contains('broadcast') || catLower.contains('media')) {
       discColor = const Color(0xFFF59E0B); // Amber / Orange
       discGradient = const [Color(0xFFF59E0B), Color(0xFFD97706)];
@@ -3196,28 +3377,15 @@ class _InstitutionWorkspaceScreenState
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Visual discipline icon badge
-                    Container(
-                      width: 54,
-                      height: 54,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: discGradient,
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: discColor.withValues(alpha: 0.35),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Center(
-                        child: Icon(discIcon, color: Colors.white, size: 28),
-                      ),
+                    // Visual project thumbnail with rich real artwork
+                    _buildShowcaseMediaThumbnail(
+                      record: record,
+                      title: title,
+                      category: category,
+                      discColor: discColor,
+                      discGradient: discGradient,
+                      discIcon: discIcon,
+                      isDark: isDark,
                     ),
                     const SizedBox(width: 16),
                     // Core Details
