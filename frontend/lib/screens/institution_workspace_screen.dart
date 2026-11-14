@@ -649,11 +649,22 @@ class _InstitutionWorkspaceScreenState
     if (widget.resourceType == 'tenders' && !_isCorporate && !_isGovernment) {
       return false;
     }
+    if (widget.resourceType == 'documents') {
+      return false;
+    }
     return true;
   }
 
   Future<void> _openEditor([Map<String, dynamic>? existing]) async {
     if (existing == null && !_canCreateResource) {
+      if (widget.resourceType == 'documents') {
+        AppSweetAlert.info(
+          context,
+          'Dokumen MoU diterbitkan secara otomatis setelah pengajuan kemitraan di menu Mitra Industri disetujui oleh Corporate.',
+          title: 'Penerbitan Dokumen Otomatis',
+        );
+        return;
+      }
       AppSweetAlert.error(
         context,
         'Fitur Buka Program Magang khusus untuk akun Corporate / Mitra Industri. Institusi Pendidikan tidak dapat membuka lowongan magang.',
@@ -670,6 +681,7 @@ class _InstitutionWorkspaceScreenState
       context: context,
       barrierDismissible: true,
       builder: (dialogContext) => _ResourceEditorDialog(
+        user: widget.user,
         resourceType: widget.resourceType,
         title: _title,
         action: _action,
@@ -810,7 +822,7 @@ class _InstitutionWorkspaceScreenState
         _openOfficialDocument(record ?? {
           'title': 'Dokumen Resmi',
           'description': 'Dokumen elektronik resmi terverifikasi instansi.',
-          'metadata': {'url': trimmed, 'doc_number': '027/SPK-KREAVANA/DISPAREKRAF/2026'},
+          'metadata': {'url': trimmed},
         });
       }
       return;
@@ -864,7 +876,7 @@ class _InstitutionWorkspaceScreenState
   // ── HEADER HERO EXECUTIVE ──────────────────────────────────────────────────
   Widget _buildExecutiveHero(bool isDark) {
     final bgImageUrl = _getWorkspaceHeroImage(widget.resourceType, _isGovernment);
-    final accentColor = _isGovernment ? const Color(0xFF0D9488) : const Color(0xFF4338CA);
+    final accentColor = _isGovernment ? const Color(0xFF0D9488) : (_isSchool ? const Color(0xFF7C3AED) : const Color(0xFF4338CA));
     final baseDark = const Color(0xFF07050E);
 
     return Container(
@@ -1140,7 +1152,7 @@ class _InstitutionWorkspaceScreenState
           sumBudget += double.tryParse(m['budget']?.toString() ?? '') ?? 0;
         }
         kpis = [
-          {'title': 'Total Tender RFP', 'value': records.length.toString(), 'icon': Icons.assignment_outlined, 'color': const Color(0xFF2563EB)},
+          {'title': 'Total Tender RFP', 'value': records.length.toString(), 'icon': Icons.assignment_outlined, 'color': _isSchool ? const Color(0xFF7C3AED) : const Color(0xFF2563EB)},
           {'title': 'Tender Terbuka', 'value': openCount.toString(), 'icon': Icons.lock_open_rounded, 'color': const Color(0xFF10B981)},
           {'title': 'Dalam Evaluasi', 'value': inProgCount.toString(), 'icon': Icons.hourglass_top_rounded, 'color': const Color(0xFFF59E0B)},
           {'title': 'Total Pagu Pengadaan', 'value': _formatCurrency(sumBudget), 'icon': Icons.payments_outlined, 'color': const Color(0xFF8B5CF6)},
@@ -1150,7 +1162,7 @@ class _InstitutionWorkspaceScreenState
         final activeCount = records.where((r) => r['status'] == 'active').length;
         final categories = records.map((r) => _metadata(r)['category']?.toString() ?? '').toSet().length;
         kpis = [
-          {'title': 'Total Rekanan Vendor', 'value': records.length.toString(), 'icon': Icons.business_center_outlined, 'color': const Color(0xFF2563EB)},
+          {'title': 'Total Rekanan Vendor', 'value': records.length.toString(), 'icon': Icons.business_center_outlined, 'color': _isSchool ? const Color(0xFF7C3AED) : const Color(0xFF2563EB)},
           {'title': 'Vendor Aktif', 'value': activeCount.toString(), 'icon': Icons.check_circle_outline, 'color': const Color(0xFF10B981)},
           {'title': 'Kategori Spesialis', 'value': '$categories Bidang', 'icon': Icons.category_outlined, 'color': const Color(0xFFF59E0B)},
           {'title': 'Skor Kepuasan SLA', 'value': '4.9 / 5.0', 'icon': Icons.star_rounded, 'color': const Color(0xFF8B5CF6)},
@@ -1160,7 +1172,7 @@ class _InstitutionWorkspaceScreenState
         final publishedCount = records.where((r) => r['status'] == 'published').length;
         final draftCount = records.where((r) => r['status'] == 'draft').length;
         kpis = [
-          {'title': 'Total Dokumen Legal', 'value': records.length.toString(), 'icon': Icons.folder_copy_outlined, 'color': const Color(0xFF2563EB)},
+          {'title': 'Total Dokumen Legal', 'value': records.length.toString(), 'icon': Icons.folder_copy_outlined, 'color': _isSchool ? const Color(0xFF7C3AED) : const Color(0xFF2563EB)},
           {'title': 'Tervalidasi Digital', 'value': publishedCount.toString(), 'icon': Icons.verified_outlined, 'color': const Color(0xFF10B981)},
           {'title': 'Menunggu Otorisasi', 'value': draftCount.toString(), 'icon': Icons.pending_actions_outlined, 'color': const Color(0xFFF59E0B)},
           {'title': 'Kepatuhan Hukum', 'value': '100% Aman', 'icon': Icons.shield_outlined, 'color': const Color(0xFF8B5CF6)},
@@ -1177,7 +1189,7 @@ class _InstitutionWorkspaceScreenState
         final double remaining = allocated - realized;
         final double ratio = allocated > 0 ? (realized / allocated * 100).clamp(0, 100) : 0;
         kpis = [
-          {'title': 'Pagu Anggaran', 'value': _formatCurrency(allocated), 'icon': Icons.account_balance_outlined, 'color': const Color(0xFF2563EB)},
+          {'title': 'Pagu Anggaran', 'value': _formatCurrency(allocated), 'icon': Icons.account_balance_outlined, 'color': _isSchool ? const Color(0xFF7C3AED) : const Color(0xFF2563EB)},
           {'title': 'Realisasi Belanja', 'value': _formatCurrency(realized), 'icon': Icons.trending_up_rounded, 'color': const Color(0xFF10B981)},
           {'title': 'Sisa Anggaran', 'value': _formatCurrency(remaining), 'icon': Icons.savings_outlined, 'color': const Color(0xFFF59E0B)},
           {'title': 'Rasio Serapan', 'value': '${ratio.toStringAsFixed(1)}%', 'icon': Icons.pie_chart_outline_rounded, 'color': const Color(0xFF8B5CF6)},
@@ -1186,7 +1198,7 @@ class _InstitutionWorkspaceScreenState
       case 'reports':
         final pubCount = records.where((r) => r['status'] == 'published').length;
         kpis = [
-          {'title': 'Total Laporan Audit', 'value': records.length.toString(), 'icon': Icons.summarize_outlined, 'color': const Color(0xFF2563EB)},
+          {'title': 'Total Laporan Audit', 'value': records.length.toString(), 'icon': Icons.summarize_outlined, 'color': _isSchool ? const Color(0xFF7C3AED) : const Color(0xFF2563EB)},
           {'title': 'Audit Published', 'value': pubCount.toString(), 'icon': Icons.task_alt_rounded, 'color': const Color(0xFF10B981)},
           {'title': 'Status Draft', 'value': (records.length - pubCount).toString(), 'icon': Icons.edit_note_rounded, 'color': const Color(0xFFF59E0B)},
           {'title': 'Efisiensi Pengadaan', 'value': '24.8% Terhemat', 'icon': Icons.insights_rounded, 'color': const Color(0xFF8B5CF6)},
@@ -1228,7 +1240,7 @@ class _InstitutionWorkspaceScreenState
         break;
       default:
         kpis = [
-          {'title': 'Total Data', 'value': records.length.toString(), 'icon': Icons.layers_outlined, 'color': const Color(0xFF2563EB)},
+          {'title': 'Total Data', 'value': records.length.toString(), 'icon': Icons.layers_outlined, 'color': _isSchool ? const Color(0xFF7C3AED) : const Color(0xFF2563EB)},
           {'title': 'Status Aktif', 'value': records.where((r) => r['status'] == 'published' || r['status'] == 'open').length.toString(), 'icon': Icons.check_circle_outline, 'color': const Color(0xFF10B981)},
           {'title': 'Menunggu Review', 'value': records.where((r) => r['status'] == 'draft' || r['status'] == 'in_progress').length.toString(), 'icon': Icons.hourglass_top_outlined, 'color': const Color(0xFFF59E0B)},
           {'title': 'Database Status', 'value': 'Tersinkron', 'icon': Icons.cloud_done_outlined, 'color': const Color(0xFF8B5CF6)},
@@ -1642,25 +1654,7 @@ class _InstitutionWorkspaceScreenState
     }
     final t = title.toLowerCase();
     if (t.contains('google')) {
-      return 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/240px-Google_%22G%22_logo.svg.png';
-    }
-    if (t.contains('animasi') || t.contains('animation')) {
-      return 'https://cdn-icons-png.flaticon.com/512/3845/3845868.png';
-    }
-    if (t.contains('pixel') || t.contains('creative') || t.contains('desain')) {
-      return 'https://cdn-icons-png.flaticon.com/512/3233/3233483.png';
-    }
-    if (t.contains('svara') || t.contains('audio') || t.contains('sound')) {
-      return 'https://cdn-icons-png.flaticon.com/512/2983/2983780.png';
-    }
-    if (t.contains('cakrawala') || t.contains('media') || t.contains('siber')) {
-      return 'https://cdn-icons-png.flaticon.com/512/2983/2983803.png';
-    }
-    if (t.contains('adgi')) {
-      return 'https://cdn-icons-png.flaticon.com/512/1055/1055666.png';
-    }
-    if (t.contains('game') || t.contains('guild')) {
-      return 'https://cdn-icons-png.flaticon.com/512/686/686589.png';
+      return 'https://www.gstatic.com/images/branding/googleg/1x/googleg_standard_color_128dp.png';
     }
     return null;
   }
@@ -1670,20 +1664,18 @@ class _InstitutionWorkspaceScreenState
     required String? networkFallbackUrl,
     required String initials,
     required List<Color> gradientColors,
+    required String title,
+    required String category,
   }) {
-    if (logoPath != null && logoPath.isNotEmpty) {
-      if (logoPath.startsWith('http://') || logoPath.startsWith('https://')) {
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: Image.network(
-            logoPath,
-            width: 40,
-            height: 40,
-            fit: BoxFit.contain,
-            errorBuilder: (_, _, _) => _buildMonogramFallback(initials, gradientColors),
-          ),
-        );
-      }
+    final t = title.toLowerCase();
+
+    // 1. Dedicated authentic Google "G" emblem
+    if (t.contains('google')) {
+      return _buildGoogleLogoWidget();
+    }
+
+    // 2. Local Asset Loader
+    if (logoPath != null && logoPath.isNotEmpty && !logoPath.startsWith('http')) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(10),
         child: Image.asset(
@@ -1698,30 +1690,78 @@ class _InstitutionWorkspaceScreenState
                 width: 40,
                 height: 40,
                 fit: BoxFit.contain,
-                errorBuilder: (_, _, _) => _buildMonogramFallback(initials, gradientColors),
+                errorBuilder: (_, _, _) => _buildCorporateEmblemWidget(title, category, gradientColors),
               );
             }
-            return _buildMonogramFallback(initials, gradientColors);
+            return _buildCorporateEmblemWidget(title, category, gradientColors);
           },
         ),
       );
     }
-    if (networkFallbackUrl != null && networkFallbackUrl.isNotEmpty) {
+
+    // 3. Network URL Loader
+    final url = (logoPath != null && logoPath.startsWith('http')) ? logoPath : networkFallbackUrl;
+    if (url != null && url.isNotEmpty) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(10),
         child: Image.network(
-          networkFallbackUrl,
+          url,
           width: 40,
           height: 40,
           fit: BoxFit.contain,
-          errorBuilder: (_, _, _) => _buildMonogramFallback(initials, gradientColors),
+          errorBuilder: (_, _, _) => _buildCorporateEmblemWidget(title, category, gradientColors),
         ),
       );
     }
-    return _buildMonogramFallback(initials, gradientColors);
+
+    // 4. Elegant Corporate Emblem Fallback (No ugly raw monogram letters)
+    return _buildCorporateEmblemWidget(title, category, gradientColors);
   }
 
-  Widget _buildMonogramFallback(String initials, List<Color> gradientColors) {
+  Widget _buildGoogleLogoWidget() {
+    return SizedBox(
+      width: 38,
+      height: 38,
+      child: Image.asset(
+        'assets/partners/google.png',
+        width: 38,
+        height: 38,
+        fit: BoxFit.contain,
+        errorBuilder: (_, _, _) {
+          return Image.network(
+            'https://www.gstatic.com/images/branding/googleg/1x/googleg_standard_color_128dp.png',
+            width: 38,
+            height: 38,
+            fit: BoxFit.contain,
+            errorBuilder: (_, _, _) => CustomPaint(
+              size: const Size(38, 38),
+              painter: _GoogleGLogoPainter(),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildCorporateEmblemWidget(String title, String category, List<Color> gradientColors) {
+    final t = title.toLowerCase();
+    final IconData emblemIcon;
+    if (t.contains('animasi') || t.contains('animation')) {
+      emblemIcon = Icons.movie_creation_rounded;
+    } else if (t.contains('pixel') || t.contains('creative') || t.contains('desain')) {
+      emblemIcon = Icons.auto_awesome_rounded;
+    } else if (t.contains('svara') || t.contains('audio') || t.contains('sound') || t.contains('musik')) {
+      emblemIcon = Icons.graphic_eq_rounded;
+    } else if (t.contains('cakrawala') || t.contains('media') || t.contains('siber') || t.contains('broadcast')) {
+      emblemIcon = Icons.podcasts_rounded;
+    } else if (t.contains('adgi') || t.contains('desainer')) {
+      emblemIcon = Icons.draw_rounded;
+    } else if (t.contains('game') || t.contains('guild')) {
+      emblemIcon = Icons.sports_esports_rounded;
+    } else {
+      emblemIcon = Icons.apartment_rounded;
+    }
+
     return Container(
       width: 40,
       height: 40,
@@ -1732,16 +1772,19 @@ class _InstitutionWorkspaceScreenState
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: gradientColors.first.withValues(alpha: 0.28),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Center(
-        child: Text(
-          initials,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
-            fontSize: 15,
-            letterSpacing: 0.5,
-          ),
+        child: Icon(
+          emblemIcon,
+          color: Colors.white,
+          size: 20,
         ),
       ),
     );
@@ -1893,6 +1936,8 @@ class _InstitutionWorkspaceScreenState
                       networkFallbackUrl: networkUrl,
                       initials: initials,
                       gradientColors: gradientColors,
+                      title: title,
+                      category: category,
                     ),
                   ),
                 ),
@@ -2431,7 +2476,8 @@ class _InstitutionWorkspaceScreenState
       } else if (titleLower.contains('pedoman')) {
         docNumber = '088/JUKNIS-VOKASI/2026';
       } else {
-        docNumber = '027/SPK-KREAVANA/2026';
+        final recId = record['id'];
+        docNumber = recId != null ? 'DOC-$recId' : '-';
       }
     }
 
@@ -2906,7 +2952,7 @@ class _InstitutionWorkspaceScreenState
                             const Icon(Icons.verified_user_outlined, size: 14, color: Color(0xFF10B981)),
                             const SizedBox(width: 4),
                             const Text(
-                              'TTE Sah (BSrE)',
+                              'Dokumen Sah Terverifikasi',
                               style: TextStyle(
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.w600,
@@ -4063,7 +4109,9 @@ class _InstitutionWorkspaceScreenState
                     Text(
                       _search.isNotEmpty || _statusFilter != 'Semua'
                           ? 'Coba sesuaikan kata kunci pencarian atau ubah filter status.'
-                          : 'Tambahkan data pertama Anda untuk dikelola dan dipublikasikan secara resmi.',
+                          : (widget.resourceType == 'documents'
+                              ? 'Berkas dokumen MoU otomatis terbit di sini setelah pengajuan kemitraan di menu "Mitra Industri" disetujui oleh Corporate.'
+                              : 'Tambahkan data pertama Anda untuk dikelola dan dipublikasikan secara resmi.'),
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
                     ),
@@ -4186,6 +4234,7 @@ class _InstitutionWorkspaceScreenState
 }
 
 class _ResourceEditorDialog extends StatefulWidget {
+  final UserModel? user;
   final String resourceType;
   final String title;
   final String action;
@@ -4196,6 +4245,7 @@ class _ResourceEditorDialog extends StatefulWidget {
   final IconData icon;
 
   const _ResourceEditorDialog({
+    this.user,
     required this.resourceType,
     required this.title,
     required this.action,
@@ -4584,6 +4634,48 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
 
   bool get _isDark => Theme.of(context).brightness == Brightness.dark;
 
+  bool get _isInstitution {
+    final subRole = widget.user?.subRole?.toLowerCase() ?? '';
+    if (['corporate', 'company', 'business', 'perusahaan', 'bisnis'].contains(subRole)) {
+      return false;
+    }
+    if (['government', 'pemerintah', 'dinas', 'bumn', 'kementerian'].contains(subRole)) {
+      return false;
+    }
+    final role = widget.user?.role.toLowerCase() ?? '';
+    if (role == 'institution' || role == 'school') return true;
+    const schoolSubroles = [
+      'school',
+      'sekolah',
+      'universitas',
+      'institution',
+      'kampus',
+      'smk',
+      'education',
+      'institusi',
+      'lembaga',
+      'yayasan',
+    ];
+    if (schoolSubroles.contains(subRole)) return true;
+    final username = widget.user?.username.toLowerCase() ?? '';
+    final email = widget.user?.email.toLowerCase() ?? '';
+    if (username.contains('institution') || username.contains('sekolah') || email.contains('institution')) {
+      return true;
+    }
+    return true;
+  }
+
+  Color get _accentPrimary => _isInstitution ? const Color(0xFF7C3AED) : const Color(0xFF2563EB);
+  Color get _accentDarker => _isInstitution ? const Color(0xFF6D28D9) : const Color(0xFF1D4ED8);
+  Color get _accentGradientEnd => _isInstitution ? const Color(0xFFA855F7) : const Color(0xFF38BDF8);
+  Color get _accentBright => _isInstitution ? const Color(0xFF8B5CF6) : const Color(0xFF3B82F6);
+  Color get _accentLightText => _isInstitution ? const Color(0xFFA78BFA) : const Color(0xFF60A5FA);
+  Color get _accentPaleText => _isInstitution ? const Color(0xFFDDD6FE) : const Color(0xFF93C5FD);
+  Color get _accentDeepText => _isInstitution ? const Color(0xFF5B21B6) : const Color(0xFF1E40AF);
+  Color get _accentBorderLight => _isInstitution ? const Color(0xFFDDD6FE) : const Color(0xFFBFDBFE);
+  Color get _accentBgLight => _isInstitution ? const Color(0xFFF5F3FF) : const Color(0xFFEFF6FF);
+  Color get _accentBgDark => _isInstitution ? const Color(0xFF2E1065) : const Color(0xFF1E283D);
+
   InputDecoration _inputDecoration({
     required String hint,
     IconData? prefixIcon,
@@ -4597,7 +4689,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
           ? Icon(
               prefixIcon,
               size: 20,
-              color: _isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
+              color: _isDark ? _accentLightText : _accentPrimary,
             )
           : null,
       suffixIcon: suffixIcon,
@@ -4623,7 +4715,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(
-          color: _isDark ? const Color(0xFF3B82F6) : const Color(0xFF2563EB),
+          color: _isDark ? _accentBright : _accentPrimary,
           width: 1.8,
         ),
       ),
@@ -4658,19 +4750,19 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: _isDark
-                      ? const Color(0xFF2563EB).withValues(alpha: 0.2)
-                      : const Color(0xFFEFF6FF),
+                      ? _accentPrimary.withValues(alpha: 0.2)
+                      : _accentBgLight,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
                     color: _isDark
-                        ? const Color(0xFF2563EB).withValues(alpha: 0.4)
-                        : const Color(0xFFBFDBFE),
+                        ? _accentPrimary.withValues(alpha: 0.4)
+                        : _accentBorderLight,
                   ),
                 ),
                 child: Icon(
                   icon,
                   size: 18,
-                  color: _isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
+                  color: _isDark ? _accentLightText : _accentPrimary,
                 ),
               ),
               const SizedBox(width: 12),
@@ -4717,6 +4809,8 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
     required String caption,
     required Widget child,
     double? minHeaderHeight,
+    List<String> chips = const [],
+    TextEditingController? targetController,
   }) {
     final headerContent = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -4758,6 +4852,52 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
           headerContent,
         const SizedBox(height: 8),
         child,
+        if (chips.isNotEmpty && targetController != null) ...[
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: chips.map((chipText) {
+              return InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: () {
+                  setState(() {
+                    targetController.text = chipText;
+                  });
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _isDark ? const Color(0xFF201D35) : Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: _isDark ? const Color(0xFF383457) : const Color(0xFFCBD5E1),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.add_rounded,
+                        size: 13,
+                        color: _isDark ? _accentLightText : _accentPrimary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        chipText,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: _isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
       ],
     );
   }
@@ -4793,11 +4933,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                 suffixIcon: Tooltip(
                   message: 'Tekan Enter untuk membuat tag',
                   child: IconButton(
-                    icon: Icon(
-                      Icons.keyboard_return_rounded,
-                      size: 18,
-                      color: _isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
-                    ),
+                    icon: Icon(Icons.keyboard_return_rounded, size: 18, color: _accentPrimary),
                     onPressed: () => _addTag(field.key),
                   ),
                 ),
@@ -4820,15 +4956,12 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                   return Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: _isDark ? const Color(0xFF201D35) : Colors.white,
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: _isDark ? const Color(0xFF383457) : const Color(0xFFCBD5E1),
-                        width: 1.2,
-                      ),
+                      border: Border.all(color: const Color(0xFFCBD5E1), width: 1.2),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF0F172A).withValues(alpha: _isDark ? 0.2 : 0.04),
+                          color: const Color(0xFF0F172A).withValues(alpha: 0.04),
                           blurRadius: 4,
                           offset: const Offset(0, 1.5),
                         ),
@@ -4839,10 +4972,10 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                       children: [
                         Text(
                           tag,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w600,
-                            color: _isDark ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B),
+                            color: Color(0xFF1E293B),
                           ),
                         ),
                         const SizedBox(width: 6),
@@ -4851,14 +4984,14 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                           onTap: () => _removeTag(field.key, tag),
                           child: Container(
                             padding: const EdgeInsets.all(2),
-                            decoration: BoxDecoration(
-                              color: _isDark ? const Color(0xFF2A2742) : const Color(0xFFF1F5F9),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFF1F5F9),
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(
+                            child: const Icon(
                               Icons.close_rounded,
                               size: 13,
-                              color: _isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                              color: Color(0xFF64748B),
                             ),
                           ),
                         ),
@@ -4971,17 +5104,17 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
 
   Widget _buildCorporateSearchSection() {
     return _buildFieldCardContainer(
-      title: 'Cari & Hubungkan Akun Corporate Mitra *',
+      title: 'Cari & Hubungkan Akun Corporate Mitra',
       subtitle: 'Tautkan pengajuan kemitraan ini ke entitas akun Corporate / Perusahaan resmi di Kreavana.',
-      icon: Icons.apartment_rounded,
+      icon: Icons.business_rounded,
       children: [
         if (_selectedCorporate != null) ...[
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
+              color: _accentBgLight,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFBFDBFE)),
+              border: Border.all(color: _accentBorderLight),
             ),
             child: Row(
               children: [
@@ -4989,8 +5122,8 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                    gradient: LinearGradient(
+                      colors: [_accentPrimary, _accentDarker],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -5024,12 +5157,13 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFDBEAFE),
+                              color: _accentBgLight,
                               borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: _accentBorderLight),
                             ),
-                            child: const Text(
+                            child: Text(
                               'Corporate Terverifikasi',
-                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF1D4ED8)),
+                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: _accentDarker),
                             ),
                           ),
                         ],
@@ -5046,8 +5180,8 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                   icon: const Icon(Icons.swap_horiz_rounded, size: 16),
                   label: const Text('Ganti', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF2563EB),
-                    side: const BorderSide(color: Color(0xFF93C5FD)),
+                    foregroundColor: _accentPrimary,
+                    side: BorderSide(color: _accentBorderLight),
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     visualDensity: VisualDensity.compact,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -5131,7 +5265,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                     visualDensity: VisualDensity.compact,
                     leading: CircleAvatar(
                       radius: 16,
-                      backgroundColor: const Color(0xFF2563EB),
+                      backgroundColor: _accentPrimary,
                       child: Text(
                         initials,
                         style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
@@ -5147,7 +5281,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                           ),
                         ),
                         const SizedBox(width: 6),
-                        const Icon(Icons.verified_rounded, size: 14, color: Color(0xFF2563EB)),
+                        Icon(Icons.verified_rounded, size: 14, color: _accentPrimary),
                       ],
                     ),
                     subtitle: Text(
@@ -5174,6 +5308,26 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
             ),
           ],
         ],
+        const SizedBox(height: 14),
+        _buildFieldWithHeader(
+          label: 'Nama Resmi Perusahaan / Mitra Industri *',
+          caption: 'Nama identitas resmi rekanan (terisi otomatis jika memilih akun di atas).',
+          child: TextFormField(
+            controller: _titleController,
+            style: TextStyle(
+              fontSize: 13.5,
+              color: _isDark ? Colors.white : const Color(0xFF0F172A),
+            ),
+            decoration: _inputDecoration(
+              hint: 'Contoh: PT Studio Animasi Nusantara, Google, Inc...',
+              prefixIcon: Icons.domain_rounded,
+            ),
+            validator: (value) =>
+                value == null || value.trim().isEmpty
+                    ? 'Nama / Judul mitra industri wajib diisi'
+                    : null,
+          ),
+        ),
       ],
     );
   }
@@ -5288,23 +5442,23 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
               child: Column(
                 children: [
                   if (_isUploadingMou) ...[
-                    const SizedBox(
+                    SizedBox(
                       width: 28,
                       height: 28,
-                      child: CircularProgressIndicator(strokeWidth: 2.5, color: Color(0xFF2563EB)),
+                      child: CircularProgressIndicator(strokeWidth: 2.5, color: _accentPrimary),
                     ),
                     const SizedBox(height: 10),
-                    const Text('Mengunggah dokumen MoU ke server...', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF2563EB))),
+                    Text('Mengunggah dokumen MoU ke server...', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: _accentPrimary)),
                   ] else ...[
                     Container(
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEFF6FF),
+                        color: _accentBgLight,
                         shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                        border: Border.all(color: _accentBorderLight),
                       ),
-                      child: const Icon(Icons.cloud_upload_outlined, color: Color(0xFF2563EB), size: 24),
+                      child: Icon(Icons.cloud_upload_outlined, color: _accentPrimary, size: 24),
                     ),
                     const SizedBox(height: 10),
                     const Text(
@@ -5355,13 +5509,13 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
           // Top accent gradient bar
           Container(
             height: 4,
-            decoration: const BoxDecoration(
-              borderRadius: BorderRadius.only(
+            decoration: BoxDecoration(
+              borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(24),
                 topRight: Radius.circular(24),
               ),
               gradient: LinearGradient(
-                colors: [Color(0xFF2563EB), Color(0xFF38BDF8)],
+                colors: [_accentPrimary, _accentGradientEnd],
               ),
             ),
           ),
@@ -5373,15 +5527,15 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                    gradient: LinearGradient(
+                      colors: [_accentPrimary, _accentDarker],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF2563EB).withValues(alpha: _isDark ? 0.4 : 0.3),
+                        color: _accentPrimary.withValues(alpha: _isDark ? 0.4 : 0.3),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -5413,13 +5567,13 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                             decoration: BoxDecoration(
                               color: _isDark
-                                  ? const Color(0xFF2563EB).withValues(alpha: 0.22)
-                                  : const Color(0xFFEFF6FF),
+                                  ? _accentPrimary.withValues(alpha: 0.22)
+                                  : _accentBgLight,
                               borderRadius: BorderRadius.circular(6),
                               border: Border.all(
                                 color: _isDark
-                                    ? const Color(0xFF3B82F6).withValues(alpha: 0.4)
-                                    : const Color(0xFFBFDBFE),
+                                    ? _accentBright.withValues(alpha: 0.4)
+                                    : _accentBorderLight,
                               ),
                             ),
                             child: Text(
@@ -5427,7 +5581,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                               style: TextStyle(
                                 fontSize: 10.5,
                                 fontWeight: FontWeight.w700,
-                                color: _isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
+                                color: _isDark ? _accentLightText : _accentPrimary,
                               ),
                             ),
                           ),
@@ -5524,20 +5678,20 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(
                         color: _isDark
-                            ? const Color(0xFF1E283D).withValues(alpha: 0.7)
-                            : const Color(0xFFEFF6FF),
+                            ? _accentBgDark.withValues(alpha: 0.7)
+                            : _accentBgLight,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: _isDark
-                              ? const Color(0xFF2563EB).withValues(alpha: 0.45)
-                              : const Color(0xFFBFDBFE),
+                              ? _accentPrimary.withValues(alpha: 0.45)
+                              : _accentBorderLight,
                         ),
                       ),
                       child: Row(
                         children: [
                           Icon(
                             Icons.info_outline_rounded,
-                            color: _isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
+                            color: _isDark ? _accentLightText : _accentPrimary,
                             size: 20,
                           ),
                           const SizedBox(width: 12),
@@ -5548,7 +5702,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                                   : 'Panduan: Lengkapi seluruh kolom wajib bertanda bintang (*) untuk menjaga keabsahan arsip instansi.',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: _isDark ? const Color(0xFF93C5FD) : const Color(0xFF1E40AF),
+                                color: _isDark ? _accentPaleText : _accentDeepText,
                                 height: 1.4,
                               ),
                             ),
@@ -5703,7 +5857,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                           ? const Icon(Icons.send_rounded, size: 17)
                           : const Icon(Icons.check_circle_outline_rounded, size: 18)),
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF2563EB),
+                    backgroundColor: _accentPrimary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
                     elevation: 0,
@@ -5726,4 +5880,53 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
       ],
     );
   }
+}
+
+class _GoogleGLogoPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final strokeWidth = size.width * 0.22;
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.width - strokeWidth) / 2;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.butt;
+
+    const degToRad = 3.141592653589793 / 180.0;
+
+    // 1. Red (top arc)
+    paint.color = const Color(0xFFEA4335);
+    canvas.drawArc(rect, -155 * degToRad, 110 * degToRad, false, paint);
+
+    // 2. Yellow (bottom-left arc)
+    paint.color = const Color(0xFFFBBC05);
+    canvas.drawArc(rect, -225 * degToRad, 70 * degToRad, false, paint);
+
+    // 3. Green (bottom-right arc)
+    paint.color = const Color(0xFF34A853);
+    canvas.drawArc(rect, 45 * degToRad, 90 * degToRad, false, paint);
+
+    // 4. Blue (right arc)
+    paint.color = const Color(0xFF4285F4);
+    canvas.drawArc(rect, -45 * degToRad, 90 * degToRad, false, paint);
+
+    // 5. Blue horizontal crossbar
+    final barPaint = Paint()
+      ..color = const Color(0xFF4285F4)
+      ..style = PaintingStyle.fill;
+    final barHeight = strokeWidth;
+    final barRect = Rect.fromLTWH(
+      center.dx - 2,
+      center.dy - barHeight / 2,
+      radius + strokeWidth / 2 + 2,
+      barHeight,
+    );
+    canvas.drawRect(barRect, barPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

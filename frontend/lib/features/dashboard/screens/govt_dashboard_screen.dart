@@ -261,7 +261,7 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
             'satisfaction_rate': meta['satisfaction_rate'] ?? '98%',
             'testimonial_author': meta['testimonial_author'] ?? '',
             'testimonial_quote': meta['testimonial_quote'] ?? '',
-            'verified_badge': meta['verified_badge'] ?? 'Terverifikasi BSrE',
+            'verified_badge': meta['verified_badge'] ?? 'Terverifikasi Resmi',
             'status': r['status'] ?? 'published',
           });
         }
@@ -727,7 +727,7 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
                     Icon(Icons.verified, size: 13, color: Color(0xFF10B981)),
                     SizedBox(width: 4),
                     Text(
-                      'LKPP & BSrE Terverifikasi 100%',
+                      'Terverifikasi Resmi 100%',
                       style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
                     ),
                     SizedBox(width: 4),
@@ -915,7 +915,7 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
       {
         'step': '02',
         'title': 'Monev, BAST & Akuntabilitas',
-        'desc': 'Pengawasan progres lapangan, realisasi DIPA, arsip BAST BSrE, & laporan publik.',
+        'desc': 'Pengawasan progres lapangan, realisasi anggaran, arsip BAST, & laporan publik.',
         'badge': '${_documents.length} Dokumen Sah • ${_reports.length} Laporan',
         'badge_color': const Color(0xFF059669),
         'icon': Icons.verified_outlined,
@@ -1173,7 +1173,7 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
                         ),
                         SizedBox(height: 2),
                         Text(
-                          'Kementerian / Pemerintah Daerah Terverifikasi BSrE & LKPP',
+                          'Instansi Resmi Terdaftar pada Platform Kreavana',
                           style: TextStyle(fontSize: 11, color: Color(0xFF10B981), fontWeight: FontWeight.bold),
                         ),
                       ],
@@ -1197,11 +1197,11 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
                   children: [
                     _buildVerificationRow('Nama Organisasi', 'Dinas Pariwisata dan Ekonomi Kreatif', isDark),
                     const Divider(height: 16),
-                    _buildVerificationRow('Pejabat PPK', widget.user.name, isDark),
+                    _buildVerificationRow('Penanggung Jawab', widget.user.name, isDark),
                     const Divider(height: 16),
-                    _buildVerificationRow('Nomor Satker DIPA', 'SATKER-418290-DKI', isDark),
+                    _buildVerificationRow('Nomor Registrasi', 'REG-INST-418290', isDark),
                     const Divider(height: 16),
-                    _buildVerificationRow('Otentikasi Kriptografi', 'BSrE BSSN SHA-256 (Valid)', isDark),
+                    _buildVerificationRow('Status Validasi', 'Terverifikasi Resmi (Aktif)', isDark),
                     const Divider(height: 16),
                     _buildVerificationRow('Masa Berlaku Akun', 'Aktif s.d. 31 Desember 2026', isDark),
                   ],
@@ -1223,10 +1223,9 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
                         context,
                         document: {
                           'id': 'CERT-GOV-2026',
-                          'title': 'Sertifikat Verifikasi Akun Kedinasan Resmi Pemerintah',
-                          'category': 'Sertifikat Akreditasi BSrE & LKPP',
+                          'title': 'Dokumen Verifikasi Akun Kedinasan Resmi Pemerintah',
+                          'category': 'Dokumen Verifikasi Akun',
                           'document_date': '16 Oktober 2026',
-                          'url': 'https://bsre.bssn.go.id/verify/SATKER-418290',
                         },
                         isGovernment: true,
                       );
@@ -3156,7 +3155,7 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
                             );
                           },
                           icon: const Icon(Icons.verified_outlined, size: 15),
-                          label: const Text('Buka Dokumen Resmi (BSrE)', style: TextStyle(fontSize: 11)),
+                          label: const Text('Buka Dokumen Resmi', style: TextStyle(fontSize: 11)),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF1D4ED8),
                             foregroundColor: Colors.white,

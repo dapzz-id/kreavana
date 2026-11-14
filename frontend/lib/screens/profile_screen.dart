@@ -48,6 +48,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _profileFormKey = GlobalKey<FormState>();
   final _scrollController = ScrollController();
 
   // ── School / Institution Profile Controllers ─────────────────────────────
@@ -184,6 +187,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
     _nameController.text = _currentUser.name;
     _phoneController.text = _currentUser.phone ?? '';
+    _usernameController.text = _currentUser.username;
+    _emailController.text = _currentUser.email;
     if (_isSchool) {
       _initSchoolDefaults();
     }
@@ -219,12 +224,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _schoolPhoneController.text = widget.user.phone ?? '';
       }
     }
+    if (widget.user.username != oldWidget.user.username) {
+      _usernameController.text = widget.user.username;
+    }
+    if (widget.user.email != oldWidget.user.email) {
+      _emailController.text = widget.user.email;
+    }
   }
 
   @override
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
+    _usernameController.dispose();
+    _emailController.dispose();
     _scrollController.dispose();
     _schoolNameController.dispose();
     _npsnController.dispose();
@@ -374,11 +387,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _handleUpdateProfile() async {
+    if (_profileFormKey.currentState != null && !_profileFormKey.currentState!.validate()) {
+      return;
+    }
+
     setState(() => _isLoading = true);
     final result = await ProfileService.updateProfile(
       userId: _currentUser.id ?? '',
       name: _nameController.text.trim(),
       phone: _phoneController.text.trim(),
+      username: _usernameController.text.trim(),
+      email: _emailController.text.trim(),
     );
 
     if (mounted) {
@@ -1119,93 +1138,109 @@ class _ProfileScreenState extends State<ProfileScreen> {
           width: 1,
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            _isSchool ? 'Informasi Akun Pengelola (PIC)' : 'Informasi Pribadi',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          if (_isSchool) ...[
-            const SizedBox(height: 4),
+      child: Form(
+        key: _profileFormKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Text(
-              'Kelola nama PIC, nomor kontak pribadi, dan identitas akun login pengelola institusi.',
-              style: TextStyle(
-                fontSize: 13,
-                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+              _isSchool ? 'Informasi Akun Pengelola (PIC)' : 'Informasi Pribadi',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            if (_isSchool) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Kelola nama PIC, nomor kontak pribadi, dan identitas akun login pengelola institusi.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                ),
+              ),
+            ],
+            const SizedBox(height: 24),
+            TextFormField(
+              controller: _nameController,
+              decoration: const InputDecoration(
+                labelText: 'Nama Lengkap',
+                prefixIcon: Icon(Icons.person_outline_rounded),
+              ),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return 'Nama lengkap wajib diisi';
+                if (v.trim().length < 2) return 'Nama minimal 2 karakter';
+                return null;
+              },
+            ),
+            const SizedBox(height: 20),
+            TextFormField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9+\-\s()]')),
+                LengthLimitingTextInputFormatter(25),
+              ],
+              decoration: const InputDecoration(
+                labelText: 'Nomor Telepon',
+                hintText: '081234567890 atau +6281234567890',
+                prefixIcon: Icon(Icons.phone_outlined),
+              ),
+              validator: FormValidators.phone,
+            ),
+            const SizedBox(height: 20),
+            TextFormField(
+              controller: _usernameController,
+              decoration: const InputDecoration(
+                labelText: 'Username',
+                hintText: 'username_pengguna',
+                prefixIcon: Icon(Icons.alternate_email_rounded),
+              ),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return 'Username wajib diisi';
+                if (v.trim().length < 3) return 'Username minimal 3 karakter';
+                if (!RegExp(r'^[a-zA-Z0-9_.-]+$').hasMatch(v.trim())) {
+                  return 'Username hanya boleh huruf, angka, titik, strip, dan underscore';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 20),
+            TextFormField(
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                hintText: 'nama@domain.com',
+                prefixIcon: Icon(Icons.email_outlined),
+              ),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return 'Email wajib diisi';
+                if (!RegExp(r'^[\w\.\-]+@([\w\-]+\.)+[\w\-]{2,4}$').hasMatch(v.trim())) {
+                  return 'Format email tidak valid (contoh: nama@domain.com)';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 28),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: _handleUpdateProfile,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  'Simpan Perubahan',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
               ),
             ),
           ],
-          const SizedBox(height: 24),
-          TextFormField(
-            controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'Nama Lengkap',
-              prefixIcon: Icon(Icons.person_outline_rounded),
-            ),
-          ),
-          const SizedBox(height: 20),
-          TextFormField(
-            controller: _phoneController,
-            keyboardType: TextInputType.phone,
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(15),
-            ],
-            decoration: const InputDecoration(
-              labelText: 'Nomor Telepon',
-              hintText: '081234567890',
-              prefixIcon: Icon(Icons.phone_outlined),
-            ),
-            validator: FormValidators.phone,
-          ),
-          const SizedBox(height: 20),
-          TextFormField(
-            initialValue: _currentUser.username,
-            readOnly: true,
-            decoration: InputDecoration(
-              labelText: 'Username',
-              filled: true,
-              fillColor: isDark
-                  ? Colors.grey.shade900.withValues(alpha: 0.5)
-                  : Colors.grey.shade100,
-              prefixIcon: const Icon(Icons.alternate_email_rounded),
-            ),
-          ),
-          const SizedBox(height: 20),
-          TextFormField(
-            initialValue: _currentUser.email,
-            readOnly: true,
-            decoration: InputDecoration(
-              labelText: 'Email',
-              filled: true,
-              fillColor: isDark
-                  ? Colors.grey.shade900.withValues(alpha: 0.5)
-                  : Colors.grey.shade100,
-              prefixIcon: const Icon(Icons.email_outlined),
-            ),
-          ),
-          const SizedBox(height: 28),
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton(
-              onPressed: _handleUpdateProfile,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: theme.colorScheme.primary,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text(
-                'Simpan Perubahan',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

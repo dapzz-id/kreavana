@@ -58,7 +58,9 @@ class ProfileService extends BaseService
         $user = $this->userRepo->find($userId);
 
         if (isset($data['name'])) $user->name = $data['name'];
-        if (isset($data['phone'])) $user->phone = $data['phone'];
+        if (array_key_exists('phone', $data)) $user->phone = !empty($data['phone']) ? $data['phone'] : null;
+        if (isset($data['username']) && !empty($data['username'])) $user->username = $data['username'];
+        if (isset($data['email']) && !empty($data['email'])) $user->email = $data['email'];
         if (isset($data['sub_role'])) $user->sub_role = $data['sub_role'];
         if (array_key_exists('max_work_capacity', $data)) $user->max_work_capacity = $data['max_work_capacity'];
 

@@ -21,6 +21,8 @@ class ProfileController
             'display_name' => 'sometimes|string|max:255',
             'avatar_url' => 'sometimes|string|url|max:500',
             'phone' => 'sometimes|nullable|string|max:30|unique:users,phone,' . $user->id,
+            'username' => 'sometimes|string|min:3|max:50|unique:users,username,' . $user->id,
+            'email' => 'sometimes|email|max:150|unique:users,email,' . $user->id,
             'date_of_birth' => 'sometimes|nullable|date',
             'gender' => 'sometimes|nullable|in:male,female,other',
             'locale' => 'sometimes|string|max:10',
@@ -36,6 +38,8 @@ class ProfileController
         }
 
         $user->update($request->only([
+            'username',
+            'email',
             'full_name',
             'display_name',
             'avatar_url',

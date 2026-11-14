@@ -170,30 +170,28 @@ class SchoolPdfService {
     // ── PENGESAHAN ELEKTRONIK ────────────────────────────────────────────────
     stream.writeln('/F1 10.5 Tf');
     stream.writeln('0 -25 Td');
-    stream.writeln('(III. PENGESAHAN ELEKTRONIK & OTORISASI REKTORAT) Tj');
+    stream.writeln('(III. OTORISASI & VALIDASI DOKUMEN INSTITUSI) Tj');
 
     stream.writeln('/F2 9 Tf');
     stream.writeln('0 -14 Td');
-    stream.writeln('(Dokumen ini telah ditandatangani secara elektronik menggunakan sertifikat elektronik) Tj');
+    stream.writeln('(Dokumen ini diterbitkan resmi melalui sistem kemitraan terverifikasi Kreavana.) Tj');
     stream.writeln('0 -12 Td');
-    stream.writeln('(yang diterbitkan oleh Balai Sertifikasi Elektronik (BSrE), BSSN Republik Indonesia.) Tj');
+    stream.writeln('(Keabsahan dan integritas berkas tercatat pada pangkalan data arsip resmi.) Tj');
     stream.writeln('0 -12 Td');
-    stream.writeln('(Akreditasi Institusi: UNGGUL (BAN-PT SK No. 412/SK/BAN-PT/Ak/PT/2024)) Tj');
+    stream.writeln('(Status: TERDAFTAR & TERVALIDASI SISTEM KREAVANA) Tj');
 
     stream.writeln('/F1 10 Tf');
     stream.writeln('0 -25 Td');
-    stream.writeln('(Ditetapkan di : Surabaya) Tj');
-    stream.writeln('0 -13 Td');
-    stream.writeln('(Pada Tanggal  : ${_escapePdf(date)}) Tj');
+    stream.writeln('(Ditetapkan pada Tanggal : ${_escapePdf(date)}) Tj');
     stream.writeln('0 -15 Td');
-    stream.writeln('(Wakil Rektor Bidang Akademik, Riset & Kerjasama Industri) Tj');
+    stream.writeln('(Pejabat Otorisasi Kemitraan & Kerjasama Institusi) Tj');
 
     stream.writeln('/F1 11 Tf');
     stream.writeln('0 -38 Td');
-    stream.writeln('(Prof. Dr. Ir. H. Bambang Soeprapto, M.Sc., Ph.D.) Tj');
+    stream.writeln('(Pimpinan Bidang Kerjasama Institusi) Tj');
     stream.writeln('/F2 9 Tf');
     stream.writeln('0 -12 Td');
-    stream.writeln('(NIP. 19680814 199303 1 002 | Sertifikasi Digital BSrE Verified) Tj');
+    stream.writeln('(Tercatat Resmi pada Sistem Manajemen Dokumen Kreavana) Tj');
 
     stream.writeln('ET');
 

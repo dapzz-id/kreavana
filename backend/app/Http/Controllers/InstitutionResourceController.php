@@ -149,7 +149,9 @@ class InstitutionResourceController extends Controller
                     'document_number' => 'MOU-' . strtoupper(substr(md5($resource->id), 0, 8)) . '/' . date('Y'),
                     'category' => 'MoU Kemitraan',
                     'valid_until' => now()->addYears(3)->format('Y-m-d'),
-                    'url' => $mouUrl ?: 'https://docs.kreavana.id/mou/' . $resource->id,
+                    'url' => $mouUrl ?: null,
+                    'file_url' => $mouUrl ?: null,
+                    'file_name' => $meta['mou_filename'] ?? null,
                     'file_format' => strtoupper($meta['mou_extension'] ?? 'PDF'),
                     'file_size' => $meta['mou_filesize'] ?? 'Dokumen Digital',
                     'partner_name' => $partnerName,
@@ -266,6 +268,10 @@ class InstitutionResourceController extends Controller
             return $this->errorResponse('Fitur Pengadaan & Vendor hanya tersedia untuk akun Corporate / Perusahaan.', 403);
         }
 
+        if ($isSchool && ($validated['resource_type'] ?? null) === 'documents') {
+            return $this->errorResponse('Dokumen MoU diterbitkan otomatis melalui proses persetujuan kemitraan industri.', 403);
+        }
+
         if ($isSchool && ($validated['resource_type'] ?? null) === 'partners') {
             if (empty($validated['status'])) {
                 $validated['status'] = 'pending';
@@ -348,9 +354,11 @@ class InstitutionResourceController extends Controller
                     'document_number' => 'MOU-' . strtoupper(substr(md5($resource->id), 0, 8)) . '/' . date('Y'),
                     'category' => 'MoU Kemitraan',
                     'valid_until' => now()->addYears(3)->format('Y-m-d'),
-                    'url' => $mouUrl ?: 'https://docs.kreavana.id/mou/' . $resource->id,
+                    'url' => $mouUrl ?: null,
+                    'file_url' => $mouUrl ?: null,
+                    'file_name' => $meta['mou_filename'] ?? null,
                     'file_format' => strtoupper($meta['mou_extension'] ?? 'PDF'),
-                    'file_size' => $meta['mou_filesize'] ?? '2.4 MB',
+                    'file_size' => $meta['mou_filesize'] ?? 'Dokumen Digital',
                     'partner_name' => $partnerName,
                     'partner_resource_id' => $resource->id,
                     'corporate_user_id' => $meta['corporate_user_id'] ?? null,
