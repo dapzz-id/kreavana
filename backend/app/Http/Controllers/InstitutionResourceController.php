@@ -514,36 +514,41 @@ class InstitutionResourceController extends Controller
             return $this->errorResponse('Fitur Pengadaan & Vendor hanya tersedia untuk akun Corporate / Perusahaan.', 403);
         }
 
-        if ($resource->resource_type === 'members' && isset($validated['metadata'])) {
+        if (isset($validated['metadata']) && is_array($validated['metadata'])) {
             $oldMeta = is_array($resource->metadata) ? $resource->metadata : [];
             $newMeta = array_merge($oldMeta, $validated['metadata']);
-            $staffPassword = $validated['metadata']['password'] ?? $request->input('metadata.password');
-            if (isset($newMeta['password'])) {
-                unset($newMeta['password']);
-            }
-            if (isset($newMeta['permissions']) && is_array($newMeta['permissions'])) {
-                $newMeta['permissions'] = array_values($newMeta['permissions']);
-            }
-            $validated['metadata'] = $newMeta;
 
-            // Sync with User table if user exists
-            $memberUserId = $newMeta['user_id'] ?? null;
-            $memberEmail = $newMeta['email'] ?? null;
-            $targetUser = $memberUserId
-                ? \App\Models\User::find($memberUserId)
-                : ($memberEmail ? \App\Models\User::where('email', $memberEmail)->first() : null);
+            if ($resource->resource_type === 'members') {
+                $staffPassword = $validated['metadata']['password'] ?? $request->input('metadata.password');
+                if (isset($newMeta['password'])) {
+                    unset($newMeta['password']);
+                }
+                if (isset($newMeta['permissions']) && is_array($newMeta['permissions'])) {
+                    $newMeta['permissions'] = array_values($newMeta['permissions']);
+                }
+                $validated['metadata'] = $newMeta;
 
-            if ($targetUser) {
-                $userUpdates = [];
-                if (!empty($validated['title']) && $targetUser->name !== $validated['title']) {
-                    $userUpdates['name'] = $validated['title'];
+                // Sync with User table if user exists
+                $memberUserId = $newMeta['user_id'] ?? null;
+                $memberEmail = $newMeta['email'] ?? null;
+                $targetUser = $memberUserId
+                    ? \App\Models\User::find($memberUserId)
+                    : ($memberEmail ? \App\Models\User::where('email', $memberEmail)->first() : null);
+
+                if ($targetUser) {
+                    $userUpdates = [];
+                    if (!empty($validated['title']) && $targetUser->name !== $validated['title']) {
+                        $userUpdates['name'] = $validated['title'];
+                    }
+                    if (!empty($staffPassword) && strlen((string) $staffPassword) >= 6) {
+                        $userUpdates['password'] = \Illuminate\Support\Facades\Hash::make($staffPassword);
+                    }
+                    if (!empty($userUpdates)) {
+                        $targetUser->update($userUpdates);
+                    }
                 }
-                if (!empty($staffPassword) && strlen((string) $staffPassword) >= 6) {
-                    $userUpdates['password'] = \Illuminate\Support\Facades\Hash::make($staffPassword);
-                }
-                if (!empty($userUpdates)) {
-                    $targetUser->update($userUpdates);
-                }
+            } else {
+                $validated['metadata'] = $newMeta;
             }
         }
 
