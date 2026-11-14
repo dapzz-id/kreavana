@@ -1515,33 +1515,6 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                                 isCollapsed: collapsed,
                               ),
                           ],
-                          if (effectiveUser.hasInstitutionPermission('laporan_kegiatan') ||
-                              effectiveUser.hasInstitutionPermission('monitoring_evaluasi')) ...[
-                            if (!collapsed) ...[
-                              const SizedBox(height: 18),
-                              _buildSectionHeader('PEMANTAUAN AKADEMIK', isDark),
-                            ] else ...[
-                              const SizedBox(height: 8),
-                            ],
-                            if (effectiveUser.hasInstitutionPermission('laporan_kegiatan'))
-                              _buildNavRow(
-                                icon: Icons.summarize_outlined,
-                                label: 'Laporan Kegiatan',
-                                onTap: () => _pushLink('laporan'),
-                                isSelected: _isRouteActive('laporan'),
-                                isDark: isDark,
-                                isCollapsed: collapsed,
-                              ),
-                            if (effectiveUser.hasInstitutionPermission('monitoring_evaluasi'))
-                              _buildNavRow(
-                                icon: Icons.monitor_outlined,
-                                label: 'Monitoring & Evaluasi',
-                                onTap: () => _pushLink('monitoring_evaluasi'),
-                                isSelected: _isRouteActive('monitoring_evaluasi'),
-                                isDark: isDark,
-                                isCollapsed: collapsed,
-                              ),
-                          ],
                           if (effectiveUser.hasInstitutionPermission('dokumen_institusi') ||
                               effectiveUser.hasInstitutionPermission('pengumuman_institusi')) ...[
                             if (!collapsed) ...[
