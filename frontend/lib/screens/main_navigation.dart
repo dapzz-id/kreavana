@@ -1899,11 +1899,11 @@ class _MainNavigationState extends State<MainNavigation> {
 
     return switch (index) {
       0 => _buildClientDashboardScreen(),
-      1 => (_currentUser.isInstitution || _currentUser.isCorporate)
+      1 => _currentUser.isCorporate
           ? NotFoundScreen(
               title: 'Akses Dibatasi (403)',
               message:
-                  'Fitur Jelajahi Kolaborasi tidak tersedia untuk akun ${_currentUser.isInstitution ? "Institusi Pendidikan" : "Corporate / Perusahaan"}.',
+                  'Fitur Jelajahi Kolaborasi tidak tersedia untuk akun Corporate / Perusahaan.',
               user: _currentUser,
             )
           : ExploreScreen(user: _currentUser),
