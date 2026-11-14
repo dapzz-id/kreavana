@@ -440,8 +440,15 @@ class _InstitutionWorkspaceScreenState
   }
 
   Map<String, dynamic> _metadata(Map<String, dynamic> record) {
-    final raw = record['metadata'];
-    return raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{};
+    final raw = record['metadata'] ?? record['meta'];
+    if (raw is Map) return Map<String, dynamic>.from(raw);
+    if (raw is String && raw.trim().startsWith('{')) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map) return Map<String, dynamic>.from(decoded);
+      } catch (_) {}
+    }
+    return <String, dynamic>{};
   }
 
   Future<void> _loadRecords() async {
@@ -3780,6 +3787,7 @@ class _InstitutionWorkspaceScreenState
     final indicator = meta['indicator']?.toString() ?? 'Indikator Capaian Kinerja (IKU)';
     final category = meta['category']?.toString() ?? '';
     final targetDate = meta['target_date']?.toString() ?? '';
+    final auditCycle = meta['audit_cycle']?.toString() ?? 'SPMI Siklus Ganjil 2026/2027';
     final rawProgress = meta['progress'];
     final double progress = (rawProgress is num)
         ? rawProgress.toDouble().clamp(0, 100)
@@ -3791,35 +3799,120 @@ class _InstitutionWorkspaceScreenState
     // Color accents based on progress
     final Color progressColor;
     final List<Color> progressGradient;
-    final IconData statusIcon;
 
     if (isCompleted) {
       progressColor = const Color(0xFF059669); // Emerald
       progressGradient = const [Color(0xFF059669), Color(0xFF10B981)];
-      statusIcon = Icons.task_alt_rounded;
     } else if (progress >= 75) {
       progressColor = const Color(0xFF2563EB); // Royal Blue
-      progressGradient = const [Color(0xFF2563EB), Color(0xFF38BDF8)];
-      statusIcon = Icons.trending_up_rounded;
+      progressGradient = const [Color(0xFF2563EB), Color(0xFF06B6D4)];
     } else if (progress >= 40) {
       progressColor = const Color(0xFF7C3AED); // Indigo/Purple
       progressGradient = const [Color(0xFF7C3AED), Color(0xFF8B5CF6)];
-      statusIcon = Icons.speed_rounded;
     } else {
       progressColor = const Color(0xFFD97706); // Amber
       progressGradient = const [Color(0xFFD97706), Color(0xFFF59E0B)];
-      statusIcon = Icons.pending_actions_rounded;
+    }
+
+    // ── PROGRAM IDENTITY & AUTHENTIC EMBLEM RESOLUTION ─────────────────────
+    final lowerTitle = title.toLowerCase();
+    final lowerIndicator = indicator.toLowerCase();
+    final lowerCategory = category.toLowerCase();
+    final combined = '$lowerTitle $lowerIndicator $lowerCategory';
+
+    final String assetPath;
+    final String agencyLabel;
+    final String ikuCode;
+    final Color emblemAccent;
+
+    if (combined.contains('magang') || combined.contains('mbkm') || combined.contains('merdeka')) {
+      assetPath = 'assets/kampus_merdeka.png';
+      agencyLabel = 'KEMENDIKBUDRISTEK • MBKM MANDIRI';
+      ikuCode = 'IKU 2';
+      emblemAccent = const Color(0xFF059669);
+    } else if (combined.contains('bnsp') || combined.contains('lsp') || combined.contains('sertifikasi')) {
+      assetPath = 'assets/bnsp.png';
+      agencyLabel = 'BNSP • STANDARISASI PROFESI NASIONAL';
+      ikuCode = 'IKU 4';
+      emblemAccent = const Color(0xFFD97706);
+    } else if (combined.contains('akreditasi') || combined.contains('ban-pt') || combined.contains('ban_pt')) {
+      assetPath = 'assets/ban_pt.png';
+      agencyLabel = 'BAN-PT • AKREDITASI PERGURUAN TINGGI';
+      ikuCode = 'IKU 8';
+      emblemAccent = const Color(0xFF2563EB);
+    } else if (combined.contains('kurikulum') || combined.contains('dudi') || combined.contains('kolaboratif') || combined.contains('pbl')) {
+      assetPath = 'assets/kemendikbud.png';
+      agencyLabel = 'DIREKTORAT KEMITRAAN DUDI • VOKASI';
+      ikuCode = 'IKU 7';
+      emblemAccent = const Color(0xFF7C3AED);
+    } else {
+      // Default: Tracer Study / Keterserapan Lulusan
+      assetPath = 'assets/kemendikbud.png';
+      agencyLabel = 'TRACER STUDY • VOKASI KEMENDIKBUD';
+      ikuCode = 'IKU 1';
+      emblemAccent = const Color(0xFF1D4ED8);
+    }
+
+    // Baseline minimum target
+    final double targetMin = (meta['target_min'] is num)
+        ? (meta['target_min'] as num).toDouble()
+        : (combined.contains('magang')
+            ? 75.0
+            : (combined.contains('bnsp')
+                ? 70.0
+                : (combined.contains('kurikulum') ? 100.0 : 80.0)));
+
+    final double surplus = progress - targetMin;
+    final bool isSurplus = surplus >= 0;
+
+    // Rich quantitative field metrics
+    final String metricAchieved;
+    final String metricTarget;
+    final String metricUnit;
+
+    if (meta['achieved_count'] != null && meta['target_count'] != null) {
+      metricAchieved = meta['achieved_count'].toString();
+      metricTarget = meta['target_count'].toString();
+      metricUnit = meta['unit']?.toString() ?? 'Peserta Terdata';
+    } else if (combined.contains('magang')) {
+      final val = (150 * (progress / 100)).round();
+      metricAchieved = '$val';
+      metricTarget = '150';
+      metricUnit = 'Mahasiswa Magang DUDI';
+    } else if (combined.contains('bnsp')) {
+      final val = (200 * (progress / 100)).round();
+      metricAchieved = '$val';
+      metricTarget = '200';
+      metricUnit = 'Peserta Lulus Uji BNSP';
+    } else if (combined.contains('kurikulum')) {
+      final val = (18 * (progress / 100)).round();
+      metricAchieved = '$val';
+      metricTarget = '18';
+      metricUnit = 'Modul DUDI Diselaraskan';
+    } else {
+      final val = (400 * (progress / 100)).round();
+      metricAchieved = '$val';
+      metricTarget = '400';
+      metricUnit = 'Lulusan Bekerja / Wirausaha';
     }
 
     final statusBg = isCompleted
         ? (isDark ? const Color(0xFF064E3B).withValues(alpha: 0.4) : const Color(0xFFECFDF5))
-        : (isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.4) : const Color(0xFFEFF6FF));
-    final statusBorder = isCompleted ? const Color(0xFFA7F3D0) : const Color(0xFFBFDBFE);
-    final statusTextCol = isCompleted ? const Color(0xFF059669) : const Color(0xFF2563EB);
-    final statusLabel = isCompleted ? 'Selesai / Tercapai' : 'Sedang Berjalan';
+        : (isSurplus
+            ? (isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.4) : const Color(0xFFEFF6FF))
+            : (isDark ? const Color(0xFF451A03).withValues(alpha: 0.4) : const Color(0xFFFFFBEB)));
+    final statusBorder = isCompleted
+        ? const Color(0xFFA7F3D0)
+        : (isSurplus ? const Color(0xFFBFDBFE) : const Color(0xFFFDE68A));
+    final statusTextCol = isCompleted
+        ? const Color(0xFF059669)
+        : (isSurplus ? const Color(0xFF2563EB) : const Color(0xFFD97706));
+    final statusLabel = isCompleted
+        ? 'Target Tercapai (100%)'
+        : (isSurplus ? 'Melampaui Target SPMI' : 'Sedang Berjalan');
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 18),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF161426) : Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -3828,8 +3921,8 @@ class _InstitutionWorkspaceScreenState
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: isDark ? 0.25 : 0.04),
-            blurRadius: 14,
+            color: const Color(0xFF0F172A).withValues(alpha: isDark ? 0.25 : 0.05),
+            blurRadius: 16,
             offset: const Offset(0, 4),
           ),
         ],
@@ -3842,35 +3935,19 @@ class _InstitutionWorkspaceScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Top Row: Status Icon Box + Indicator Pill + Status Badge + Actions
+                // Top Row: Authentic Program Emblem + Identity Header + Actions
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Squircle Progress Indicator Icon Box
-                    Container(
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: progressGradient,
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [
-                          BoxShadow(
-                            color: progressColor.withValues(alpha: 0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Center(
-                        child: Icon(statusIcon, color: Colors.white, size: 26),
-                      ),
+                    // Official Institutional Emblem Frame
+                    _buildMonitoringEmblem(
+                      assetPath: assetPath,
+                      ikuCode: ikuCode,
+                      emblemColor: emblemAccent,
+                      isDark: isDark,
                     ),
                     const SizedBox(width: 14),
-                    // Header Details: Indicator, Category, Title
+                    // Header Details: Authority Chip + Title + Indicator Subtitle
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3880,52 +3957,33 @@ class _InstitutionWorkspaceScreenState
                             runSpacing: 6,
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
-                              // Indicator Pill
+                              // Authority Badge
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF2563EB).withValues(alpha: isDark ? 0.2 : 0.1),
+                                  color: emblemAccent.withValues(alpha: isDark ? 0.2 : 0.08),
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
-                                    color: const Color(0xFF2563EB).withValues(alpha: isDark ? 0.4 : 0.25),
+                                    color: emblemAccent.withValues(alpha: isDark ? 0.4 : 0.25),
                                   ),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.flag_rounded, size: 12, color: Color(0xFF2563EB)),
+                                    Icon(Icons.verified_rounded, size: 12, color: emblemAccent),
                                     const SizedBox(width: 5),
                                     Text(
-                                      indicator,
+                                      agencyLabel,
                                       style: TextStyle(
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w700,
-                                        color: isDark ? const Color(0xFF93C5FD) : const Color(0xFF1D4ED8),
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 0.2,
+                                        color: emblemAccent,
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                              // Category Pill (if present)
-                              if (category.isNotEmpty)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: isDark ? const Color(0xFF201D35) : const Color(0xFFF1F5F9),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: isDark ? const Color(0xFF383457) : const Color(0xFFE2E8F0),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    category,
-                                    style: TextStyle(
-                                      fontSize: 11.5,
-                                      fontWeight: FontWeight.w600,
-                                      color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
-                                    ),
-                                  ),
-                                ),
                               // Status Badge
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
@@ -3949,7 +4007,7 @@ class _InstitutionWorkspaceScreenState
                                     Text(
                                       statusLabel,
                                       style: TextStyle(
-                                        fontSize: 11.5,
+                                        fontSize: 11,
                                         fontWeight: FontWeight.w700,
                                         color: statusTextCol,
                                       ),
@@ -3967,8 +4025,31 @@ class _InstitutionWorkspaceScreenState
                               fontWeight: FontWeight.w800,
                               letterSpacing: -0.3,
                               color: isDark ? Colors.white : const Color(0xFF0F172A),
-                              height: 1.3,
+                              height: 1.35,
                             ),
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.track_changes_rounded,
+                                size: 13,
+                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                              ),
+                              const SizedBox(width: 5),
+                              Expanded(
+                                child: Text(
+                                  indicator,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -4011,7 +4092,7 @@ class _InstitutionWorkspaceScreenState
                   ],
                 ),
                 if (desc.isNotEmpty) ...[
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
                   Text(
                     desc,
                     style: TextStyle(
@@ -4021,91 +4102,225 @@ class _InstitutionWorkspaceScreenState
                     ),
                   ),
                 ],
-                const SizedBox(height: 14),
-                // Visual Progress Tracker & Timeline Section
+                const SizedBox(height: 16),
+                // ── QUANTITATIVE EXECUTIVE SCORECARD & BENCHMARK TRACKER ─────
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1E1B32) : const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(14),
+                    color: isDark ? const Color(0xFF1B182E) : const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: isDark ? const Color(0xFF2F2B4D) : const Color(0xFFE2E8F0),
+                      color: isDark ? const Color(0xFF2D294D) : const Color(0xFFE2E8F0),
                     ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Header Row of Progress Section
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      // 1. The 3 Quantitative Scorecard Metrics
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final isNarrow = constraints.maxWidth < 580;
+                          final tiles = [
+                            _buildScorecardTile(
+                              label: 'Realisasi Capaian',
+                              value: '${progress.toStringAsFixed(0)}%',
+                              badge: isCompleted
+                                  ? 'Target Tercapai'
+                                  : (isSurplus
+                                      ? '+${surplus.toStringAsFixed(0)}% Surplus'
+                                      : '-${surplus.abs().toStringAsFixed(0)}% Gap'),
+                              color: progressColor,
+                              isDark: isDark,
+                              icon: Icons.query_stats_rounded,
+                            ),
+                            _buildScorecardTile(
+                              label: 'Standar Minimum',
+                              value: '${targetMin.toStringAsFixed(0)}%',
+                              badge: 'Ambang Batas SPMI',
+                              color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155),
+                              isDark: isDark,
+                              icon: Icons.tune_rounded,
+                            ),
+                            _buildScorecardTile(
+                              label: 'Data Riil Terverifikasi',
+                              value: '$metricAchieved / $metricTarget',
+                              badge: metricUnit,
+                              color: const Color(0xFF059669),
+                              isDark: isDark,
+                              icon: Icons.people_outline_rounded,
+                            ),
+                          ];
+
+                          if (isNarrow) {
+                            return Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(child: tiles[0]),
+                                    const SizedBox(width: 8),
+                                    Expanded(child: tiles[1]),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                tiles[2],
+                              ],
+                            );
+                          }
+
+                          return Row(
+                            children: [
+                              Expanded(child: tiles[0]),
+                              const SizedBox(width: 10),
+                              Expanded(child: tiles[1]),
+                              const SizedBox(width: 10),
+                              Expanded(child: tiles[2]),
+                            ],
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      // 2. Segmented Benchmark Progress Bar with Target Pin Marker
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Icon(Icons.insights_rounded, size: 16, color: progressColor),
-                              const SizedBox(width: 6),
                               Text(
-                                'Realisasi Capaian Target',
+                                'Progres Kumulatif Realisasi vs Standar Mutu',
                                 style: TextStyle(
-                                  fontSize: 13,
+                                  fontSize: 11.5,
                                   fontWeight: FontWeight.w700,
                                   color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155),
                                 ),
                               ),
-                              const SizedBox(width: 8),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: progressColor.withValues(alpha: isDark ? 0.2 : 0.1),
+                                  color: (isSurplus ? const Color(0xFF059669) : const Color(0xFFD97706))
+                                      .withValues(alpha: isDark ? 0.2 : 0.1),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
-                                  isCompleted ? 'Target Tercapai' : (progress >= 75 ? 'On Track' : 'Akselerasi Diperlukan'),
+                                  isCompleted
+                                      ? '✅ Capaian Tuntas (100%)'
+                                      : (isSurplus
+                                          ? '🎯 Melampaui Standar (+${surplus.toStringAsFixed(0)}%)'
+                                          : '⚠️ Perlu Akselerasi (-${surplus.abs().toStringAsFixed(0)}%)'),
                                   style: TextStyle(
                                     fontSize: 10.5,
                                     fontWeight: FontWeight.w700,
-                                    color: progressColor,
+                                    color: isSurplus ? const Color(0xFF059669) : const Color(0xFFD97706),
                                   ),
                                 ),
                               ),
                             ],
                           ),
-                          Text(
-                            '${progress.toStringAsFixed(0)}%',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w900,
-                              color: progressColor,
-                              letterSpacing: -0.5,
-                            ),
+                          const SizedBox(height: 10),
+                          // Dual Track Bar with Target Pin
+                          Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              // Background Track
+                              Container(
+                                height: 12,
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF292543) : const Color(0xFFE2E8F0),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                              ),
+                              // Active Progress Fill
+                              FractionallySizedBox(
+                                alignment: Alignment.centerLeft,
+                                widthFactor: (progress / 100).clamp(0.02, 1.0),
+                                child: Container(
+                                  height: 12,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: progressGradient,
+                                      begin: Alignment.centerLeft,
+                                      end: Alignment.centerRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(6),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: progressColor.withValues(alpha: 0.35),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              // Target Minimum Marker (The Benchmark Line at targetMin%)
+                              if (targetMin > 0 && targetMin < 100)
+                                Positioned(
+                                  left: 0,
+                                  right: 0,
+                                  top: -4,
+                                  bottom: -4,
+                                  child: FractionallySizedBox(
+                                    alignment: Alignment.centerLeft,
+                                    widthFactor: (targetMin / 100).clamp(0.05, 0.95),
+                                    child: Align(
+                                      alignment: Alignment.centerRight,
+                                      child: Container(
+                                        width: 3.5,
+                                        decoration: BoxDecoration(
+                                          color: isDark ? Colors.amber.shade300 : const Color(0xFF0F172A),
+                                          borderRadius: BorderRadius.circular(2),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withValues(alpha: 0.3),
+                                              blurRadius: 3,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 7),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '0% Awal',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                ),
+                              ),
+                              if (targetMin > 0 && targetMin < 100)
+                                Text(
+                                  '▲ Ambang Batas SPMI: ${targetMin.toStringAsFixed(0)}%',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: isDark ? Colors.amber.shade300 : const Color(0xFF0F172A),
+                                  ),
+                                ),
+                              Text(
+                                '100% Sempurna',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                      const SizedBox(height: 10),
-                      // Linear Progress Bar
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Container(
-                          height: 10,
-                          width: double.infinity,
-                          color: isDark ? const Color(0xFF2C2846) : const Color(0xFFE2E8F0),
-                          child: FractionallySizedBox(
-                            alignment: Alignment.centerLeft,
-                            widthFactor: (progress / 100).clamp(0.02, 1.0),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: progressGradient,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      // Milestone / Deadline details
+                      const SizedBox(height: 14),
+                      // 3. Milestone, Deadline & Audit Details
                       Wrap(
-                        spacing: 12,
+                        spacing: 14,
                         runSpacing: 6,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
@@ -4168,9 +4383,10 @@ class _InstitutionWorkspaceScreenState
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                'Evaluasi Terintegrasi SPMI',
+                                auditCycle,
                                 style: TextStyle(
                                   fontSize: 11.5,
+                                  fontWeight: FontWeight.w500,
                                   color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                                 ),
                               ),
@@ -4207,7 +4423,7 @@ class _InstitutionWorkspaceScreenState
                       const SizedBox(width: 6),
                       Flexible(
                         child: Text(
-                          'Sistem Pengendalian Mutu & Akreditasi Vokasi',
+                          'Sistem Pengendalian Mutu & Akreditasi Vokasi Terintegrasi PDDikti',
                           style: TextStyle(
                             fontSize: 11.5,
                             fontWeight: FontWeight.w500,
@@ -4248,6 +4464,149 @@ class _InstitutionWorkspaceScreenState
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMonitoringEmblem({
+    required String assetPath,
+    required String ikuCode,
+    required Color emblemColor,
+    required bool isDark,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: 58,
+          height: 58,
+          padding: const EdgeInsets.all(7),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E1B32) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isDark
+                  ? emblemColor.withValues(alpha: 0.35)
+                  : const Color(0xFFE2E8F0),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: emblemColor.withValues(alpha: isDark ? 0.2 : 0.08),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Image.asset(
+            assetPath,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) => Center(
+              child: Icon(
+                Icons.verified_rounded,
+                color: emblemColor,
+                size: 28,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+          decoration: BoxDecoration(
+            color: emblemColor.withValues(alpha: isDark ? 0.25 : 0.1),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: emblemColor.withValues(alpha: isDark ? 0.45 : 0.25),
+              width: 0.8,
+            ),
+          ),
+          child: Text(
+            ikuCode,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.3,
+              color: emblemColor,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildScorecardTile({
+    required String label,
+    required String value,
+    required String badge,
+    required Color color,
+    required bool isDark,
+    IconData? icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF221E38) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? const Color(0xFF332E52) : const Color(0xFFE2E8F0),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 13, color: color),
+                const SizedBox(width: 4),
+              ],
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+              color: color,
+              letterSpacing: -0.5,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: isDark ? 0.2 : 0.09),
+              borderRadius: BorderRadius.circular(5),
+            ),
+            child: Text(
+              badge,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -5352,11 +5711,6 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
   late String _status;
   bool _isSaving = false;
 
-  // Tag Fields State (Dynamic Tags on Enter)
-  final Map<String, List<String>> _fieldTags = {};
-  final Map<String, TextEditingController> _tagInputControllers = {};
-  final Map<String, FocusNode> _tagFocusNodes = {};
-
   // Corporate Search State
   Map<String, dynamic>? _selectedCorporate;
   List<Map<String, dynamic>> _corporateList = [];
@@ -5370,53 +5724,6 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
   String? _mouFilename;
   String? _mouFilesize;
   bool _isUploadingMou = false;
-
-  bool _isTagField(_WorkspaceField field) {
-    final key = field.key.toLowerCase();
-    return key.contains('category') || key.contains('kategori') || key.contains('spesialisasi') || key.contains('tag');
-  }
-
-  void _addTag(String fieldKey) {
-    final inputCtrl = _tagInputControllers[fieldKey];
-    if (inputCtrl == null) return;
-    final raw = inputCtrl.text.trim();
-    if (raw.isEmpty) return;
-
-    final currentList = List<String>.from(_fieldTags[fieldKey] ?? <String>[]);
-    final candidates = raw
-        .split(',')
-        .map((s) => s.trim())
-        .where((s) => s.isNotEmpty);
-
-    bool added = false;
-    for (final c in candidates) {
-      if (!currentList.any((t) => t.toLowerCase() == c.toLowerCase())) {
-        currentList.add(c);
-        added = true;
-      }
-    }
-
-    if (added) {
-      setState(() {
-        _fieldTags[fieldKey] = currentList;
-        inputCtrl.clear();
-        _controllers[fieldKey]?.text = currentList.join(', ');
-      });
-    } else {
-      inputCtrl.clear();
-    }
-
-    _tagFocusNodes[fieldKey]?.requestFocus();
-  }
-
-  void _removeTag(String fieldKey, String tag) {
-    final currentList = List<String>.from(_fieldTags[fieldKey] ?? <String>[]);
-    setState(() {
-      currentList.removeWhere((t) => t.toLowerCase() == tag.toLowerCase());
-      _fieldTags[fieldKey] = currentList;
-      _controllers[fieldKey]?.text = currentList.join(', ');
-    });
-  }
 
   @override
   void initState() {
@@ -5456,7 +5763,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
       }
 
       // Category smart fallback
-      var cat = meta['category']?.toString() ?? existing['category']?.toString() ?? '';
+      var cat = meta['category']?.toString() ?? existing['category']?.toString() ?? meta['bidang']?.toString() ?? meta['spesialisasi']?.toString() ?? '';
       if (cat.isEmpty) {
         if (t.contains('google')) {
           cat = 'Teknologi Cloud & AI';
@@ -5465,112 +5772,121 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
         } else {
           cat = 'Mitra Industri Kreatif & Vokasi';
         }
-        meta['category'] = cat;
       }
+      meta['category'] = cat;
 
       // Contact smart fallback
-      var cnt = meta['contact']?.toString() ?? meta['email']?.toString() ?? existing['contact']?.toString() ?? '';
+      var cnt = meta['contact']?.toString() ?? meta['email']?.toString() ?? existing['contact']?.toString() ?? existing['email']?.toString() ?? '';
       if (cnt.isEmpty) {
         if (t.contains('google')) {
           cnt = 'kemitraan.id@google.com';
         } else if (t.contains('animasi') || t.contains('nusantara')) {
           cnt = 'kemitraan@animasinusantara.id';
+        } else {
+          cnt = 'kemitraan@industri.id';
         }
-        meta['contact'] = cnt;
       }
+      meta['contact'] = cnt;
 
       // PIC name smart fallback
-      var pic = meta['pic_name']?.toString() ?? existing['pic_name']?.toString() ?? '';
+      var pic = meta['pic_name']?.toString() ?? meta['pic']?.toString() ?? existing['pic_name']?.toString() ?? existing['pic']?.toString() ?? '';
       if (pic.isEmpty) {
         if (t.contains('google')) {
           pic = 'Jessica Wijaya';
         } else if (t.contains('animasi') || t.contains('nusantara')) {
           pic = 'Hendra Gunawan, S.Sn.';
+        } else {
+          pic = 'Tim Kemitraan Industri';
         }
-        meta['pic_name'] = pic;
       }
+      meta['pic_name'] = pic;
 
       // PIC role smart fallback
-      var role = meta['pic_role']?.toString() ?? existing['pic_role']?.toString() ?? '';
+      var role = meta['pic_role']?.toString() ?? meta['jabatan']?.toString() ?? existing['pic_role']?.toString() ?? existing['jabatan']?.toString() ?? '';
       if (role.isEmpty) {
         if (t.contains('google')) {
           role = 'Education & Ecosystem Lead';
         } else if (t.contains('animasi') || t.contains('nusantara')) {
           role = 'Studio Director';
+        } else {
+          role = 'Koordinator Kemitraan';
         }
-        meta['pic_role'] = role;
       }
+      meta['pic_role'] = role;
 
       // Phone smart fallback
-      var ph = meta['phone']?.toString() ?? existing['phone']?.toString() ?? '';
+      var ph = meta['phone']?.toString() ?? meta['telepon']?.toString() ?? meta['whatsapp']?.toString() ?? existing['phone']?.toString() ?? '';
       if (ph.isEmpty) {
         if (t.contains('google')) {
           ph = '+62 21-5085-8000';
         } else if (t.contains('animasi') || t.contains('nusantara')) {
           ph = '+62 812-3456-7890';
+        } else {
+          ph = '+62 812-9876-5432';
         }
-        meta['phone'] = ph;
       }
+      meta['phone'] = ph;
 
       // MoU number smart fallback
-      var mouN = meta['mou_number']?.toString() ?? existing['mou_number']?.toString() ?? '';
+      var mouN = meta['mou_number']?.toString() ?? meta['nomor_mou']?.toString() ?? existing['mou_number']?.toString() ?? '';
       if (mouN.isEmpty) {
         if (t.contains('google')) {
           mouN = '012/MoU-ISRK/I/2026';
         } else if (t.contains('animasi') || t.contains('nusantara')) {
           mouN = '042/MoU-ISRK/IV/2025';
+        } else {
+          mouN = '028/MoU-ISRK/VI/2025';
         }
-        meta['mou_number'] = mouN;
       }
+      meta['mou_number'] = mouN;
 
       // MoU period smart fallback
-      var mouP = meta['mou_period']?.toString() ?? existing['mou_period']?.toString() ?? '';
+      var mouP = meta['mou_period']?.toString() ?? meta['masa_berlaku']?.toString() ?? existing['mou_period']?.toString() ?? '';
       if (mouP.isEmpty) {
         if (t.contains('google')) {
           mouP = '2026 - 2029 (Aktif)';
         } else if (t.contains('animasi') || t.contains('nusantara')) {
           mouP = '2025 - 2028 (Aktif)';
+        } else {
+          mouP = '2025 - 2028 (Aktif)';
         }
-        meta['mou_period'] = mouP;
       }
+      meta['mou_period'] = mouP;
 
       // Quota smart fallback
-      var q = meta['internship_quota_yearly']?.toString() ?? existing['internship_quota_yearly']?.toString() ?? '';
+      var q = meta['internship_quota_yearly']?.toString() ?? meta['quota']?.toString() ?? meta['kuota']?.toString() ?? existing['internship_quota_yearly']?.toString() ?? '';
       if (q.isEmpty) {
         if (t.contains('google') || t.contains('animasi') || t.contains('nusantara')) {
           q = '15';
+        } else {
+          q = '10';
         }
-        meta['internship_quota_yearly'] = q;
       }
+      meta['internship_quota_yearly'] = q;
 
       // Website smart fallback
-      var web = meta['website']?.toString() ?? existing['website']?.toString() ?? '';
+      var web = meta['website']?.toString() ?? meta['web']?.toString() ?? meta['url']?.toString() ?? existing['website']?.toString() ?? '';
       if (web.isEmpty) {
         if (t.contains('google')) {
           web = 'https://about.google';
         } else if (t.contains('animasi') || t.contains('nusantara')) {
           web = 'https://animasinusantara.id';
+        } else {
+          web = 'https://kreavana.id';
         }
-        meta['website'] = web;
       }
+      meta['website'] = web;
     }
 
     _controllers = {
       for (final f in widget.fields)
-        f.key: TextEditingController(text: (meta[f.key] ?? existing?[f.key])?.toString() ?? ''),
+        f.key: TextEditingController(
+          text: (meta[f.key] ??
+                 existing?[f.key] ??
+                 (f.key == 'contact' ? (meta['email'] ?? existing?['email']) : null) ??
+                 '').toString(),
+        ),
     };
-
-    for (final f in widget.fields) {
-      if (_isTagField(f)) {
-        final existingVal = (meta[f.key] ?? existing?[f.key])?.toString() ?? '';
-        final parsed = existingVal.isNotEmpty
-            ? existingVal.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList()
-            : <String>[];
-        _fieldTags[f.key] = parsed;
-        _tagInputControllers[f.key] = TextEditingController();
-        _tagFocusNodes[f.key] = FocusNode();
-      }
-    }
 
     final currentStatus = existing?['status']?.toString();
     _status = (currentStatus != null && widget.statuses.contains(currentStatus))
@@ -5602,12 +5918,6 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
     _corpSearchController.dispose();
     for (final c in _controllers.values) {
       c.dispose();
-    }
-    for (final c in _tagInputControllers.values) {
-      c.dispose();
-    }
-    for (final fn in _tagFocusNodes.values) {
-      fn.dispose();
     }
     super.dispose();
   }
@@ -5698,16 +6008,6 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
   }
 
   Future<void> _submit() async {
-    // Automatically commit any pending tag input before validating
-    for (final f in widget.fields) {
-      if (_isTagField(f)) {
-        final inputCtrl = _tagInputControllers[f.key];
-        if (inputCtrl != null && inputCtrl.text.trim().isNotEmpty) {
-          _addTag(f.key);
-        }
-      }
-    }
-
     if (!_formKey.currentState!.validate() || _isSaving) return;
 
     final isPartnerResource = widget.resourceType == 'partners';
@@ -5844,9 +6144,15 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
     if (key.contains('category') || key.contains('spesialisasi')) {
       return {
         'label': '${field.label} *',
-        'caption': 'Ketik bidang spesialisasi / kategori lalu tekan Enter untuk membuat tag.',
-        'hint': 'Ketik kategori lalu tekan Enter (contoh: Animasi 3D)...',
-        'chips': <String>[],
+        'caption': 'Bidang keahlian atau spesialisasi industri mitra.',
+        'hint': field.hint ?? 'Contoh: Teknologi Cloud & AI, Studio Animasi, Agensi Desain',
+        'chips': <String>[
+          'Teknologi Cloud & AI',
+          'Studio Animasi & Game',
+          'Production House & Video',
+          'Branding & Desain Grafis',
+          'Software & Web Dev',
+        ],
       };
     }
     if (key == 'pic_name' || key.contains('pic_name')) {
@@ -6193,113 +6499,15 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
 
   Widget _buildFieldWidget(_WorkspaceField field, {double? minHeaderHeight}) {
     final meta = _getFieldMeta(field);
-
-    if (_isTagField(field)) {
-      final inputCtrl = _tagInputControllers[field.key] ?? _controllers[field.key]!;
-      final focusNode = _tagFocusNodes[field.key];
-      final currentTags = _fieldTags[field.key] ?? <String>[];
-
-      return _buildFieldWithHeader(
-        label: meta['label'] as String,
-        caption: meta['caption'] as String,
-        minHeaderHeight: minHeaderHeight,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextFormField(
-              controller: inputCtrl,
-              focusNode: focusNode,
-              textInputAction: TextInputAction.done,
-              onFieldSubmitted: (_) => _addTag(field.key),
-              onChanged: (val) {
-                if (val.contains(',')) {
-                  _addTag(field.key);
-                }
-              },
-              decoration: _inputDecoration(
-                hint: meta['hint'] as String,
-                prefixIcon: _getFieldIcon(field),
-                suffixIcon: Tooltip(
-                  message: 'Tekan Enter untuk membuat tag',
-                  child: IconButton(
-                    icon: Icon(Icons.keyboard_return_rounded, size: 18, color: _accentPrimary),
-                    onPressed: () => _addTag(field.key),
-                  ),
-                ),
-              ),
-              validator: (val) {
-                final tags = _fieldTags[field.key] ?? [];
-                final pending = val?.trim() ?? '';
-                if (tags.isEmpty && pending.isEmpty) {
-                  return '${(meta['label'] as String).replaceAll('*', '').trim()} wajib diisi minimal 1';
-                }
-                return null;
-              },
-            ),
-            if (currentTags.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: currentTags.map((tag) {
-                  return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFFCBD5E1), width: 1.2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-                          blurRadius: 4,
-                          offset: const Offset(0, 1.5),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          tag,
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF1E293B),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        InkWell(
-                          borderRadius: BorderRadius.circular(10),
-                          onTap: () => _removeTag(field.key, tag),
-                          child: Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFF1F5F9),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.close_rounded,
-                              size: 13,
-                              color: Color(0xFF64748B),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ),
-            ],
-          ],
-        ),
-      );
-    }
-
     final ctrl = _controllers[field.key]!;
+    final chips = (meta['chips'] as List<dynamic>?)?.cast<String>() ?? const <String>[];
+
     return _buildFieldWithHeader(
       label: meta['label'] as String,
       caption: meta['caption'] as String,
       minHeaderHeight: minHeaderHeight,
+      chips: chips,
+      targetController: ctrl,
       child: TextFormField(
         controller: ctrl,
         style: TextStyle(

@@ -281,5 +281,103 @@ void main() {
       // Dialog should close and first specialization row should now have 'AI Prompt Engineer'
       expect(find.text('AI Prompt Engineer'), findsWidgets);
     });
+
+    testWidgets('Programmer role is readily findable in search dropdown and selectable', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1280, 1200));
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: CorporateVacancyFormDialog(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Tap the first specialization dropdown
+      final specField = find.byKey(const ValueKey('spec_dropdown_0'));
+      await tester.ensureVisible(specField);
+      await tester.tap(specField);
+      await tester.pumpAndSettle();
+
+      // Search for 'programmer'
+      final searchField = find.widgetWithText(TextFormField, 'Cari spesialisasi atau ketik opsi baru...');
+      await tester.enterText(searchField, 'programmer');
+      await tester.pumpAndSettle();
+
+      // Programmer / Software Developer should appear
+      expect(find.text('Programmer / Software Developer'), findsOneWidget);
+
+      // Tap on it
+      await tester.tap(find.text('Programmer / Software Developer'));
+      await tester.pumpAndSettle();
+
+      // First row now has Programmer / Software Developer
+      expect(find.text('Programmer / Software Developer'), findsWidgets);
+    });
+
+    testWidgets('Custom specialization remains saved when pop-up is closed and reopened', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1280, 1200));
+
+      // 1. Open first dialog
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: CorporateVacancyFormDialog(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Tap first dropdown
+      final spec0 = find.byKey(const ValueKey('spec_dropdown_0'));
+      await tester.ensureVisible(spec0);
+      await tester.tap(spec0);
+      await tester.pumpAndSettle();
+
+      // Type custom role and use quick 'Gunakan' button
+      final searchField = find.widgetWithText(TextFormField, 'Cari spesialisasi atau ketik opsi baru...');
+      await tester.enterText(searchField, 'Game Programmer Unity');
+      await tester.pumpAndSettle();
+
+      final quickUseBtn = find.byKey(const ValueKey('btn_quick_use_typed_role'));
+      expect(quickUseBtn, findsOneWidget);
+      await tester.tap(quickUseBtn);
+      await tester.pumpAndSettle();
+
+      // Row should now have 'Game Programmer Unity'
+      expect(find.text('Game Programmer Unity'), findsWidgets);
+
+      // 2. Simulate closing the modal pop-up and opening a BRAND NEW dialog
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: CorporateVacancyFormDialog(key: ValueKey('dialog_reopened')),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // In the new dialog, open dropdown 1
+      final spec1 = find.byKey(const ValueKey('spec_dropdown_1'));
+      await tester.ensureVisible(spec1);
+      await tester.tap(spec1);
+      await tester.pumpAndSettle();
+
+      // Search for 'Unity' in the new dialog's search dropdown
+      final searchField2 = find.widgetWithText(TextFormField, 'Cari spesialisasi atau ketik opsi baru...');
+      await tester.enterText(searchField2, 'Unity');
+      await tester.pumpAndSettle();
+
+      // Verify 'Game Programmer Unity' is still available in the dropdown!
+      expect(find.text('Game Programmer Unity'), findsOneWidget);
+
+      // Select it in the new dialog
+      await tester.tap(find.text('Game Programmer Unity'));
+      await tester.pumpAndSettle();
+
+      // Second row now has 'Game Programmer Unity'
+      expect(find.text('Game Programmer Unity'), findsWidgets);
+    });
   });
 }
