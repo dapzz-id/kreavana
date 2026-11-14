@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:dio/dio.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../app/theme.dart';
 import '../models/user_model.dart';
@@ -3135,7 +3137,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
 
   Future<void> _pickMouFile() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'doc', 'docx'],
         withData: true,
@@ -3536,16 +3538,21 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
   }
 
   Widget _buildStatusDropdown() {
+    final effectiveStatuses = widget.resourceType == 'partners'
+        ? (widget.statuses.contains('pending') ? widget.statuses : ['pending', ...widget.statuses])
+        : widget.statuses;
+
     return _buildFieldWithHeader(
       label: 'Status Kemitraan & Akses *',
       caption: 'Tentukan status keaktifan mitra untuk keperluan penempatan magang siswa.',
       child: DropdownButtonFormField<String>(
-        initialValue: _status,
+        value: _status,
+        dropdownColor: Colors.white,
         decoration: _inputDecoration(
           hint: 'Pilih status...',
           prefixIcon: Icons.verified_user_outlined,
         ),
-        items: widget.statuses
+        items: effectiveStatuses
             .map(
               (value) => DropdownMenuItem(
                 value: value,
@@ -3559,7 +3566,9 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                         shape: BoxShape.circle,
                         color: value == 'active' || value == 'published'
                             ? Colors.green.shade600
-                            : (value == 'draft' ? Colors.amber.shade600 : const Color(0xFF64748B)),
+                            : (value == 'pending'
+                                ? Colors.amber.shade700
+                                : (value == 'draft' ? Colors.amber.shade600 : const Color(0xFF64748B))),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -3571,7 +3580,9 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                     Text(
                       value == 'active' || value == 'published'
                           ? '(Siap Kerjasama)'
-                          : (value == 'draft' ? '(Tahap Inisiasi)' : '(Arsip)'),
+                          : (value == 'pending'
+                              ? '(Menunggu Konfirmasi Corporate)'
+                              : (value == 'draft' ? '(Tahap Inisiasi)' : '(Arsip)')),
                       style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
                     ),
                   ],
@@ -3585,6 +3596,373 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
           }
         },
       ),
+    );
+  }
+
+  Widget _buildCorporateSearchSection() {
+    return _buildFieldCardContainer(
+      title: 'Cari & Hubungkan Akun Corporate Mitra *',
+      subtitle: 'Tautkan pengajuan kemitraan ini ke entitas akun Corporate / Perusahaan resmi di Kreavana.',
+      icon: Icons.domain_verification_rounded,
+      children: [
+        if (_selectedCorporate != null) ...[
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFBFDBFE)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: Text(
+                      _selectedCorporate!['name'] != null && _selectedCorporate!['name'].toString().isNotEmpty
+                          ? _selectedCorporate!['name'].toString().substring(0, 1).toUpperCase()
+                          : 'C',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              _selectedCorporate!['name']?.toString() ?? 'Perusahaan Mitra',
+                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFF0F172A)),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDBEAFE),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              'Corporate Terverifikasi',
+                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF1D4ED8)),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '@${_selectedCorporate!['username'] ?? 'corporate'} • ${_selectedCorporate!['email'] ?? 'Akun Resmi Industri'}',
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                      ),
+                    ],
+                  ),
+                ),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.swap_horiz_rounded, size: 16),
+                  label: const Text('Ganti', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF2563EB),
+                    side: const BorderSide(color: Color(0xFF93C5FD)),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    visualDensity: VisualDensity.compact,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _selectedCorporate = null;
+                      _corpSearchController.clear();
+                      _showCorpDropdown = true;
+                    });
+                    _fetchCorporates('');
+                  },
+                ),
+              ],
+            ),
+          ),
+        ] else ...[
+          TextField(
+            controller: _corpSearchController,
+            onChanged: (val) {
+              _fetchCorporates(val);
+              if (!_showCorpDropdown) setState(() => _showCorpDropdown = true);
+            },
+            onTap: () {
+              if (!_showCorpDropdown) {
+                setState(() => _showCorpDropdown = true);
+                if (_corporateList.isEmpty) _fetchCorporates('');
+              }
+            },
+            decoration: _inputDecoration(
+              hint: 'Ketik nama PT, CV, studio agensi, atau @username corporate...',
+              prefixIcon: Icons.search_rounded,
+              suffixIcon: _isLoadingCorporates
+                  ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                    )
+                  : (_corpSearchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear_rounded, size: 18),
+                          onPressed: () {
+                            _corpSearchController.clear();
+                            _fetchCorporates('');
+                          },
+                        )
+                      : null),
+            ),
+          ),
+          if (_showCorpDropdown && _corporateList.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Container(
+              constraints: const BoxConstraints(maxHeight: 200),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFCBD5E1)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: _corporateList.length,
+                separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                itemBuilder: (context, idx) {
+                  final corp = _corporateList[idx];
+                  final corpName = corp['name']?.toString() ?? 'Perusahaan';
+                  final corpUname = corp['username']?.toString() ?? '';
+                  final corpEmail = corp['email']?.toString() ?? '';
+                  final initials = corpName.isNotEmpty ? corpName.substring(0, 1).toUpperCase() : 'C';
+
+                  return ListTile(
+                    dense: true,
+                    visualDensity: VisualDensity.compact,
+                    leading: CircleAvatar(
+                      radius: 16,
+                      backgroundColor: const Color(0xFF2563EB),
+                      child: Text(
+                        initials,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                    ),
+                    title: Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            corpName,
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(Icons.verified_rounded, size: 14, color: Color(0xFF2563EB)),
+                      ],
+                    ),
+                    subtitle: Text(
+                      '@$corpUname • $corpEmail',
+                      style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Color(0xFF94A3B8)),
+                    onTap: () {
+                      setState(() {
+                        _selectedCorporate = corp;
+                        _showCorpDropdown = false;
+                        if (_titleController.text.trim().isEmpty) {
+                          _titleController.text = corpName;
+                        }
+                        if (_controllers['contact'] != null && _controllers['contact']!.text.trim().isEmpty) {
+                          _controllers['contact']!.text = corpEmail.isNotEmpty ? corpEmail : (corp['phone']?.toString() ?? '');
+                        }
+                      });
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ],
+      ],
+    );
+  }
+
+  Widget _buildMouUploadSection() {
+    final hasFile = _pickedMouFile != null || (_mouUrl != null && _mouUrl!.isNotEmpty);
+    final fileName = _pickedMouFile?.name ?? _mouFilename ?? 'Dokumen-MoU-Kemitraan.pdf';
+    final fileSize = _pickedMouFile != null
+        ? (_pickedMouFile!.size >= 1048576
+            ? '${(_pickedMouFile!.size / 1048576).toStringAsFixed(1)} MB'
+            : '${(_pickedMouFile!.size / 1024).toStringAsFixed(0)} KB')
+        : (_mouFilesize ?? 'Dokumen Digital');
+
+    return _buildFieldCardContainer(
+      title: 'Unggah Berkas Perjanjian Kerjasama (MoU / PKS)',
+      subtitle: 'Upload draf resmi nota kesepahaman yang akan diajukan ke Corporate untuk disetujui.',
+      icon: Icons.upload_file_rounded,
+      children: [
+        if (hasFile) ...[
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0FDF4),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFBBF7D0)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDCFCE7),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF86EFAC)),
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.picture_as_pdf_rounded, color: Color(0xFF16A34A), size: 24),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              fileName,
+                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: Color(0xFF14532D)),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDCFCE7),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.check_circle_rounded, size: 11, color: Color(0xFF16A34A)),
+                                SizedBox(width: 3),
+                                Text('Siap Diajukan', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF16A34A))),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '$fileSize • Berkas Resmi Terlampir',
+                        style: TextStyle(fontSize: 11.5, color: Colors.green.shade800),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Hapus / Ganti Berkas',
+                  icon: const Icon(Icons.close_rounded, size: 20, color: Color(0xFFDC2626)),
+                  onPressed: () {
+                    setState(() {
+                      _pickedMouFile = null;
+                      _mouUrl = null;
+                      _mouFilename = null;
+                      _mouFilesize = null;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+        ] else ...[
+          InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: _isUploadingMou ? null : _pickMouFile,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: const Color(0xFFCBD5E1),
+                  width: 1.5,
+                ),
+              ),
+              child: Column(
+                children: [
+                  if (_isUploadingMou) ...[
+                    const SizedBox(
+                      width: 28,
+                      height: 28,
+                      child: CircularProgressIndicator(strokeWidth: 2.5, color: Color(0xFF2563EB)),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text('Mengunggah dokumen MoU ke server...', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF2563EB))),
+                  ] else ...[
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                      ),
+                      child: const Icon(Icons.cloud_upload_outlined, color: Color(0xFF2563EB), size: 24),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Klik untuk memilih berkas MoU (PDF / DOC / DOCX)',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF1E293B)),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Format yang didukung: .pdf, .doc, .docx (Maksimal 15 MB)',
+                      style: TextStyle(fontSize: 11.5, color: Colors.grey.shade500),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            const Icon(Icons.info_outline_rounded, size: 14, color: Color(0xFF64748B)),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                'Setelah disetujui Corporate, berkas MoU ini akan otomatis terbit dan masuk ke menu "Dokumen & MoU".',
+                style: TextStyle(fontSize: 11.5, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
