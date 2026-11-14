@@ -37,6 +37,28 @@ class ProfileController extends Controller
         $user = Auth::guard('api')->user();
         $followRepo = app(\App\Repositories\FollowRepository::class);
 
+        $rawSubRole = $user->sub_role instanceof \BackedEnum ? $user->sub_role->value : $user->sub_role;
+        $uname = strtolower($user->username ?? '');
+        $email = strtolower($user->email ?? '');
+        $isInst = in_array(strtolower((string)$rawSubRole), ['institution', 'school', 'sekolah', 'kampus', 'smk', 'universitas', 'education', 'institusi'])
+            || in_array(strtolower((string)($user->role->value ?? '')), ['institution', 'school', 'institusi'])
+            || $user->verification_type === 'institution'
+            || str_contains($uname, 'institution')
+            || str_contains($uname, 'sekolah')
+            || str_contains($uname, 'smk')
+            || str_starts_with($email, 'institution@')
+            || str_starts_with($email, 'smk@')
+            || str_starts_with($email, 'sekolah@');
+
+        $effectiveSubRole = $rawSubRole;
+        if (empty($effectiveSubRole) && $isInst) {
+            $effectiveSubRole = 'institution';
+        }
+        $effectiveVerifType = $user->verification_type;
+        if (empty($effectiveVerifType) && $isInst) {
+            $effectiveVerifType = 'institution';
+        }
+
         $data = [
             'id' => $user->id,
             'name' => $user->name,
@@ -44,11 +66,11 @@ class ProfileController extends Controller
             'email' => $user->email,
             'phone' => $user->phone,
             'role' => $user->role->value,
-            'sub_role' => $user->sub_role instanceof \BackedEnum ? $user->sub_role->value : $user->sub_role,
+            'sub_role' => $effectiveSubRole,
             'avatar_url' => $user->avatar_url,
             'is_creator_approved' => (bool) $user->is_creator_approved,
-            'is_verified' => (bool) $user->is_verified,
-            'verification_type' => $user->verification_type,
+            'is_verified' => (bool) ($user->is_verified || $isInst),
+            'verification_type' => $effectiveVerifType,
             'max_work_capacity' => $user->max_work_capacity,
             'balance' => $user->balance,
             'followers_count' => $followRepo->getFollowersCount($user->id),
@@ -61,8 +83,8 @@ class ProfileController extends Controller
             'created_at' => $user->created_at?->toISOString(),
         ];
 
-        $subRoleLower = strtolower((string) ($user->sub_role instanceof \BackedEnum ? $user->sub_role->value : $user->sub_role ?? ''));
-        if (in_array($subRoleLower, ['institution', 'school', 'sekolah', 'kampus', 'smk', 'universitas', 'education', 'institusi'])) {
+        $subRoleLower = strtolower((string) ($effectiveSubRole ?? ''));
+        if ($isInst || in_array($subRoleLower, ['institution', 'school', 'sekolah', 'kampus', 'smk', 'universitas', 'education', 'institusi'])) {
             $profileResource = \App\Models\InstitutionResource::where('user_id', $user->id)
                 ->where('resource_type', 'profile')
                 ->first();

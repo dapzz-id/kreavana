@@ -98,15 +98,23 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
   }
 
   bool get _isSchool {
+    if (widget.user.isInstitution) return true;
     final sub = CreatorSidebarMenus.normalizeSubRole(widget.user.subRole);
-    return (widget.user.role == 'user' || widget.user.role == 'creator') &&
+    final role = widget.user.role.toLowerCase().trim();
+    final verif = widget.user.verificationType?.toLowerCase().trim() ?? '';
+    final uname = widget.user.username.toLowerCase().trim();
+    return (role == 'user' || role == 'creator' || role == 'institution' || role == 'school') &&
         (sub == 'institution' ||
             sub == 'institusi' ||
             sub == 'school' ||
             sub == 'education' ||
             sub == 'campus' ||
             sub == 'sekolah' ||
-            sub == 'kampus');
+            sub == 'kampus' ||
+            verif == 'institution' ||
+            uname.contains('institution') ||
+            uname.contains('sekolah') ||
+            uname.contains('smk'));
   }
 
   bool get _isCompany {

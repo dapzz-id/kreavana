@@ -85,6 +85,38 @@ class UserModel {
         username.toLowerCase() == 'corporate_demo' ||
         email.toLowerCase().startsWith('corporate@');
   }
+
+  bool get isInstitution {
+    if (isAdmin) return false;
+    final r = role.toLowerCase().trim();
+    final s = (subRole ?? '').toLowerCase().trim();
+    final v = (verificationType ?? '').toLowerCase().trim();
+    final uname = username.toLowerCase().trim();
+    final mail = email.toLowerCase().trim();
+    const instKeywords = [
+      'institution',
+      'institusi',
+      'school',
+      'sekolah',
+      'universitas',
+      'kampus',
+      'smk',
+      'education',
+      'campus',
+    ];
+    return instKeywords.contains(r) ||
+        instKeywords.contains(s) ||
+        v == 'institution' ||
+        uname.contains('institution') ||
+        uname.contains('sekolah') ||
+        uname.contains('smk') ||
+        mail.startsWith('institution@') ||
+        mail.startsWith('smk@') ||
+        mail.startsWith('sekolah@');
+  }
+
+  bool get isSchool => isInstitution;
+
   bool get isClientVerified => isCorporate || (isClient && isVerified);
   bool get isCreatorVerified => isCreator && (isVerified || isCreatorApproved);
 
@@ -114,6 +146,28 @@ class UserModel {
         uname == 'corporate_demo' ||
         mail.startsWith('corporate@');
 
+    const instKeywords = [
+      'institution',
+      'institusi',
+      'school',
+      'sekolah',
+      'universitas',
+      'kampus',
+      'smk',
+      'education',
+      'campus',
+    ];
+    final verifType = json['verification_type']?.toString().toLowerCase().trim();
+    final isInst = instKeywords.contains(r) ||
+        instKeywords.contains(s) ||
+        verifType == 'institution' ||
+        uname.contains('institution') ||
+        uname.contains('sekolah') ||
+        uname.contains('smk') ||
+        mail.startsWith('institution@') ||
+        mail.startsWith('smk@') ||
+        mail.startsWith('sekolah@');
+
     return UserModel(
       id: json['id']?.toString(),
       name: json['name'] ?? '',
@@ -124,17 +178,20 @@ class UserModel {
       bio: json['bio']?.toString() ?? json['description']?.toString(),
       location: json['location']?.toString() ?? json['city']?.toString(),
       role: json['role'] ?? 'user',
-      subRole: rawSub ?? (isCorp ? 'corporate' : null),
+      subRole: rawSub ?? (isCorp ? 'corporate' : (isInst ? 'institution' : null)),
       isCreatorApproved:
+          isInst ||
           json['is_creator_approved'] == 1 ||
           json['is_creator_approved'] == true ||
           json['is_creator_approved'] == '1',
       isVerified:
           isCorp ||
+          isInst ||
           json['is_verified'] == 1 ||
           json['is_verified'] == true ||
           json['is_verified'] == '1',
-      verificationType: json['verification_type']?.toString() ?? (isCorp ? 'corporate' : null),
+      verificationType: json['verification_type']?.toString() ??
+          (isCorp ? 'corporate' : (isInst ? 'institution' : null)),
       nik: json['nik']?.toString(),
       fullNameKtp: json['full_name_ktp']?.toString(),
       ktpPhotoUrl: json['ktp_photo_url']?.toString(),

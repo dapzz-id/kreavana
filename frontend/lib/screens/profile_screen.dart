@@ -62,7 +62,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isSavingSchool = false;
 
   bool get _isSchool {
+    if (_currentUser.isInstitution) return true;
     final sub = _currentUser.subRole?.toLowerCase().trim() ?? '';
+    final role = _currentUser.role.toLowerCase().trim();
+    final verif = _currentUser.verificationType?.toLowerCase().trim() ?? '';
+    final uname = _currentUser.username.toLowerCase().trim();
+    final mail = _currentUser.email.toLowerCase().trim();
     return [
       'school',
       'sekolah',
@@ -72,7 +77,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
       'smk',
       'education',
       'institusi',
-    ].contains(sub);
+      'campus',
+    ].contains(sub) ||
+    ['school', 'institution', 'institusi'].contains(role) ||
+    verif == 'institution' ||
+    uname.contains('institution') ||
+    uname.contains('sekolah') ||
+    uname.contains('smk') ||
+    mail.startsWith('institution@') ||
+    mail.startsWith('smk@') ||
+    mail.startsWith('sekolah@');
   }
 
   bool get _isGovernment {
@@ -154,6 +168,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.didUpdateWidget(oldWidget);
     if (widget.user != oldWidget.user) {
       _currentUser = widget.user;
+      if (_isSchool && _schoolNameController.text.isEmpty) {
+        _initSchoolDefaults();
+      }
     }
     if (widget.user.name != oldWidget.user.name) {
       _nameController.text = widget.user.name;
@@ -199,6 +216,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (result.user != null) {
           _currentUser = result.user!;
           widget.onUserUpdated(result.user!);
+          if (_isSchool && _schoolNameController.text.isEmpty) {
+            _initSchoolDefaults();
+          }
         }
       }
     }

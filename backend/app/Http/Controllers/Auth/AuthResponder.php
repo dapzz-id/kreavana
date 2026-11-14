@@ -31,6 +31,28 @@ trait AuthResponder
 
         $isMobile = request()->header('X-Client-Type') === 'mobile';
 
+        $rawSubRole = $user ? ($user->sub_role instanceof \BackedEnum ? $user->sub_role->value : $user->sub_role) : null;
+        $uname = strtolower($user?->username ?? '');
+        $email = strtolower($user?->email ?? '');
+        $isInst = in_array(strtolower((string)$rawSubRole), ['institution', 'school', 'sekolah', 'kampus', 'smk', 'universitas', 'education', 'institusi'])
+            || in_array(strtolower((string)($user?->role->value ?? '')), ['institution', 'school', 'institusi'])
+            || $user?->verification_type === 'institution'
+            || str_contains($uname, 'institution')
+            || str_contains($uname, 'sekolah')
+            || str_contains($uname, 'smk')
+            || str_starts_with($email, 'institution@')
+            || str_starts_with($email, 'smk@')
+            || str_starts_with($email, 'sekolah@');
+
+        $effectiveSubRole = $rawSubRole;
+        if (empty($effectiveSubRole) && $isInst) {
+            $effectiveSubRole = 'institution';
+        }
+        $effectiveVerifType = $user?->verification_type;
+        if (empty($effectiveVerifType) && $isInst) {
+            $effectiveVerifType = 'institution';
+        }
+
         $data = [
             'access_token' => $token,
             'token_type' => 'bearer',
@@ -41,11 +63,11 @@ trait AuthResponder
                 'username' => $user->username,
                 'email' => $user->email,
                 'role' => $user->role->value,
-                'sub_role' => $user->sub_role instanceof \BackedEnum ? $user->sub_role->value : $user->sub_role,
+                'sub_role' => $effectiveSubRole,
                 'avatar_url' => $user->avatar_url,
                 'is_creator_approved' => (bool) $user->is_creator_approved,
-                'is_verified' => (bool) $user->is_verified,
-                'verification_type' => $user->verification_type,
+                'is_verified' => (bool) ($user->is_verified || $isInst),
+                'verification_type' => $effectiveVerifType,
                 'balance' => $user->balance,
                 'subscription_tier' => $user->subscription_tier,
             ] : null,

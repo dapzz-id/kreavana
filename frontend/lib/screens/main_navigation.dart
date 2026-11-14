@@ -2071,15 +2071,23 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 
   bool get _isSchool {
+    if (_currentUser.isInstitution) return true;
     final sub = CreatorSidebarMenus.normalizeSubRole(_currentUser.subRole);
-    return (_currentUser.role == 'user' || _currentUser.role == 'creator') &&
+    final role = _currentUser.role.toLowerCase().trim();
+    final verif = _currentUser.verificationType?.toLowerCase().trim() ?? '';
+    final uname = _currentUser.username.toLowerCase().trim();
+    return (role == 'user' || role == 'creator' || role == 'institution' || role == 'school') &&
         (sub == 'institution' ||
             sub == 'institusi' ||
             sub == 'school' ||
             sub == 'education' ||
             sub == 'campus' ||
             sub == 'sekolah' ||
-            sub == 'kampus');
+            sub == 'kampus' ||
+            verif == 'institution' ||
+            uname.contains('institution') ||
+            uname.contains('sekolah') ||
+            uname.contains('smk'));
   }
 
   Widget _buildScreenAt(int index) {
