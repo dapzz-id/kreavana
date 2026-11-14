@@ -1518,7 +1518,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                           ],
                           _buildNavRow(
                             icon: Icons.account_balance_outlined,
-                            label: 'Profil Sekolah',
+                            label: 'Profil Institusi',
                             onTap: () => _pushLink('profil_instansi'),
                             isSelected: _isRouteActive('profil_instansi'),
                             isDark: isDark,

@@ -413,8 +413,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
         AppSweetAlert.success(
           context,
-          'Data legalitas, NPSN, dan profil institusi sekolah berhasil diperbarui.',
-          title: 'Profil Sekolah Disimpan',
+          'Data legalitas, NPSN, dan profil institusi berhasil diperbarui.',
+          title: 'Profil Institusi Disimpan',
         );
       }
     } catch (e) {
@@ -422,7 +422,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         setState(() => _isSavingSchool = false);
         AppSweetAlert.error(
           context,
-          'Terjadi kesalahan saat menyimpan profil sekolah: $e',
+          'Terjadi kesalahan saat menyimpan profil institusi: $e',
           title: 'Gagal Menyimpan',
         );
       }
@@ -461,7 +461,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         toolbarHeight: 75,
         title: Text(
           _isSchool
-              ? 'Profil Sekolah'
+              ? 'Profil Institusi'
               : (_isGovernment ? 'Profil Instansi & Kedinasan' : 'Profil Pengguna'),
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
@@ -577,7 +577,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ),
                                     BreadcrumbItem(
                                       label: _isSchool
-                                          ? 'Profil Sekolah'
+                                          ? 'Profil Institusi'
                                           : (_isGovernment
                                               ? 'Profil Instansi'
                                               : 'Profil Saya'),
@@ -1354,12 +1354,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Informasi Legalitas & Profil Sekolah',
+                      'Informasi Legalitas & Profil Institusi',
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      'Kelola data legalitas, NPSN, akreditasi, pimpinan, dan narahubung resmi sekolah.',
+                      'Kelola data legalitas, NPSN, akreditasi, pimpinan, dan narahubung resmi institusi.',
                       style: TextStyle(
                         fontSize: 13,
                         color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
@@ -1740,7 +1740,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     )
                   : const Icon(Icons.check_circle_outline_rounded, size: 20),
               label: Text(
-                _isSavingSchool ? 'Menyimpan...' : 'Simpan Profil Sekolah',
+                _isSavingSchool ? 'Menyimpan...' : 'Simpan Profil Institusi',
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
               style: ElevatedButton.styleFrom(

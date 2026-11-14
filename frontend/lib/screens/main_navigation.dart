@@ -1147,7 +1147,7 @@ class _MainNavigationState extends State<MainNavigation> {
         ],
         _buildSidebarLink(
           icon: Icons.account_balance_outlined,
-          label: 'Profil Sekolah',
+          label: 'Profil Institusi',
           onTap: () {
             setState(() => _activeGovRoute = 'profil_instansi');
             _pushGovScreen(
