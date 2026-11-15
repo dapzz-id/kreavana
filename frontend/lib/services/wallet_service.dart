@@ -20,6 +20,13 @@ class WalletService {
     throw Exception(response['message'] ?? 'Gagal mengatur PIN.');
   }
 
+  /// Mengatur ulang / mereset PIN wallet pengguna.
+  static Future<bool> resetPin(String pin) async {
+    final response = await ApiService.post('wallet/reset-pin', {'pin': pin});
+    if (response['status'] == true) return true;
+    throw Exception(response['message'] ?? 'Gagal memperbarui PIN.');
+  }
+
   /// Verifikasi PIN wallet ke server. Returns true jika valid.
   /// Throws Exception dengan pesan error jika PIN salah atau wallet belum aktif.
   static Future<bool> verifyPin(String pin) async {
