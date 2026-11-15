@@ -3994,7 +3994,14 @@ class _InstitutionWorkspaceScreenState
                     // Action Popup Menu
                     PopupMenuButton<String>(
                       icon: Icon(Icons.more_vert_rounded, color: isDark ? const Color(0xFF94A3B8) : Colors.grey.shade500),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      color: isDark ? const Color(0xFF1E1B2E) : Colors.white,
+                      elevation: 6,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        side: BorderSide(
+                          color: isDark ? const Color(0xFF2D2A42) : const Color(0xFFE2E8F0),
+                        ),
+                      ),
                       onSelected: (value) {
                         if (value == 'edit') {
                           _openEditor(record);
@@ -4002,26 +4009,21 @@ class _InstitutionWorkspaceScreenState
                           _deleteRecord(record);
                         }
                       },
-                      itemBuilder: (_) => const [
-                        PopupMenuItem(
+                      itemBuilder: (_) => [
+                        _buildPopupActionItem(
                           value: 'edit',
-                          child: Row(
-                            children: [
-                              Icon(Icons.edit_note_rounded, size: 16, color: Color(0xFF2563EB)),
-                              SizedBox(width: 8),
-                              Text('Update Progres & Target'),
-                            ],
-                          ),
+                          icon: Icons.edit_note_rounded,
+                          label: 'Update Progres & Target',
+                          isDark: isDark,
+                          color: const Color(0xFF2563EB),
                         ),
-                        PopupMenuItem(
+                        _buildPopupDivider(),
+                        _buildPopupActionItem(
                           value: 'delete',
-                          child: Row(
-                            children: [
-                              Icon(Icons.delete_outline_rounded, size: 16, color: Colors.red),
-                              SizedBox(width: 8),
-                              Text('Hapus Agenda Monev'),
-                            ],
-                          ),
+                          icon: Icons.delete_outline_rounded,
+                          label: 'Hapus Agenda Monev',
+                          isDark: isDark,
+                          isDestructive: true,
                         ),
                       ],
                     ),
