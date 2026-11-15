@@ -3777,11 +3777,10 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
     final waUri = Uri.parse('https://wa.me/$cleanPhone?text=$message');
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Mengarahkan ke kontak WhatsApp $name ($cleanPhone)...'),
-        duration: const Duration(seconds: 2),
-      ),
+    AppSweetAlert.info(
+      context,
+      'Mengarahkan ke kontak WhatsApp $name ($cleanPhone)...',
+      title: 'Menghubungkan WhatsApp',
     );
 
     try {
@@ -3882,11 +3881,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                       onPressed: () {
                         Clipboard.setData(ClipboardData(text: displayPhone));
                         Navigator.pop(dialogCtx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Nomor $displayPhone berhasil disalin'),
-                            backgroundColor: Colors.green.shade700,
-                          ),
+                        AppSweetAlert.success(
+                          context,
+                          'Nomor $displayPhone berhasil disalin ke clipboard',
+                          title: 'Nomor Disalin',
                         );
                       },
                     ),
@@ -3905,9 +3903,13 @@ class _DashboardScreenState extends State<DashboardScreen>
                           await launchUrl(uri, mode: LaunchMode.externalApplication);
                         } catch (_) {
                           Clipboard.setData(ClipboardData(text: displayPhone));
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Nomor $displayPhone telah disalin')),
-                          );
+                          if (context.mounted) {
+                            AppSweetAlert.info(
+                              context,
+                              'Nomor $displayPhone telah disalin ke clipboard.',
+                              title: 'Nomor Disalin',
+                            );
+                          }
                         }
                       },
                       icon: const Icon(Icons.call_rounded, size: 16),
@@ -3933,9 +3935,13 @@ class _DashboardScreenState extends State<DashboardScreen>
                           await launchUrl(waUri, mode: LaunchMode.externalApplication);
                         } catch (_) {
                           Clipboard.setData(ClipboardData(text: displayPhone));
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Nomor $displayPhone telah disalin')),
-                          );
+                          if (context.mounted) {
+                            AppSweetAlert.warning(
+                              context,
+                              'Membuka WhatsApp gagal. Nomor $displayPhone telah disalin ke clipboard.',
+                              title: 'Gagal Buka WhatsApp',
+                            );
+                          }
                         }
                       },
                       icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16),

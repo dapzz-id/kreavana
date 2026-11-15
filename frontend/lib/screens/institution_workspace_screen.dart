@@ -575,6 +575,52 @@ class _InstitutionWorkspaceScreenState
     }
   }
 
+  PopupMenuEntry<String> _buildPopupActionItem({
+    required String value,
+    required IconData icon,
+    required String label,
+    required bool isDark,
+    Color color = const Color(0xFF2563EB),
+    bool isDestructive = false,
+  }) {
+    final effectiveColor = isDestructive ? Colors.red : color;
+    return PopupMenuItem<String>(
+      value: value,
+      height: 42,
+      child: Row(
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: effectiveColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(7),
+            ),
+            child: Icon(icon, size: 15, color: effectiveColor),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: isDestructive
+                    ? Colors.red
+                    : (isDark ? Colors.white : const Color(0xFF0F172A)),
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  PopupMenuEntry<String> _buildPopupDivider() {
+    return const PopupMenuDivider(height: 1);
+  }
+
   bool get _canCreateResource {
     if (widget.resourceType == 'tenders' && !_isCorporate && !_isGovernment) {
       return false;
@@ -1245,12 +1291,34 @@ class _InstitutionWorkspaceScreenState
                   ),
                 ),
                 PopupMenuButton<String>(
+                  icon: Icon(Icons.more_vert_rounded, color: isDark ? const Color(0xFF94A3B8) : Colors.grey.shade500),
+                  color: isDark ? const Color(0xFF1E1B2E) : Colors.white,
+                  elevation: 6,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    side: BorderSide(
+                      color: isDark ? const Color(0xFF2D2A42) : const Color(0xFFE2E8F0),
+                    ),
+                  ),
                   onSelected: (value) => value == 'edit'
                       ? _openEditor(record)
                       : _deleteRecord(record),
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(value: 'edit', child: Text('Edit Tender')),
-                    PopupMenuItem(value: 'delete', child: Text('Hapus Permanen')),
+                  itemBuilder: (_) => [
+                    _buildPopupActionItem(
+                      value: 'edit',
+                      icon: Icons.edit_outlined,
+                      label: 'Edit Tender',
+                      isDark: isDark,
+                      color: const Color(0xFF2563EB),
+                    ),
+                    _buildPopupDivider(),
+                    _buildPopupActionItem(
+                      value: 'delete',
+                      icon: Icons.delete_outline_rounded,
+                      label: 'Hapus Permanen',
+                      isDark: isDark,
+                      isDestructive: true,
+                    ),
                   ],
                 ),
               ],
@@ -1363,23 +1431,8 @@ class _InstitutionWorkspaceScreenState
   }
 
   List<Color> _getPartnerGradient(String category, String title) {
-    final text = '$category $title'.toLowerCase();
-    if (text.contains('animasi') || text.contains('game')) {
-      return const [Color(0xFF6366F1), Color(0xFF8B5CF6)];
-    }
-    if (text.contains('creative') || text.contains('design') || text.contains('desain') || text.contains('grafis')) {
-      return const [Color(0xFFEC4899), Color(0xFFF43F5E)];
-    }
-    if (text.contains('sound') || text.contains('audio') || text.contains('musik')) {
-      return const [Color(0xFFF59E0B), Color(0xFFEA580C)];
-    }
-    if (text.contains('broadcasting') || text.contains('media') || text.contains('video') || text.contains('sinema')) {
-      return const [Color(0xFF06B6D4), Color(0xFF0284C7)];
-    }
-    if (text.contains('komunitas') || text.contains('asosiasi')) {
-      return const [Color(0xFF10B981), Color(0xFF0D9488)];
-    }
-    return const [Color(0xFF2563EB), Color(0xFF1D4ED8)];
+    final accentColor = _resolvedAccentColor;
+    return [accentColor, accentColor];
   }
 
   IconData _getCategoryIcon(String category) {
@@ -1404,20 +1457,20 @@ class _InstitutionWorkspaceScreenState
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardDark2 : const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: color),
+          Icon(icon, size: 14, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
           const SizedBox(width: 6),
           Text(
             label,
             style: TextStyle(
               fontSize: 11.5,
-              fontWeight: FontWeight.w700,
-              color: isDark ? Colors.white70 : const Color(0xFF475569),
+              fontWeight: FontWeight.w600,
+              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
             ),
           ),
           const SizedBox(width: 4),
@@ -1431,7 +1484,7 @@ class _InstitutionWorkspaceScreenState
           ),
           if (onTap != null) ...[
             const SizedBox(width: 4),
-            Icon(Icons.copy_rounded, size: 12, color: Colors.grey.shade400),
+            Icon(Icons.copy_rounded, size: 12, color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
           ],
         ],
       ),
@@ -1440,7 +1493,7 @@ class _InstitutionWorkspaceScreenState
     if (onTap != null) {
       return InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
         child: badge,
       );
     }
@@ -1579,28 +1632,20 @@ class _InstitutionWorkspaceScreenState
       emblemIcon = Icons.apartment_rounded;
     }
 
+    final accentColor = _resolvedAccentColor;
+
     return Container(
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: gradientColors,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: accentColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(
-            color: gradientColors.first.withValues(alpha: 0.28),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: accentColor.withValues(alpha: 0.18)),
       ),
       child: Center(
         child: Icon(
           emblemIcon,
-          color: Colors.white,
+          color: accentColor,
           size: 20,
         ),
       ),
@@ -1612,6 +1657,7 @@ class _InstitutionWorkspaceScreenState
     final status = record['status']?.toString().toLowerCase() ?? 'active';
     final title = record['title']?.toString() ?? 'Mitra Industri';
     var desc = record['description']?.toString() ?? '';
+    final accentColor = _resolvedAccentColor;
 
     // Smart fallback if description is trivial or placeholder like "google boss"
     if (desc.trim().toLowerCase() == 'google boss' || desc.trim().length <= 15) {
@@ -1755,18 +1801,18 @@ class _InstitutionWorkspaceScreenState
     final networkUrl = _resolvePartnerNetworkLogo(title, meta);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: isDark ? 0.2 : 0.04),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+            color: const Color(0xFF0F172A).withValues(alpha: isDark ? 0.15 : 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -1775,26 +1821,19 @@ class _InstitutionWorkspaceScreenState
         children: [
           // 1. TOP HEADER ROW (Avatar, Title, Badges, Status, Menu)
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 16, 12),
+            padding: const EdgeInsets.fromLTRB(18, 18, 14, 12),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Company Official Logo / Monogram Container
+                // Company Official Logo Container
                 Container(
-                  width: 54,
-                  height: 54,
-                  padding: const EdgeInsets.all(7),
+                  width: 48,
+                  height: 48,
+                  padding: const EdgeInsets.all(5),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                    boxShadow: [
-          BoxShadow(
-                        color: const Color(0xFF0F172A).withValues(alpha: 0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
+                    color: isDark ? AppTheme.cardDark2 : Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0)),
                   ),
                   child: Center(
                     child: _buildPartnerLogoWidget(
@@ -1819,8 +1858,8 @@ class _InstitutionWorkspaceScreenState
                             child: Text(
                               title,
                               style: TextStyle(
-                                fontSize: 16.5,
-                                fontWeight: FontWeight.w800,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
                                 color: isDark ? Colors.white : const Color(0xFF0F172A),
                                 letterSpacing: -0.2,
                               ),
@@ -1829,39 +1868,39 @@ class _InstitutionWorkspaceScreenState
                             ),
                           ),
                           const SizedBox(width: 6),
-                          const Icon(Icons.verified_rounded, color: Color(0xFF2563EB), size: 18),
+                          Icon(Icons.verified_rounded, color: accentColor, size: 16),
                           const SizedBox(width: 8),
                           // DUDI Tag
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFEFF6FF),
+                              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
                               borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: const Color(0xFFBFDBFE)),
+                              border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
                             ),
-                            child: const Text(
+                            child: Text(
                               'Mitra DUDI',
                               style: TextStyle(
                                 fontSize: 10.5,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF2563EB),
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
                               ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 5),
+                      const SizedBox(height: 4),
                       // Category with icon
                       Row(
                         children: [
-                          Icon(categoryIcon, size: 14, color: const Color(0xFF64748B)),
+                          Icon(categoryIcon, size: 13, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
                           const SizedBox(width: 5),
                           Text(
                             category,
                             style: TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w600,
-                              color: isDark ? AppTheme.textMuted : const Color(0xFF475569),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: isDark ? AppTheme.textMuted : const Color(0xFF64748B),
                             ),
                           ),
                         ],
@@ -1872,29 +1911,29 @@ class _InstitutionWorkspaceScreenState
                 const SizedBox(width: 10),
                 // Status Pill
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: statusBg,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(6),
                     border: Border.all(color: statusBorder),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        width: 7,
-                        height: 7,
+                        width: 6,
+                        height: 6,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: statusDotColor,
                         ),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 5),
                       Text(
                         statusText,
                         style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w700,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
                           color: statusDotColor,
                         ),
                       ),
@@ -1903,45 +1942,45 @@ class _InstitutionWorkspaceScreenState
                 ),
                 // Actions PopupMenu
                 PopupMenuButton<String>(
-                  icon: Icon(Icons.more_vert_rounded, color: Colors.grey.shade500),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  icon: Icon(Icons.more_vert_rounded, color: isDark ? const Color(0xFF94A3B8) : Colors.grey.shade500),
+                  color: isDark ? const Color(0xFF1E1B2E) : Colors.white,
+                  elevation: 6,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    side: BorderSide(
+                      color: isDark ? const Color(0xFF2D2A42) : const Color(0xFFE2E8F0),
+                    ),
+                  ),
                   onSelected: (value) {
                     if (value == 'edit') _openEditor(normalizedRecord);
                     if (value == 'delete') _deleteRecord(record);
                     if (value == 'contact') _copyOrLaunchContact(contact);
                   },
                   itemBuilder: (_) => [
-                    const PopupMenuItem(
+                    _buildPopupActionItem(
                       value: 'edit',
-                      child: Row(
-                        children: [
-                          Icon(Icons.edit_outlined, size: 17, color: Color(0xFF2563EB)),
-                          SizedBox(width: 8),
-                          Text('Edit Data Mitra'),
-                        ],
-                      ),
+                      icon: Icons.edit_outlined,
+                      label: 'Edit Data Mitra',
+                      isDark: isDark,
+                      color: accentColor,
                     ),
-                    if (contact.isNotEmpty)
-                      const PopupMenuItem(
+                    if (contact.isNotEmpty) ...[
+                      _buildPopupDivider(),
+                      _buildPopupActionItem(
                         value: 'contact',
-                        child: Row(
-                          children: [
-                            Icon(Icons.copy_rounded, size: 17, color: Color(0xFF059669)),
-                            SizedBox(width: 8),
-                            Text('Salin Kontak PIC'),
-                          ],
-                        ),
+                        icon: Icons.copy_rounded,
+                        label: 'Salin Kontak PIC',
+                        isDark: isDark,
+                        color: const Color(0xFF059669),
                       ),
-                    const PopupMenuDivider(),
-                    const PopupMenuItem(
+                    ],
+                    _buildPopupDivider(),
+                    _buildPopupActionItem(
                       value: 'delete',
-                      child: Row(
-                        children: [
-                          Icon(Icons.delete_outline_rounded, size: 17, color: Colors.red),
-                          SizedBox(width: 8),
-                          Text('Hapus Permanen', style: TextStyle(color: Colors.red)),
-                        ],
-                      ),
+                      icon: Icons.delete_outline_rounded,
+                      label: 'Hapus Permanen',
+                      isDark: isDark,
+                      isDestructive: true,
                     ),
                   ],
                 ),
@@ -1951,21 +1990,21 @@ class _InstitutionWorkspaceScreenState
 
           // 2. DESCRIPTION
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 18),
             child: Text(
               desc,
               style: TextStyle(
                 fontSize: 13,
-                height: 1.5,
-                color: isDark ? Colors.white70 : const Color(0xFF334155),
+                height: 1.45,
+                color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
               ),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
 
-          // 3. KEY HIGHLIGHTS / METADATA TILES
+          // 3. KEY HIGHLIGHTS / METADATA TILES (Clean & Restrained)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 18),
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -1976,7 +2015,7 @@ class _InstitutionWorkspaceScreenState
                     icon: Icons.person_outline_rounded,
                     label: 'PIC:',
                     value: picDisplay,
-                    color: const Color(0xFF2563EB),
+                    color: const Color(0xFF475569),
                     isDark: isDark,
                   ),
                 // Contact Email / Phone Badge
@@ -1985,7 +2024,7 @@ class _InstitutionWorkspaceScreenState
                     icon: Icons.mail_outline_rounded,
                     label: 'Kontak:',
                     value: contact,
-                    color: const Color(0xFF059669),
+                    color: const Color(0xFF475569),
                     isDark: isDark,
                     onTap: () => _copyOrLaunchContact(contact),
                   ),
@@ -1994,7 +2033,7 @@ class _InstitutionWorkspaceScreenState
                   icon: Icons.assignment_outlined,
                   label: 'MoU:',
                   value: mouDisplay,
-                  color: const Color(0xFF7C3AED),
+                  color: const Color(0xFF475569),
                   isDark: isDark,
                 ),
                 // Internship Quota Badge
@@ -2002,24 +2041,16 @@ class _InstitutionWorkspaceScreenState
                   icon: Icons.school_outlined,
                   label: 'Kuota PKL:',
                   value: quotaDisplay,
-                  color: const Color(0xFFD97706),
-                  isDark: isDark,
-                ),
-                // Reputation Star Badge
-                _buildInfoBadge(
-                  icon: Icons.star_rounded,
-                  label: 'Reputasi:',
-                  value: '4.9 Rekomendasi Industri',
-                  color: const Color(0xFFEAB308),
+                  color: const Color(0xFF475569),
                   isDark: isDark,
                 ),
                 // MoU Uploaded Badge
                 if (meta['mou_url'] != null && meta['mou_url'].toString().isNotEmpty)
                   _buildInfoBadge(
-                    icon: Icons.picture_as_pdf_rounded,
-                    label: 'MoU:',
+                    icon: Icons.description_outlined,
+                    label: 'Berkas MoU:',
                     value: meta['mou_filename']?.toString() ?? 'Dokumen MoU Terlampir',
-                    color: const Color(0xFF16A34A),
+                    color: accentColor,
                     isDark: isDark,
                     onTap: () => _openOfficialDocument({
                       'title': 'Perjanjian Kerjasama (MoU) - $title',
@@ -2036,24 +2067,24 @@ class _InstitutionWorkspaceScreenState
             ),
           ),
 
-          const SizedBox(height: 16),
-          const Divider(height: 1, thickness: 1, color: Color(0xFFF1F5F9)),
+          const SizedBox(height: 14),
+          Divider(height: 1, thickness: 1, color: isDark ? const Color(0xFF292543) : const Color(0xFFF1F5F9)),
 
-          // 4. BOTTOM ACTION TOOLBAR
+          // 4. BOTTOM ACTION TOOLBAR (Clean, Unified Outline Buttons)
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 10, 16, 12),
+            padding: const EdgeInsets.fromLTRB(18, 10, 14, 12),
             child: Row(
               children: [
-                // Left: Vokasi Sync Pill
+                // Left: Vokasi Sync Label
                 Row(
                   children: [
-                    const Icon(Icons.shield_outlined, size: 14, color: Color(0xFF64748B)),
+                    Icon(Icons.shield_outlined, size: 14, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
                     const SizedBox(width: 5),
                     Text(
-                      'Tersinkronisasi Direktori Vokasi & MBKM',
+                      'Terverifikasi Direktori Vokasi & DUDI',
                       style: TextStyle(
                         fontSize: 11,
-                        color: Colors.grey.shade600,
+                        color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -2073,22 +2104,22 @@ class _InstitutionWorkspaceScreenState
                         'partner_name': title,
                       },
                     }),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(6),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF0FDF4),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFBBF7D0)),
+                        color: accentColor.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: accentColor.withValues(alpha: 0.25)),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.picture_as_pdf_rounded, size: 14, color: Color(0xFF16A34A)),
-                          SizedBox(width: 5),
+                          Icon(Icons.description_outlined, size: 13, color: accentColor),
+                          const SizedBox(width: 5),
                           Text(
-                            'Buka Dokumen MoU',
-                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF16A34A)),
+                            'Dokumen MoU',
+                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: accentColor),
                           ),
                         ],
                       ),
@@ -2099,25 +2130,29 @@ class _InstitutionWorkspaceScreenState
                 if (website.isNotEmpty) ...[
                   InkWell(
                     onTap: () => _launchUrl(website),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(6),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEFF6FF),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.language_rounded, size: 14, color: Color(0xFF2563EB)),
-                          SizedBox(width: 5),
+                          Icon(Icons.language_rounded, size: 13, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569)),
+                          const SizedBox(width: 5),
                           Text(
-                            'Kunjungi Website',
-                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF2563EB)),
+                            'Website',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                            ),
                           ),
-                          SizedBox(width: 3),
-                          Icon(Icons.open_in_new_rounded, size: 12, color: Color(0xFF2563EB)),
+                          const SizedBox(width: 3),
+                          Icon(Icons.open_in_new_rounded, size: 11, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
                         ],
                       ),
                     ),
@@ -2127,22 +2162,26 @@ class _InstitutionWorkspaceScreenState
                 if (contact.isNotEmpty) ...[
                   InkWell(
                     onTap: () => _copyOrLaunchContact(contact),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(6),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.chat_bubble_outline_rounded, size: 14, color: Color(0xFF334155)),
-                          SizedBox(width: 5),
+                          Icon(Icons.chat_bubble_outline_rounded, size: 13, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569)),
+                          const SizedBox(width: 5),
                           Text(
-                            'Hubungi PIC',
-                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+                            'Kontak',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                            ),
                           ),
                         ],
                       ),
@@ -2152,22 +2191,26 @@ class _InstitutionWorkspaceScreenState
                 ],
                 InkWell(
                   onTap: () => _openEditor(normalizedRecord),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(6),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.edit_outlined, size: 14, color: Color(0xFF64748B)),
-                        SizedBox(width: 5),
+                        Icon(Icons.edit_outlined, size: 13, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                        const SizedBox(width: 5),
                         Text(
                           'Kelola',
-                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                          ),
                         ),
                       ],
                     ),
@@ -2184,12 +2227,12 @@ class _InstitutionWorkspaceScreenState
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: const Color(0xFFFFFBEB),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: const Color(0xFFFDE68A)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.pending_actions_rounded, color: Color(0xFFD97706), size: 22),
+                  const Icon(Icons.pending_actions_rounded, color: Color(0xFFD97706), size: 20),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
@@ -2199,7 +2242,7 @@ class _InstitutionWorkspaceScreenState
                           _isCorporate
                               ? 'Pengajuan Kemitraan Menunggu Persetujuan Anda'
                               : 'Pengajuan Kemitraan Menunggu Persetujuan Pihak Corporate',
-                          style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF92400E)),
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF92400E)),
                         ),
                         const SizedBox(height: 2),
                         Text(
@@ -2219,7 +2262,7 @@ class _InstitutionWorkspaceScreenState
                       side: const BorderSide(color: Color(0xFFFCA5A5)),
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                       visualDensity: VisualDensity.compact,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                     ),
                     child: const Text('Tolak', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
                   ),
@@ -2232,7 +2275,7 @@ class _InstitutionWorkspaceScreenState
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                       visualDensity: VisualDensity.compact,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                     ),
                     label: Text(
                       _isCorporate ? 'Setujui Kemitraan' : 'Setujui (Simulasi)',
@@ -2631,8 +2674,15 @@ class _InstitutionWorkspaceScreenState
                     const SizedBox(width: 12),
                     // Action Popup Menu
                     PopupMenuButton<String>(
-                      icon: Icon(Icons.more_vert_rounded, color: Colors.grey.shade500),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      icon: Icon(Icons.more_vert_rounded, color: isDark ? const Color(0xFF94A3B8) : Colors.grey.shade500),
+                      color: isDark ? const Color(0xFF1E1B2E) : Colors.white,
+                      elevation: 6,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        side: BorderSide(
+                          color: isDark ? const Color(0xFF2D2A42) : const Color(0xFFE2E8F0),
+                        ),
+                      ),
                       onSelected: (value) {
                         if (value == 'open') {
                           _openOfficialDocument(record);
@@ -2642,36 +2692,29 @@ class _InstitutionWorkspaceScreenState
                           _deleteRecord(record);
                         }
                       },
-                      itemBuilder: (_) => const [
-                        PopupMenuItem(
+                      itemBuilder: (_) => [
+                        _buildPopupActionItem(
                           value: 'open',
-                          child: Row(
-                            children: [
-                              Icon(Icons.open_in_new_rounded, size: 16, color: Color(0xFF2563EB)),
-                              SizedBox(width: 8),
-                              Text('Buka Dokumen Resmi'),
-                            ],
-                          ),
+                          icon: Icons.open_in_new_rounded,
+                          label: 'Buka Dokumen Resmi',
+                          isDark: isDark,
+                          color: const Color(0xFF2563EB),
                         ),
-                        PopupMenuItem(
+                        _buildPopupDivider(),
+                        _buildPopupActionItem(
                           value: 'edit',
-                          child: Row(
-                            children: [
-                              Icon(Icons.edit_outlined, size: 16, color: Color(0xFF2563EB)),
-                              SizedBox(width: 8),
-                              Text('Edit Berkas'),
-                            ],
-                          ),
+                          icon: Icons.edit_outlined,
+                          label: 'Edit Berkas',
+                          isDark: isDark,
+                          color: const Color(0xFF0284C7),
                         ),
-                        PopupMenuItem(
+                        _buildPopupDivider(),
+                        _buildPopupActionItem(
                           value: 'delete',
-                          child: Row(
-                            children: [
-                              Icon(Icons.delete_outline_rounded, size: 16, color: Colors.red),
-                              SizedBox(width: 8),
-                              Text('Hapus Permanen', style: TextStyle(color: Colors.red)),
-                            ],
-                          ),
+                          icon: Icons.delete_outline_rounded,
+                          label: 'Hapus Permanen',
+                          isDark: isDark,
+                          isDestructive: true,
                         ),
                       ],
                     ),
@@ -2910,10 +2953,32 @@ class _InstitutionWorkspaceScreenState
               ),
               const Spacer(),
               PopupMenuButton<String>(
+                icon: Icon(Icons.more_vert_rounded, color: isDark ? const Color(0xFF94A3B8) : Colors.grey.shade500),
+                color: isDark ? const Color(0xFF1E1B2E) : Colors.white,
+                elevation: 6,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: BorderSide(
+                    color: isDark ? const Color(0xFF2D2A42) : const Color(0xFFE2E8F0),
+                  ),
+                ),
                 onSelected: (value) => value == 'edit' ? _openEditor(record) : _deleteRecord(record),
-                itemBuilder: (_) => const [
-                  PopupMenuItem(value: 'edit', child: Text('Sesuaikan Anggaran')),
-                  PopupMenuItem(value: 'delete', child: Text('Hapus Permanen')),
+                itemBuilder: (_) => [
+                  _buildPopupActionItem(
+                    value: 'edit',
+                    icon: Icons.tune_rounded,
+                    label: 'Sesuaikan Anggaran',
+                    isDark: isDark,
+                    color: const Color(0xFF2563EB),
+                  ),
+                  _buildPopupDivider(),
+                  _buildPopupActionItem(
+                    value: 'delete',
+                    icon: Icons.delete_outline_rounded,
+                    label: 'Hapus Permanen',
+                    isDark: isDark,
+                    isDestructive: true,
+                  ),
                 ],
               ),
             ],
@@ -3394,7 +3459,14 @@ class _InstitutionWorkspaceScreenState
                     // Action Menu
                     PopupMenuButton<String>(
                       icon: Icon(Icons.more_vert_rounded, color: isDark ? const Color(0xFF94A3B8) : Colors.grey.shade500),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      color: isDark ? const Color(0xFF1E1B2E) : Colors.white,
+                      elevation: 6,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        side: BorderSide(
+                          color: isDark ? const Color(0xFF2D2A42) : const Color(0xFFE2E8F0),
+                        ),
+                      ),
                       onSelected: (value) {
                         if (value == 'open') {
                           _openOfficialDocument(record);
@@ -3404,36 +3476,29 @@ class _InstitutionWorkspaceScreenState
                           _deleteRecord(record);
                         }
                       },
-                      itemBuilder: (_) => const [
-                        PopupMenuItem(
+                      itemBuilder: (_) => [
+                        _buildPopupActionItem(
                           value: 'open',
-                          child: Row(
-                            children: [
-                              Icon(Icons.open_in_new_rounded, size: 16, color: Color(0xFF2563EB)),
-                              SizedBox(width: 8),
-                              Text('Buka Laporan Lengkap'),
-                            ],
-                          ),
+                          icon: Icons.open_in_new_rounded,
+                          label: 'Buka Laporan Lengkap',
+                          isDark: isDark,
+                          color: const Color(0xFF2563EB),
                         ),
-                        PopupMenuItem(
+                        _buildPopupDivider(),
+                        _buildPopupActionItem(
                           value: 'edit',
-                          child: Row(
-                            children: [
-                              Icon(Icons.edit_rounded, size: 16, color: Color(0xFF64748B)),
-                              SizedBox(width: 8),
-                              Text('Edit Data Laporan'),
-                            ],
-                          ),
+                          icon: Icons.edit_rounded,
+                          label: 'Edit Data Laporan',
+                          isDark: isDark,
+                          color: const Color(0xFF0284C7),
                         ),
-                        PopupMenuItem(
+                        _buildPopupDivider(),
+                        _buildPopupActionItem(
                           value: 'delete',
-                          child: Row(
-                            children: [
-                              Icon(Icons.delete_outline_rounded, size: 16, color: Colors.red),
-                              SizedBox(width: 8),
-                              Text('Hapus Permanen'),
-                            ],
-                          ),
+                          icon: Icons.delete_outline_rounded,
+                          label: 'Hapus Permanen',
+                          isDark: isDark,
+                          isDestructive: true,
                         ),
                       ],
                     ),
