@@ -575,6 +575,31 @@ class _InstitutionWorkspaceScreenState
     }
   }
 
+  IconData _statusIcon(String status) {
+    switch (status) {
+      case 'published':
+      case 'active':
+      case 'approved':
+        return Icons.check_circle_outline_rounded;
+      case 'open':
+        return Icons.lock_open_rounded;
+      case 'in_progress':
+        return Icons.sync_rounded;
+      case 'completed':
+        return Icons.task_alt_rounded;
+      case 'closed':
+      case 'inactive':
+        return Icons.archive_outlined;
+      case 'rejected':
+        return Icons.cancel_outlined;
+      case 'pending':
+        return Icons.hourglass_top_rounded;
+      case 'draft':
+      default:
+        return Icons.edit_note_rounded;
+    }
+  }
+
   PopupMenuEntry<String> _buildPopupActionItem({
     required String value,
     required IconData icon,
@@ -5391,23 +5416,144 @@ class _InstitutionWorkspaceScreenState
                   ),
                 );
 
+                final statusList = [
+                  ('Semua', 'Semua Status', _records.length, Icons.layers_outlined, const Color(0xFF6366F1)),
+                  for (final value in _resourceStatuses)
+                    (
+                      value,
+                      _statusLabel(value),
+                      _records.where((r) => r['status'] == value).length,
+                      _statusIcon(value),
+                      _statusColor(value),
+                    ),
+                ];
+
                 final status = DropdownButtonFormField<String>(
                   initialValue: _statusFilter,
                   isExpanded: true,
+                  dropdownColor: isDark ? const Color(0xFF1E1B2E) : Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  elevation: 6,
+                  icon: Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    size: 20,
+                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                  ),
                   decoration: InputDecoration(
                     labelText: 'Filter Status',
+                    labelStyle: TextStyle(
+                      fontSize: 12.5,
+                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                    ),
+                    prefixIcon: Icon(
+                      Icons.filter_list_rounded,
+                      size: 18,
+                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                    ),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     isDense: true,
                   ),
+                  selectedItemBuilder: (BuildContext context) {
+                    return statusList.map((item) {
+                      return Align(
+                        alignment: Alignment.centerLeft,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: item.$5,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                '${item.$2} (${item.$3})',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList();
+                  },
                   items: [
-                    DropdownMenuItem(
-                      value: 'Semua',
-                      child: Text('Semua Status (${_records.length})'),
-                    ),
-                    for (final value in _resourceStatuses)
-                      DropdownMenuItem(
-                        value: value,
-                        child: Text('${_statusLabel(value)} (${_records.where((r) => r['status'] == value).length})'),
+                    for (int i = 0; i < statusList.length; i++)
+                      DropdownMenuItem<String>(
+                        value: statusList[i].$1,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          decoration: BoxDecoration(
+                            border: i < statusList.length - 1
+                                ? Border(
+                                    bottom: BorderSide(
+                                      color: isDark
+                                          ? const Color(0xFF2D2A42)
+                                          : const Color(0xFFF1F5F9),
+                                      width: 1,
+                                    ),
+                                  )
+                                : null,
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 26,
+                                height: 26,
+                                decoration: BoxDecoration(
+                                  color: statusList[i].$5.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(7),
+                                ),
+                                child: Icon(
+                                  statusList[i].$4,
+                                  size: 15,
+                                  color: statusList[i].$5,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  statusList[i].$2,
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: statusList[i].$5.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: statusList[i].$5.withValues(alpha: 0.25),
+                                    width: 0.8,
+                                  ),
+                                ),
+                                child: Text(
+                                  '${statusList[i].$3}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: statusList[i].$5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                   ],
                   onChanged: (value) => setState(() {
@@ -5440,7 +5586,7 @@ class _InstitutionWorkspaceScreenState
                   children: [
                     Expanded(child: search),
                     const SizedBox(width: 12),
-                    SizedBox(width: 220, child: status),
+                    SizedBox(width: 250, child: status),
                     const SizedBox(width: 4),
                     refresh,
                   ],
@@ -6512,6 +6658,8 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
         isDense: true,
         initialValue: _status,
         dropdownColor: _isDark ? const Color(0xFF1E1B32) : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        elevation: 6,
         style: TextStyle(
           fontSize: 13,
           color: _isDark ? Colors.white : const Color(0xFF0F172A),
@@ -6521,22 +6669,79 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
           hint: 'Pilih status...',
           prefixIcon: Icons.verified_user_outlined,
         ),
-        items: effectiveStatuses
-            .map(
-              (value) {
-                final (dotColor, badgeText) = switch (value) {
-                  'active' || 'published' => (Colors.green.shade600, 'Aktif / Tervalidasi'),
-                  'pending' => (Colors.amber.shade700, 'Menunggu Persetujuan'),
-                  'draft' => (Colors.blue.shade600, 'Draf Inisiasi'),
-                  _ => (const Color(0xFF64748B), 'Diarsipkan'),
-                };
+        selectedItemBuilder: (context) {
+          return effectiveStatuses.map((value) {
+            final (dotColor, badgeText) = switch (value) {
+              'active' || 'published' => (Colors.green.shade600, 'Aktif / Tervalidasi'),
+              'pending' => (Colors.amber.shade700, 'Menunggu Persetujuan'),
+              'draft' => (Colors.blue.shade600, 'Draf Inisiasi'),
+              _ => (const Color(0xFF64748B), 'Diarsipkan'),
+            };
+            return Align(
+              alignment: Alignment.centerLeft,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(shape: BoxShape.circle, color: dotColor),
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      badgeText,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: _isDark ? Colors.white : const Color(0xFF1E293B),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList();
+        },
+        items: effectiveStatuses.asMap().entries.map((entry) {
+          final index = entry.key;
+          final value = entry.value;
+          final isLast = index == effectiveStatuses.length - 1;
+          final (dotColor, badgeText) = switch (value) {
+            'active' || 'published' => (Colors.green.shade600, 'Aktif / Tervalidasi'),
+            'pending' => (Colors.amber.shade700, 'Menunggu Persetujuan'),
+            'draft' => (Colors.blue.shade600, 'Draf Inisiasi'),
+            _ => (const Color(0xFF64748B), 'Diarsipkan'),
+          };
 
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
+          return DropdownMenuItem<String>(
+            value: value,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              decoration: BoxDecoration(
+                border: !isLast
+                    ? Border(
+                        bottom: BorderSide(
+                          color: _isDark
+                              ? const Color(0xFF2D2A42)
+                              : const Color(0xFFF1F5F9),
+                          width: 1,
+                        ),
+                      )
+                    : null,
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: dotColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Center(
+                      child: Container(
                         width: 8,
                         height: 8,
                         decoration: BoxDecoration(
@@ -6544,24 +6749,25 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                           color: dotColor,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          badgeText,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: _isDark ? Colors.white : const Color(0xFF1E293B),
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                );
-              },
-            )
-            .toList(),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      badgeText,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: _isDark ? Colors.white : const Color(0xFF1E293B),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
         onChanged: (value) {
           if (value != null) {
             setState(() => _status = value);
