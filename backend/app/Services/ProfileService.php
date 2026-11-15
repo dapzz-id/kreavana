@@ -57,15 +57,16 @@ class ProfileService extends BaseService
     {
         $user = $this->userRepo->find($userId);
 
-        if (isset($data['name'])) $user->name = $data['name'];
-        if (array_key_exists('phone', $data)) $user->phone = !empty($data['phone']) ? $data['phone'] : null;
-        if (isset($data['username']) && !empty($data['username'])) $user->username = $data['username'];
-        if (isset($data['email']) && !empty($data['email'])) $user->email = $data['email'];
-        if (isset($data['sub_role'])) $user->sub_role = $data['sub_role'];
-        if (array_key_exists('max_work_capacity', $data)) $user->max_work_capacity = $data['max_work_capacity'];
+        $lookupContext = [
+            'user_id' => $user->id,
+            'current_email' => $user->email,
+            'current_username' => $user->username,
+        ];
 
-        if (isset($data['avatar_url'])) {
-            $avatarUrl = $data['avatar_url'];
+        $resolvedAvatarUrl = null;
+        $hasAvatarUpdate = array_key_exists('avatar_url', $data) && $data['avatar_url'] !== null;
+        if ($hasAvatarUpdate) {
+            $avatarUrl = (string) $data['avatar_url'];
             if (str_starts_with($avatarUrl, 'data:image')) {
                 if (preg_match('/^data:image\/([a-zA-Z0-9\+\-]+);base64,/', $avatarUrl, $type)) {
                     $imageData = substr($avatarUrl, strpos($avatarUrl, ',') + 1);
@@ -79,24 +80,132 @@ class ProfileService extends BaseService
                         $fileName = 'avatar_' . $user->id . '_' . time() . '.' . $ext;
                         $tempPath = sys_get_temp_dir() . '/' . $fileName;
                         file_put_contents($tempPath, $decoded);
-                        
+
                         $uploadedFile = new \Illuminate\Http\UploadedFile($tempPath, $fileName, 'image/' . $ext, null, true);
-                        
+
                         /** @var \App\Services\StorageService $storageService */
                         $storageService = app(\App\Services\StorageService::class);
                         $storageFile = $storageService->store($user, $uploadedFile, 'avatar', 'public');
-                        
-                        $user->avatar_url = $storageFile->url;
+
+                        $resolvedAvatarUrl = $storageFile->url;
                         @unlink($tempPath);
                     }
                 }
             } else {
-                $user->avatar_url = $avatarUrl;
+                $resolvedAvatarUrl = $avatarUrl;
             }
         }
 
-        $user->save();
-        return $user;
+        $identityPayload = [];
+        if (isset($data['name']) && trim((string) $data['name']) !== '') {
+            $identityPayload['name'] = trim((string) $data['name']);
+        }
+        if (array_key_exists('phone', $data)) {
+            $trimmedPhone = trim((string) ($data['phone'] ?? ''));
+            $identityPayload['phone'] = $trimmedPhone !== '' ? $trimmedPhone : null;
+        }
+        if (isset($data['username']) && trim((string) $data['username']) !== '') {
+            $identityPayload['username'] = strtolower(trim((string) $data['username']));
+        }
+        if (isset($data['email']) && trim((string) $data['email']) !== '') {
+            $identityPayload['email'] = strtolower(trim((string) $data['email']));
+        }
+        if ($hasAvatarUpdate && $resolvedAvatarUrl !== null) {
+            $identityPayload['avatar_url'] = $resolvedAvatarUrl;
+        }
+
+        $isSubAccount = $user->isInstitutionSubAccount();
+
+        // Primary accounts synchronize identity fields to users_api first (Fail-Closed).
+        // Institution sub-accounts are app-local to Kreavana and managed solely in backend.
+        if (!$isSubAccount && !empty($identityPayload)) {
+            if (!UsersApiClient::isEnabled()) {
+                throw new Exception('Layanan Universal Identity sedang tidak dapat dijangkau.', 503);
+            }
+
+            $iamResult = UsersApiClient::updateProfile($user, $identityPayload, $lookupContext);
+            if (!$iamResult['success']) {
+                $status = (int) ($iamResult['status'] ?? 503);
+                if ($status === 422 && !empty($iamResult['errors'])) {
+                    throw \Illuminate\Validation\ValidationException::withMessages($iamResult['errors']);
+                }
+                throw new Exception(
+                    $iamResult['message'] ?? 'Gagal memperbarui identitas pada Universal Identity.',
+                    $status >= 400 && $status <= 599 ? $status : 503
+                );
+            }
+
+            $iamUser = $iamResult['data']['user'] ?? [];
+            if (!empty($iamUser['full_name'])) {
+                $identityPayload['name'] = $iamUser['full_name'];
+            }
+            if (!empty($iamUser['username'])) {
+                $identityPayload['username'] = strtolower(trim((string) $iamUser['username']));
+            }
+            if (!empty($iamUser['email'])) {
+                $identityPayload['email'] = strtolower(trim((string) $iamUser['email']));
+            }
+            if (array_key_exists('phone', $iamUser)) {
+                $identityPayload['phone'] = $iamUser['phone'] ?: null;
+            }
+            if (!empty($iamUser['avatar_url'])) {
+                $identityPayload['avatar_url'] = $iamUser['avatar_url'];
+            }
+        }
+
+        return DB::transaction(function () use ($user, $data, $identityPayload, $isSubAccount, $lookupContext) {
+            if (array_key_exists('name', $identityPayload)) {
+                $user->name = $identityPayload['name'];
+            }
+            if (array_key_exists('phone', $identityPayload)) {
+                $user->phone = $identityPayload['phone'];
+            }
+            if (array_key_exists('username', $identityPayload)) {
+                $user->username = $identityPayload['username'];
+            }
+            if (array_key_exists('email', $identityPayload)) {
+                $user->email = $identityPayload['email'];
+            }
+            if (array_key_exists('avatar_url', $identityPayload)) {
+                $user->avatar_url = $identityPayload['avatar_url'];
+            }
+            if (isset($data['sub_role'])) {
+                $user->sub_role = $data['sub_role'];
+            }
+            if (array_key_exists('max_work_capacity', $data)) {
+                $user->max_work_capacity = $data['max_work_capacity'];
+            }
+
+            $user->save();
+
+            // Keep linked InstitutionResource member record synchronized for institution sub-accounts
+            if ($isSubAccount && !empty($identityPayload)) {
+                $memberRecords = \App\Models\InstitutionResource::where('resource_type', 'members')
+                    ->where('user_id', '!=', $user->id)
+                    ->where(function ($q) use ($user, $lookupContext) {
+                        $q->where('metadata->user_id', $user->id)
+                          ->orWhere('metadata->email', $lookupContext['current_email'])
+                          ->orWhere('metadata->username', $lookupContext['current_username']);
+                    })
+                    ->get();
+
+                foreach ($memberRecords as $memberRecord) {
+                    $meta = is_array($memberRecord->metadata) ? $memberRecord->metadata : [];
+                    $meta['user_id'] = $user->id;
+                    $meta['email'] = $user->email;
+                    $meta['username'] = $user->username;
+                    if ($user->phone !== null) {
+                        $meta['phone'] = $user->phone;
+                    }
+                    $memberRecord->update([
+                        'title' => $user->name,
+                        'metadata' => $meta,
+                    ]);
+                }
+            }
+
+            return $user->fresh();
+        });
     }
 
     public function applyCreator(string $userId, array $data): \App\Models\User

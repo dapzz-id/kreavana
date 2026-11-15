@@ -246,6 +246,27 @@ class User extends Authenticatable implements JWTSubject
         });
     }
 
+    public function isInstitutionSubAccount(): bool
+    {
+        if ($this->institutionSubAccount()->exists()) {
+            return true;
+        }
+
+        $memberRecord = \App\Models\InstitutionResource::where('resource_type', 'members')
+            ->where(function ($q) {
+                $q->where('metadata->user_id', $this->id)
+                  ->orWhere('metadata->email', $this->email)
+                  ->orWhere('metadata->username', $this->username);
+            })->first();
+
+        return $memberRecord !== null && $memberRecord->user_id !== $this->id;
+    }
+
+    public function institutionSubAccount()
+    {
+        return $this->hasOne(\App\Models\InstitutionSubAccount::class, 'user_id');
+    }
+
     public function subscriptions()
     {
         return $this->hasMany(Subscription::class);

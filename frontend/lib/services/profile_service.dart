@@ -1,6 +1,7 @@
 import '../models/user_model.dart';
 import 'api_service.dart';
 import '../features/auth/services/auth_service.dart';
+import '../utils/app_errors.dart';
 import 'user_store.dart';
 
 class ProfileFetchResult {
@@ -101,11 +102,18 @@ class ProfileService {
           : response['data'] as Map<String, dynamic>;
       final user = UserModel.fromJson(userData);
       await AuthService.saveUserData(userData);
+      final activeUser = currentUserNotifier.value;
+      if (activeUser == null || activeUser.id == user.id) {
+        currentUserNotifier.value = user;
+      }
       return ActionCommandResult(success: true, user: user);
     } else {
       return ActionCommandResult(
         success: false,
-        message: response['message'] ?? 'Gagal memperbarui profil.',
+        message: AppErrors.messageFromResult(
+          response,
+          fallback: 'Gagal memperbarui profil.',
+        ),
       );
     }
   }

@@ -107,6 +107,7 @@ class AuthController
                     'id' => $user->id,
                     'username' => $user->username,
                     'email' => $user->email,
+                    'phone' => $user->phone,
                     'full_name' => $user->full_name,
                     'avatar_url' => $user->avatar_url,
                 ],
@@ -137,12 +138,14 @@ class AuthController
             ], 422);
         }
 
-        $identifier = strtolower($request->input('identifier') ?? $request->input('email'));
+        $rawIdentifier = trim((string) ($request->input('identifier') ?? $request->input('email')));
+        $identifier = strtolower($rawIdentifier);
         $clientId = $request->get('resolved_client_id', 'kreavana_app');
 
-        // Find user by email or username
-        $user = User::where('email', $identifier)
-            ->orWhere('username', $identifier)
+        // Find user by email, username, or phone
+        $user = User::whereRaw('LOWER(email) = ?', [$identifier])
+            ->orWhereRaw('LOWER(username) = ?', [$identifier])
+            ->when($rawIdentifier !== '', fn ($q) => $q->orWhere('phone', $rawIdentifier))
             ->first();
 
         if (!$user) {
@@ -204,6 +207,7 @@ class AuthController
                     'id' => $user->id,
                     'username' => $user->username,
                     'email' => $user->email,
+                    'phone' => $user->phone,
                     'full_name' => $user->full_name,
                     'display_name' => $user->display_name,
                     'avatar_url' => $user->avatar_url,
@@ -443,6 +447,7 @@ class AuthController
                         'id' => $user->id,
                         'username' => $user->username,
                         'email' => $user->email,
+                        'phone' => $user->phone,
                         'full_name' => $user->full_name,
                         'avatar_url' => $user->avatar_url,
                         'is_kyc_verified' => $user->kyc?->status === 'approved',

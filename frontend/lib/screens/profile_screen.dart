@@ -8,6 +8,7 @@ import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../services/profile_service.dart';
 import '../services/api_service.dart';
+import '../utils/app_errors.dart';
 import '../utils/form_validators.dart';
 import '../widgets/skeleton_box.dart';
 import '../widgets/desktop_sidebar_layout.dart';
@@ -384,7 +385,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() => _isLoading = false);
       if (result.success == true) {
         if (result.user != null) {
-          setState(() => _currentUser = result.user!);
+          setState(() {
+            _currentUser = result.user!;
+            _nameController.text = result.user!.name;
+            _phoneController.text = result.user!.phone ?? '';
+            _usernameController.text = result.user!.username;
+            _emailController.text = result.user!.email;
+          });
           widget.onUserUpdated(result.user!);
         }
         AppSweetAlert.success(
@@ -446,6 +453,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       }
 
+      if (res['status'] != true) {
+        if (mounted) {
+          setState(() => _isSavingSchool = false);
+          AppSweetAlert.error(
+            context,
+            AppErrors.messageFromResult(
+              res,
+              fallback: 'Gagal menyimpan data profil institusi.',
+            ),
+            title: 'Gagal Menyimpan',
+          );
+        }
+        return;
+      }
+
       // Sync nama & telepon ke user utama agar seluruh UI (sidebar, header) ikut terbarui
       final userUpdate = await ProfileService.updateProfile(
         userId: _currentUser.id ?? '',
@@ -458,9 +480,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _isSavingSchool = false;
           if (userUpdate.user != null) {
             _currentUser = userUpdate.user!;
+            _nameController.text = userUpdate.user!.name;
+            _phoneController.text = userUpdate.user!.phone ?? '';
             widget.onUserUpdated(userUpdate.user!);
           }
         });
+
+        if (!userUpdate.success) {
+          AppSweetAlert.warning(
+            context,
+            userUpdate.message ?? 'Profil institusi tersimpan, namun sinkronisasi akun PIC gagal.',
+            title: 'Sinkronisasi Akun Terkendala',
+          );
+          return;
+        }
 
         AppSweetAlert.success(
           context,

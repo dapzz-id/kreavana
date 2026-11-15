@@ -8,6 +8,7 @@ use App\Models\UserCredential;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
 class ProfileController
@@ -16,44 +17,144 @@ class ProfileController
     {
         $user = JWTAuth::parseToken()->authenticate();
 
-        $validator = Validator::make($request->all(), [
-            'full_name' => 'sometimes|string|max:255',
-            'display_name' => 'sometimes|string|max:255',
-            'avatar_url' => 'sometimes|string|url|max:500',
-            'phone' => 'sometimes|nullable|string|max:30|unique:users,phone,' . $user->id,
-            'username' => 'sometimes|string|min:3|max:50|unique:users,username,' . $user->id,
-            'email' => 'sometimes|email|max:150|unique:users,email,' . $user->id,
+        return $this->validateAndPersistProfile($request, $user, wrapInUserKey: false);
+    }
+
+    /**
+     * Internal S2S profile synchronization endpoint called by ecosystem backends (e.g. Kreavana backend).
+     */
+    public function internalUpdateProfile(Request $request)
+    {
+        $userId = trim((string) $request->input('user_id', ''));
+        $currentEmail = strtolower(trim((string) $request->input('current_email', '')));
+        $currentUsername = strtolower(trim((string) $request->input('current_username', '')));
+
+        if ($userId === '' && $currentEmail === '' && $currentUsername === '') {
+            return response()->json([
+                'status' => false,
+                'message' => 'Parameter identitas pengguna (user_id, current_email, atau current_username) diperlukan.',
+            ], 422);
+        }
+
+        $user = null;
+        if ($userId !== '') {
+            $user = User::find($userId);
+        }
+        if (!$user && $currentEmail !== '') {
+            $user = User::whereRaw('LOWER(email) = ?', [$currentEmail])->first();
+        }
+        if (!$user && $currentUsername !== '') {
+            $user = User::whereRaw('LOWER(username) = ?', [$currentUsername])->first();
+        }
+
+        if (!$user) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Akun identitas universal tidak ditemukan pada layanan Users API.',
+            ], 404);
+        }
+
+        return $this->validateAndPersistProfile($request, $user, wrapInUserKey: true);
+    }
+
+    /**
+     * Normalize, validate, and persist profile updates for the resolved universal user.
+     */
+    private function validateAndPersistProfile(Request $request, User $user, bool $wrapInUserKey)
+    {
+        $fields = [
+            'full_name',
+            'display_name',
+            'avatar_url',
+            'phone',
+            'username',
+            'email',
+            'date_of_birth',
+            'gender',
+            'locale',
+            'timezone',
+        ];
+
+        $input = [];
+        foreach ($fields as $field) {
+            if (!$request->exists($field)) {
+                continue;
+            }
+            $value = $request->input($field);
+            if ($field === 'username' || $field === 'email') {
+                $trimmed = strtolower(trim((string) $value));
+                if ($trimmed !== '') {
+                    $input[$field] = $trimmed;
+                }
+            } elseif ($field === 'phone') {
+                $trimmed = trim((string) ($value ?? ''));
+                $input[$field] = $trimmed !== '' ? $trimmed : null;
+            } elseif ($field === 'full_name' || $field === 'display_name') {
+                $trimmed = trim((string) ($value ?? ''));
+                if ($trimmed !== '') {
+                    $input[$field] = $trimmed;
+                }
+            } else {
+                $input[$field] = $value;
+            }
+        }
+
+        $validator = Validator::make($input, [
+            'full_name' => 'sometimes|string|min:2|max:255',
+            'display_name' => 'sometimes|nullable|string|max:255',
+            'avatar_url' => 'sometimes|nullable|string|max:500',
+            'phone' => ['sometimes', 'nullable', 'string', 'max:35', Rule::unique('users', 'phone')->ignore($user->id)],
+            'username' => ['sometimes', 'string', 'min:3', 'max:50', 'regex:/^[a-zA-Z0-9_.-]+$/', Rule::unique('users', 'username')->ignore($user->id)],
+            'email' => ['sometimes', 'email', 'max:150', Rule::unique('users', 'email')->ignore($user->id)],
             'date_of_birth' => 'sometimes|nullable|date',
             'gender' => 'sometimes|nullable|in:male,female,other',
             'locale' => 'sometimes|string|max:10',
             'timezone' => 'sometimes|string|max:50',
+        ], [
+            'full_name.min' => 'Nama lengkap minimal 2 karakter.',
+            'full_name.max' => 'Nama lengkap maksimal 255 karakter.',
+            'phone.unique' => 'Nomor telepon ini sudah digunakan oleh akun lain.',
+            'phone.max' => 'Nomor telepon maksimal 35 karakter.',
+            'username.min' => 'Username minimal 3 karakter.',
+            'username.max' => 'Username maksimal 50 karakter.',
+            'username.regex' => 'Username hanya boleh berisi huruf, angka, titik, strip, dan underscore.',
+            'username.unique' => 'Username ini sudah digunakan oleh akun lain.',
+            'email.email' => 'Format alamat email tidak valid.',
+            'email.unique' => 'Alamat email ini sudah terdaftar pada akun lain.',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'status' => false,
-                'message' => 'Validasi profil gagal.',
+                'message' => $validator->errors()->first(),
                 'errors' => $validator->errors(),
             ], 422);
         }
 
-        $user->update($request->only([
-            'username',
-            'email',
-            'full_name',
-            'display_name',
-            'avatar_url',
-            'phone',
-            'date_of_birth',
-            'gender',
-            'locale',
-            'timezone',
-        ]));
+        $validated = $validator->validated();
+        if (!empty($validated)) {
+            $user->update($validated);
+        }
+
+        $freshUser = $user->fresh();
+        $data = $wrapInUserKey
+            ? [
+                'user' => [
+                    'id' => $freshUser->id,
+                    'username' => $freshUser->username,
+                    'email' => $freshUser->email,
+                    'phone' => $freshUser->phone,
+                    'full_name' => $freshUser->full_name,
+                    'display_name' => $freshUser->display_name,
+                    'avatar_url' => $freshUser->avatar_url,
+                ],
+            ]
+            : $freshUser;
 
         return response()->json([
             'status' => true,
             'message' => 'Profil universal berhasil diperbarui.',
-            'data' => $user->fresh(),
+            'data' => $data,
         ]);
     }
 

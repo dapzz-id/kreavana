@@ -80,6 +80,7 @@ class ProfileController extends Controller
             'max_voice_call_duration_seconds' => $user->max_voice_call_duration_seconds,
             'max_video_call_duration_seconds' => $user->max_video_call_duration_seconds,
             'performance_boost' => $user->performance_boost,
+            'is_institution_sub_account' => $user->isInstitutionSubAccount(),
             'created_at' => $user->created_at?->toISOString(),
         ];
 
@@ -132,9 +133,21 @@ class ProfileController extends Controller
     public function updateProfile(UpdateProfileRequest $request)
     {
         $user = Auth::guard('api')->user();
-        $updatedUser = $this->profileService->updateProfile($user->id, $request->validated());
 
-        return $this->successResponse('Profil berhasil diperbarui.', ['user' => $updatedUser]);
+        try {
+            $updatedUser = $this->profileService->updateProfile($user->id, $request->validated());
+            return $this->successResponse('Profil berhasil diperbarui.', ['user' => $updatedUser]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->validator->errors()->first() ?: 'Data profil tidak valid.',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (Exception $e) {
+            $code = (int) $e->getCode();
+            $statusCode = ($code >= 400 && $code <= 599) ? $code : 500;
+            return $this->errorResponse($e->getMessage(), $statusCode);
+        }
     }
 
     public function applyCreator(ApplyCreatorRequest $request)

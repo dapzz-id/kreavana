@@ -76,3 +76,8 @@ Route::prefix('v1')->middleware(['client.app'])->group(function () {
         });
     });
 });
+
+// Internal Machine-to-Machine (S2S) Endpoints from trusted ecosystem backends
+Route::prefix('internal/v1')->middleware(['internal.s2s'])->group(function () {
+    Route::put('users/profile', [ProfileController::class, 'internalUpdateProfile']);
+});

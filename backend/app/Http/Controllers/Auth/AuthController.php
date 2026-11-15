@@ -237,18 +237,30 @@ class AuthController extends Controller
 
         $user = Auth::guard('api')->user();
 
-        if (UsersApiClient::isEnabled()) {
-            $proxyResult = UsersApiClient::changePassword($user, $request->current_password, $request->new_password);
-            if (!$proxyResult['success']) {
+        if ($user->isInstitutionSubAccount()) {
+            $subAccount = $user->institutionSubAccount;
+            if (!$subAccount || !$subAccount->is_active) {
                 return response()->json([
                     'status' => false,
-                    'message' => $proxyResult['message'] ?? 'Gagal memperbarui kata sandi.',
-                ], $proxyResult['status'] ?? 422);
+                    'message' => 'Sub-akun institusi tidak aktif.',
+                ], 403);
             }
+
+            if (!Hash::check($request->current_password, $subAccount->password_hash)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Kata sandi saat ini salah.',
+                ], 422);
+            }
+
+            $subAccount->update([
+                'password_hash' => Hash::make($request->new_password),
+                'password_changed_at' => now(),
+            ]);
 
             AuthLog::create([
                 'user_id' => $user->id,
-                'action' => 'password_changed_via_users_api',
+                'action' => 'password_changed_sub_account',
                 'ip_address' => $request->ip(),
                 'user_agent' => substr((string) $request->userAgent(), 0, 255),
             ]);
@@ -259,20 +271,24 @@ class AuthController extends Controller
             ]);
         }
 
-        if (! Hash::check($request->current_password, $user->password)) {
+        if (!UsersApiClient::isEnabled()) {
             return response()->json([
                 'status' => false,
-                'message' => 'Kata sandi saat ini salah.',
-            ], 422);
+                'message' => 'Layanan autentikasi sedang tidak dapat dijangkau.',
+            ], 503);
         }
 
-        $user->update([
-            'password' => Hash::make($request->new_password),
-        ]);
+        $proxyResult = UsersApiClient::changePassword($user, $request->current_password, $request->new_password);
+        if (!$proxyResult['success']) {
+            return response()->json([
+                'status' => false,
+                'message' => $proxyResult['message'] ?? 'Gagal memperbarui kata sandi.',
+            ], $proxyResult['status'] ?? 422);
+        }
 
         AuthLog::create([
             'user_id' => $user->id,
-            'action' => 'password_changed',
+            'action' => 'password_changed_via_users_api',
             'ip_address' => $request->ip(),
             'user_agent' => substr((string) $request->userAgent(), 0, 255),
         ]);
@@ -361,9 +377,11 @@ class AuthController extends Controller
                     'name' => $user->name,
                     'username' => $user->username,
                     'email' => $user->email,
+                    'phone' => $user->phone,
                     'role' => $user->role->value,
                     'sub_role' => $user->sub_role,
                     'is_creator_approved' => (bool) $user->is_creator_approved,
+                    'is_institution_sub_account' => $user->isInstitutionSubAccount(),
                     'permissions' => config('permissions.' . $user->role->value, []),
                     'institution_role' => $institutionRole,
                     'institution_permissions' => $institutionPermissions,

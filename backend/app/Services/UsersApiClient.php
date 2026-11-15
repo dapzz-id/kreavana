@@ -322,6 +322,135 @@ class UsersApiClient
     }
 
     /**
+     * Synchronize profile identity fields to users_api via authenticated S2S endpoint.
+     *
+     * @param User $user
+     * @param array $identityUpdates Normalized fields (name, username, email, phone, avatar_url)
+     * @param array $lookupContext Original identifiers captured prior to local mutation
+     * @return array ['success' => bool, 'status' => int, 'message' => string, 'data' => ?array, 'errors' => ?array]
+     */
+    public static function updateProfile(User $user, array $identityUpdates, array $lookupContext = []): array
+    {
+        $url = self::getBaseUrl() . '/api/internal/v1/users/profile';
+        $correlationId = (string) \Illuminate\Support\Str::uuid();
+
+        $payload = [
+            'user_id' => $lookupContext['user_id'] ?? $user->id,
+            'current_email' => $lookupContext['current_email'] ?? $user->email,
+            'current_username' => $lookupContext['current_username'] ?? $user->username,
+        ];
+
+        if (array_key_exists('name', $identityUpdates)) {
+            $payload['full_name'] = $identityUpdates['name'];
+            $payload['display_name'] = $identityUpdates['name'];
+        }
+        if (array_key_exists('username', $identityUpdates)) {
+            $payload['username'] = $identityUpdates['username'];
+        }
+        if (array_key_exists('email', $identityUpdates)) {
+            $payload['email'] = $identityUpdates['email'];
+        }
+        if (array_key_exists('phone', $identityUpdates)) {
+            $payload['phone'] = $identityUpdates['phone'];
+        }
+        if (array_key_exists('avatar_url', $identityUpdates)) {
+            $payload['avatar_url'] = $identityUpdates['avatar_url'];
+        }
+
+        try {
+            $response = self::httpClient(null, $payload, $correlationId)->put($url, $payload);
+
+            $statusCode = $response->status();
+            $json = $response->json() ?? [];
+
+            if ($response->successful()) {
+                return [
+                    'success' => true,
+                    'status' => $statusCode,
+                    'message' => $json['message'] ?? 'Profil universal berhasil diperbarui.',
+                    'data' => $json['data'] ?? [],
+                ];
+            }
+
+            $errors = is_array($json['errors'] ?? null)
+                ? self::formatValidationErrors($json['errors'])
+                : null;
+
+            $message = $json['message'] ?? 'Gagal memperbarui identitas pada Universal Identity.';
+            if (!empty($errors)) {
+                $firstGroup = reset($errors);
+                $firstMsg = is_array($firstGroup) ? reset($firstGroup) : (string) $firstGroup;
+                if (is_string($firstMsg) && $firstMsg !== '') {
+                    $message = $firstMsg;
+                }
+            }
+
+            return [
+                'success' => false,
+                'status' => $statusCode,
+                'message' => $message,
+                'errors' => $errors,
+            ];
+        } catch (\Throwable $e) {
+            Log::error('UsersApiClient::updateProfile failed: ' . $e->getMessage(), [
+                'url' => $url,
+                'correlation_id' => $correlationId,
+            ]);
+
+            return [
+                'success' => false,
+                'status' => 503,
+                'message' => 'Layanan Universal Identity sedang tidak dapat dijangkau.',
+                'error' => env('APP_DEBUG') ? $e->getMessage() : null,
+            ];
+        }
+    }
+
+    /**
+     * Format raw validation errors returned by users_api into clear Indonesian messages.
+     */
+    public static function formatValidationErrors(array $errors): array
+    {
+        $formatted = [];
+        foreach ($errors as $field => $messages) {
+            $formatted[$field] = array_map(function ($msg) use ($field) {
+                $strMsg = (string) $msg;
+                if (str_contains($strMsg, 'validation.unique') || str_contains($strMsg, 'already been taken')) {
+                    if ($field === 'email') {
+                        return 'Alamat email ini sudah terdaftar. Silakan gunakan email lain atau masuk ke akun Anda.';
+                    }
+                    if ($field === 'phone') {
+                        return 'Nomor telepon ini sudah digunakan oleh akun lain.';
+                    }
+                    return 'Username ini sudah digunakan. Silakan pilih username lain.';
+                }
+                if (str_contains($strMsg, 'validation.required')) {
+                    $label = match ($field) {
+                        'full_name', 'name' => 'Nama lengkap',
+                        'phone' => 'Nomor telepon',
+                        default => ucfirst($field),
+                    };
+                    return $label . ' wajib diisi.';
+                }
+                if (str_contains($strMsg, 'validation.min')) {
+                    $label = match ($field) {
+                        'password' => 'Kata sandi',
+                        'full_name', 'name' => 'Nama lengkap',
+                        default => ucfirst($field),
+                    };
+                    return $label . ' terlalu pendek.';
+                }
+                if (str_contains($strMsg, 'validation.email')) {
+                    return 'Format alamat email tidak valid.';
+                }
+                return $strMsg;
+            }, (array) $messages);
+        }
+
+        return $formatted;
+    }
+
+    /**
      * Synchronize or create shadow User record in backend database.
      * Keeps business domain properties (balance, role, creator approval) intact.
      *
@@ -331,21 +460,25 @@ class UsersApiClient
     public static function syncShadowUser(array $userApiData): User
     {
         $id = $userApiData['id'] ?? null;
-        $email = $userApiData['email'] ?? null;
-        $username = $userApiData['username'] ?? null;
+        $rawEmail = isset($userApiData['email']) ? strtolower(trim((string) $userApiData['email'])) : null;
+        $email = $rawEmail !== '' ? $rawEmail : null;
+        $rawUsername = isset($userApiData['username']) ? strtolower(trim((string) $userApiData['username'])) : null;
+        $username = $rawUsername !== '' ? $rawUsername : null;
         $fullName = $userApiData['full_name'] ?? $userApiData['display_name'] ?? $username ?? 'User';
         $avatarUrl = $userApiData['avatar_url'] ?? null;
+        $hasPhone = array_key_exists('phone', $userApiData);
+        $phone = $hasPhone ? (trim((string) ($userApiData['phone'] ?? '')) ?: null) : null;
 
-        // Find existing user by ID or Email
+        // Find existing user by ID, Email, or Username (case-insensitive)
         $user = null;
         if ($id) {
             $user = User::find($id);
         }
         if (!$user && $email) {
-            $user = User::where('email', $email)->first();
+            $user = User::whereRaw('LOWER(email) = ?', [$email])->first();
         }
         if (!$user && $username) {
-            $user = User::where('username', $username)->first();
+            $user = User::whereRaw('LOWER(username) = ?', [$username])->first();
         }
 
         if (!$user) {
@@ -357,6 +490,9 @@ class UsersApiClient
             $user->name = $fullName;
             $user->username = $username ?: 'user_' . substr(md5($email ?? uniqid()), 0, 8);
             $user->email = $email;
+            if ($hasPhone) {
+                $user->phone = $phone;
+            }
             $user->avatar_url = $avatarUrl;
             $user->role = RoleType::User;
             $user->is_creator_approved = 0;
@@ -374,8 +510,26 @@ class UsersApiClient
                 $user->avatar_url = $avatarUrl;
                 $dirty = true;
             }
-            if ($email && $user->email !== $email) {
-                $user->email = $email;
+            if ($email && strtolower((string) $user->email) !== $email) {
+                $emailConflict = User::whereRaw('LOWER(email) = ?', [$email])
+                    ->where('id', '!=', $user->id)
+                    ->exists();
+                if (!$emailConflict) {
+                    $user->email = $email;
+                    $dirty = true;
+                }
+            }
+            if ($username && strtolower((string) $user->username) !== $username) {
+                $usernameConflict = User::whereRaw('LOWER(username) = ?', [$username])
+                    ->where('id', '!=', $user->id)
+                    ->exists();
+                if (!$usernameConflict) {
+                    $user->username = $username;
+                    $dirty = true;
+                }
+            }
+            if ($hasPhone && $user->phone !== $phone) {
+                $user->phone = $phone;
                 $dirty = true;
             }
             if ($user->email_verified_at === null) {

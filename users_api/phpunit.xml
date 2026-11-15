@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+>
+    <testsuites>
+        <testsuite name="Feature">
+            <directory>tests/Feature</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>app</directory>
+        </include>
+    </source>
+    <php>
+        <env name="APP_ENV" value="testing"/>
+        <env name="APP_KEY" value="base64:eZgVvUuQ2i9F1f6P7e8R9S0T1U2V3W4X5Y6Z7A8B9C0="/>
+        <env name="CACHE_STORE" value="array"/>
+        <env name="DB_CONNECTION" value="sqlite"/>
+        <env name="DB_DATABASE" value=":memory:"/>
+        <env name="DB_URL" value=""/>
+        <env name="JWT_SECRET" value="testing_users_api_jwt_secret_key_must_be_32chars"/>
+        <env name="DEFAULT_CLIENT_ID" value="kreavana_app"/>
+        <env name="DEFAULT_CLIENT_SECRET" value="kreavana_ecosystem_secret_key_2026"/>
+    </php>
+</phpunit>

@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'client.app' => \App\Http\Middleware\VerifyClientApp::class,
             'auth.jwt' => \App\Http\Middleware\AuthenticateJwt::class,
+            'internal.s2s' => \App\Http\Middleware\VerifyInternalServiceSignature::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

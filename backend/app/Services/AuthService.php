@@ -30,28 +30,9 @@ class AuthService implements AuthServiceInterface
         }
 
         if (!empty($regResult['errors'])) {
-            $formattedErrors = [];
-            foreach ($regResult['errors'] as $field => $messages) {
-                $formattedErrors[$field] = array_map(function ($msg) use ($field) {
-                    $strMsg = (string) $msg;
-                    if (str_contains($strMsg, 'validation.unique') || str_contains($strMsg, 'already been taken')) {
-                        return $field === 'email'
-                            ? 'Alamat email ini sudah terdaftar. Silakan gunakan email lain atau masuk ke akun Anda.'
-                            : 'Username ini sudah digunakan. Silakan pilih username lain.';
-                    }
-                    if (str_contains($strMsg, 'validation.required')) {
-                        return ($field === 'full_name' || $field === 'name' ? 'Nama lengkap' : ucfirst($field)) . ' wajib diisi.';
-                    }
-                    if (str_contains($strMsg, 'validation.min')) {
-                        return ($field === 'password' ? 'Kata sandi' : ucfirst($field)) . ' terlalu pendek.';
-                    }
-                    if (str_contains($strMsg, 'validation.email')) {
-                        return 'Format alamat email tidak valid.';
-                    }
-                    return $strMsg;
-                }, (array) $messages);
-            }
-            throw \Illuminate\Validation\ValidationException::withMessages($formattedErrors);
+            throw \Illuminate\Validation\ValidationException::withMessages(
+                UsersApiClient::formatValidationErrors($regResult['errors'])
+            );
         }
 
         throw new \Exception($regResult['message'] ?? 'Pendaftaran pada Universal Identity gagal.');
@@ -59,13 +40,73 @@ class AuthService implements AuthServiceInterface
 
     public function attemptLogin(array $credentials, string $ip, string $userAgent, ?\App\Enums\RoleType $requiredRole = null): ?string
     {
+        $rawIdentifier = trim((string) ($credentials['email'] ?? $credentials['username'] ?? ''));
+        $identifier = strtolower($rawIdentifier);
+        $password = (string) ($credentials['password'] ?? '');
+
+        // Institution sub-accounts are Kreavana-only accounts managed exclusively in backend
+        $subAccountUser = $identifier !== ''
+            ? User::whereHas('institutionSubAccount')
+                ->where(function ($q) use ($identifier, $rawIdentifier) {
+                    $q->whereRaw('LOWER(email) = ?', [$identifier])
+                      ->orWhereRaw('LOWER(username) = ?', [$identifier]);
+                    if ($rawIdentifier !== '') {
+                        $q->orWhere('phone', $rawIdentifier);
+                    }
+                })
+                ->with('institutionSubAccount')
+                ->first()
+            : null;
+
+        if ($subAccountUser && $subAccountUser->institutionSubAccount) {
+            $subAccount = $subAccountUser->institutionSubAccount;
+
+            if (!$subAccount->is_active || !Hash::check($password, $subAccount->password_hash)) {
+                AuthLog::create([
+                    'user_id' => $subAccountUser->id,
+                    'action' => 'login_sub_account_failed',
+                    'ip_address' => $ip,
+                    'user_agent' => substr($userAgent, 0, 255),
+                ]);
+                return null;
+            }
+
+            if ($subAccountUser->isSuspended()) {
+                AuthLog::create([
+                    'user_id' => $subAccountUser->id,
+                    'action' => 'login_suspended',
+                    'ip_address' => $ip,
+                    'user_agent' => substr($userAgent, 0, 255),
+                ]);
+                return 'suspended';
+            }
+
+            if ($requiredRole && $subAccountUser->role !== $requiredRole) {
+                AuthLog::create([
+                    'user_id' => $subAccountUser->id,
+                    'action' => 'login_forbidden',
+                    'ip_address' => $ip,
+                    'user_agent' => substr($userAgent, 0, 255),
+                ]);
+                return 'forbidden';
+            }
+
+            $token = Auth::guard('api')->login($subAccountUser);
+
+            AuthLog::create([
+                'user_id' => $subAccountUser->id,
+                'action' => 'login_institution_sub_account',
+                'ip_address' => $ip,
+                'user_agent' => substr($userAgent, 0, 255),
+            ]);
+
+            return $token;
+        }
+
         if (!UsersApiClient::isEnabled()) {
             \Illuminate\Support\Facades\Log::critical('AuthService::attemptLogin: Universal Identity service is disabled or unconfigured.');
             return 'service_unavailable';
         }
-
-        $identifier = $credentials['email'] ?? $credentials['username'] ?? '';
-        $password = $credentials['password'] ?? '';
 
         $proxyResult = UsersApiClient::login($identifier, $password, [
             'ip' => $ip,

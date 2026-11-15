@@ -399,42 +399,80 @@ class InstitutionResourceController extends Controller
 
         $meta = $validated['metadata'] ?? [];
 
-        // If creating a team member (staff or co-admin)
+        // If creating a team member (app-local sub-account of this institution, managed in backend)
+        $subAccountPasswordHash = null;
+        $subAccountUser = null;
+
         if ($resType === 'members') {
             $memberEmail = strtolower(trim((string) ($meta['email'] ?? '')));
             $memberName = trim((string) ($validated['title'] ?? ''));
-            $memberPassword = $meta['password'] ?? 'Kreavana123!';
+            $rawPassword = isset($meta['password']) ? trim((string) $meta['password']) : '';
+            if ($rawPassword !== '' && strlen($rawPassword) < 6) {
+                return $this->errorResponse('Kata sandi anggota tim minimal 6 karakter.', 422);
+            }
+            $memberPassword = $rawPassword !== '' ? $rawPassword : 'Kreavana123!';
             $memberRole = $meta['role'] ?? 'Karyawan / Staf';
             $memberDept = $meta['department'] ?? $validated['description'] ?? 'Staf Lembaga';
             $memberPerms = $meta['permissions'] ?? [];
+            $requestedUsername = isset($meta['username']) ? strtolower(trim((string) $meta['username'])) : '';
+            $memberPhone = isset($meta['phone']) && trim((string) $meta['phone']) !== ''
+                ? trim((string) $meta['phone'])
+                : null;
 
             if (empty($memberEmail) || empty($memberName)) {
                 return $this->errorResponse('Nama lengkap dan email anggota tim wajib diisi.', 422);
             }
 
-            // Sync or create user account so they can log in
-            $staffUser = \App\Models\User::where('email', $memberEmail)->first();
-            if (!$staffUser) {
-                $cleanBase = preg_replace('/[^a-zA-Z0-9]/', '', strtolower(explode('@', $memberEmail)[0]));
-                $username = substr($cleanBase, 0, 20) . '_' . rand(100, 999);
+            if ($requestedUsername !== '' && !preg_match('/^[a-zA-Z0-9_.-]{3,50}$/', $requestedUsername)) {
+                return $this->errorResponse('Username harus 3-50 karakter dan hanya boleh huruf, angka, titik, strip, atau underscore.', 422);
+            }
 
-                if (\App\Services\UsersApiClient::isEnabled()) {
-                    try {
-                        \App\Services\UsersApiClient::register([
-                            'name' => $memberName,
-                            'username' => $username,
-                            'email' => $memberEmail,
-                            'password' => $memberPassword,
-                        ]);
-                    } catch (\Throwable $e) {
-                        \Illuminate\Support\Facades\Log::warning('UsersApiClient register staff error: ' . $e->getMessage());
-                    }
+            $existingUser = \App\Models\User::whereRaw('LOWER(email) = ?', [$memberEmail])->first();
+
+            if ($existingUser) {
+                $existingSub = $existingUser->institutionSubAccount;
+                if (!$existingSub || $existingSub->institution_id !== $ownerId || $existingSub->is_active) {
+                    return $this->errorResponse('Alamat email ini sudah digunakan oleh akun lain.', 422);
                 }
+            }
 
+            if ($requestedUsername !== '') {
+                $usernameTaken = \App\Models\User::whereRaw('LOWER(username) = ?', [$requestedUsername])
+                    ->when($existingUser, fn ($q) => $q->where('id', '!=', $existingUser->id))
+                    ->exists();
+                if ($usernameTaken) {
+                    return $this->errorResponse('Username ini sudah digunakan oleh akun lain.', 422);
+                }
+                $username = $requestedUsername;
+            } elseif ($existingUser) {
+                $username = $existingUser->username;
+            } else {
+                $cleanBase = preg_replace('/[^a-z0-9]/', '', strtolower(explode('@', $memberEmail)[0])) ?: 'staff';
+                $prefix = substr($cleanBase, 0, 20);
+                do {
+                    $username = $prefix . '_' . random_int(100, 9999);
+                } while (\App\Models\User::whereRaw('LOWER(username) = ?', [$username])->exists());
+            }
+
+            if ($existingUser) {
+                $existingUser->update([
+                    'name' => $memberName,
+                    'username' => $username,
+                    'email' => $memberEmail,
+                    'phone' => $memberPhone ?? $existingUser->phone,
+                    'role' => \App\Enums\RoleType::User,
+                    'sub_role' => 'institution',
+                    'is_verified' => true,
+                    'verification_type' => 'institution',
+                    'email_verified_at' => $existingUser->email_verified_at ?? now(),
+                ]);
+                $staffUser = $existingUser->fresh();
+            } else {
                 $staffUser = \App\Models\User::create([
                     'name' => $memberName,
                     'username' => $username,
                     'email' => $memberEmail,
+                    'phone' => $memberPhone,
                     'role' => \App\Enums\RoleType::User,
                     'sub_role' => 'institution',
                     'is_verified' => true,
@@ -443,9 +481,15 @@ class InstitutionResourceController extends Controller
                 ]);
             }
 
+            $subAccountUser = $staffUser;
+            $subAccountPasswordHash = \Illuminate\Support\Facades\Hash::make($memberPassword);
+
             $meta['user_id'] = $staffUser->id;
             $meta['username'] = $staffUser->username;
             $meta['email'] = $memberEmail;
+            if ($staffUser->phone !== null) {
+                $meta['phone'] = $staffUser->phone;
+            }
             $meta['role'] = $memberRole;
             $meta['permissions'] = is_array($memberPerms) ? array_values($memberPerms) : [];
             $meta['department'] = $memberDept;
@@ -462,6 +506,19 @@ class InstitutionResourceController extends Controller
             'user_id' => $ownerId,
             'published_at' => ($validated['status'] ?? 'draft') === 'published' ? now() : null,
         ]);
+
+        if ($resType === 'members' && $subAccountUser && $subAccountPasswordHash) {
+            \App\Models\InstitutionSubAccount::updateOrCreate(
+                ['user_id' => $subAccountUser->id],
+                [
+                    'institution_id' => $ownerId,
+                    'institution_resource_id' => $resource->id,
+                    'password_hash' => $subAccountPasswordHash,
+                    'is_active' => true,
+                    'password_changed_at' => now(),
+                ]
+            );
+        }
 
         if ($resource->resource_type === 'partners' && in_array($resource->status, ['active', 'approved'])) {
             $this->syncMouDocument($resource);
@@ -520,30 +577,83 @@ class InstitutionResourceController extends Controller
                 if (isset($newMeta['password'])) {
                     unset($newMeta['password']);
                 }
+                if ($staffPassword !== null && trim((string) $staffPassword) !== '' && strlen((string) $staffPassword) < 6) {
+                    return $this->errorResponse('Kata sandi anggota tim minimal 6 karakter.', 422);
+                }
                 if (isset($newMeta['permissions']) && is_array($newMeta['permissions'])) {
                     $newMeta['permissions'] = array_values($newMeta['permissions']);
                 }
-                $validated['metadata'] = $newMeta;
 
-                // Sync with User table if user exists
-                $memberUserId = $newMeta['user_id'] ?? null;
-                $memberEmail = $newMeta['email'] ?? null;
+                // Resolve linked backend sub-account user
+                $memberUserId = $newMeta['user_id'] ?? $oldMeta['user_id'] ?? null;
+                $oldEmail = isset($oldMeta['email']) ? strtolower(trim((string) $oldMeta['email'])) : null;
                 $targetUser = $memberUserId
                     ? \App\Models\User::find($memberUserId)
-                    : ($memberEmail ? \App\Models\User::where('email', $memberEmail)->first() : null);
+                    : ($oldEmail ? \App\Models\User::whereRaw('LOWER(email) = ?', [$oldEmail])->first() : null);
 
                 if ($targetUser) {
                     $userUpdates = [];
                     if (!empty($validated['title']) && $targetUser->name !== $validated['title']) {
-                        $userUpdates['name'] = $validated['title'];
+                        $userUpdates['name'] = trim((string) $validated['title']);
                     }
-                    if (!empty($staffPassword) && strlen((string) $staffPassword) >= 6) {
-                        $userUpdates['password'] = \Illuminate\Support\Facades\Hash::make($staffPassword);
+                    if (!empty($newMeta['email'])) {
+                        $normalizedEmail = strtolower(trim((string) $newMeta['email']));
+                        $newMeta['email'] = $normalizedEmail;
+                        if (strtolower((string) $targetUser->email) !== $normalizedEmail) {
+                            $emailConflict = \App\Models\User::whereRaw('LOWER(email) = ?', [$normalizedEmail])
+                                ->where('id', '!=', $targetUser->id)
+                                ->exists();
+                            if ($emailConflict) {
+                                return $this->errorResponse('Alamat email ini sudah digunakan oleh akun lain.', 422);
+                            }
+                            $userUpdates['email'] = $normalizedEmail;
+                        }
                     }
+                    if (!empty($newMeta['username'])) {
+                        $normalizedUsername = strtolower(trim((string) $newMeta['username']));
+                        if (!preg_match('/^[a-zA-Z0-9_.-]{3,50}$/', $normalizedUsername)) {
+                            return $this->errorResponse('Username harus 3-50 karakter dan hanya boleh huruf, angka, titik, strip, atau underscore.', 422);
+                        }
+                        $newMeta['username'] = $normalizedUsername;
+                        if (strtolower((string) $targetUser->username) !== $normalizedUsername) {
+                            $usernameConflict = \App\Models\User::whereRaw('LOWER(username) = ?', [$normalizedUsername])
+                                ->where('id', '!=', $targetUser->id)
+                                ->exists();
+                            if ($usernameConflict) {
+                                return $this->errorResponse('Username ini sudah digunakan oleh akun lain.', 422);
+                            }
+                            $userUpdates['username'] = $normalizedUsername;
+                        }
+                    }
+                    if (array_key_exists('phone', $validated['metadata'])) {
+                        $trimmedPhone = trim((string) ($validated['metadata']['phone'] ?? ''));
+                        $userUpdates['phone'] = $trimmedPhone !== '' ? $trimmedPhone : null;
+                        $newMeta['phone'] = $userUpdates['phone'];
+                    }
+
                     if (!empty($userUpdates)) {
                         $targetUser->update($userUpdates);
                     }
+
+                    $newMeta['user_id'] = $targetUser->id;
+                    $newMeta['username'] = $userUpdates['username'] ?? $targetUser->username;
+                    $newMeta['email'] = $userUpdates['email'] ?? $targetUser->email;
+
+                    if (!empty($staffPassword) && strlen((string) $staffPassword) >= 6) {
+                        \App\Models\InstitutionSubAccount::updateOrCreate(
+                            ['user_id' => $targetUser->id],
+                            [
+                                'institution_id' => $ownerId,
+                                'institution_resource_id' => $resource->id,
+                                'password_hash' => \Illuminate\Support\Facades\Hash::make((string) $staffPassword),
+                                'is_active' => true,
+                                'password_changed_at' => now(),
+                            ]
+                        );
+                    }
                 }
+
+                $validated['metadata'] = $newMeta;
             } else {
                 $validated['metadata'] = $newMeta;
             }
@@ -628,6 +738,22 @@ class InstitutionResourceController extends Controller
             $requiredPerm = self::TYPE_TO_PERMISSION[$resource->resource_type] ?? null;
             if ($requiredPerm && !in_array($requiredPerm, $ctx['permissions'], true)) {
                 return $this->errorResponse('Akses ditolak. Anda tidak memiliki izin untuk menghapus data fitur ini.', 403);
+            }
+        }
+
+        if ($resource->resource_type === 'members') {
+            $meta = is_array($resource->metadata) ? $resource->metadata : [];
+            $subQuery = \App\Models\InstitutionSubAccount::where('institution_resource_id', $resource->id);
+            if (!empty($meta['user_id'])) {
+                $subQuery->orWhere('user_id', $meta['user_id']);
+            }
+            $subAccounts = $subQuery->get();
+            foreach ($subAccounts as $subAccount) {
+                $subAccount->update([
+                    'is_active' => false,
+                    'institution_resource_id' => null,
+                ]);
+                app(\App\Services\RefreshTokenRepository::class)->revokeAllForUser($subAccount->user_id);
             }
         }
 

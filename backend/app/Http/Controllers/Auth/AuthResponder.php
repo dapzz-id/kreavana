@@ -98,6 +98,7 @@ trait AuthResponder
                 'name' => $user->name,
                 'username' => $user->username,
                 'email' => $user->email,
+                'phone' => $user->phone,
                 'role' => $user->role->value,
                 'sub_role' => $effectiveSubRole,
                 'avatar_url' => $user->avatar_url,
@@ -109,6 +110,7 @@ trait AuthResponder
                 'institution_role' => $institutionRole,
                 'institution_permissions' => $institutionPermissions,
                 'parent_institution_id' => $parentInstitutionId,
+                'is_institution_sub_account' => $user->isInstitutionSubAccount(),
             ] : null,
         ];
 
