@@ -1458,6 +1458,15 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isDark: isDark,
                             isCollapsed: collapsed,
                           ),
+                        if (_isSchool && (SystemSettingsService.isWalletEnabled || widget.user.isAdmin))
+                          _buildNavRow(
+                            icon: Icons.account_balance_wallet_outlined,
+                            label: 'Dompet & Pembayaran',
+                            onTap: () => _pushLink('pembayaran'),
+                            isSelected: _isRouteActive('pembayaran'),
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                          ),
                         if (!_hasSpecificCreatorSubRole && !_isCompany && !_isSchool && !_isGovernment) ...[
                           if (SystemSettingsService.isMarketplaceEnabled || widget.user.isAdmin)
                             _buildNavRow(
@@ -1571,15 +1580,6 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                               label: 'Tim & Hak Akses',
                               onTap: () => _pushLink('tim_hak_akses'),
                               isSelected: _isRouteActive('tim_hak_akses'),
-                              isDark: isDark,
-                              isCollapsed: collapsed,
-                            ),
-                          if (SystemSettingsService.isWalletEnabled || widget.user.isAdmin)
-                            _buildNavRow(
-                              icon: Icons.payment_outlined,
-                              label: 'Pembayaran & Dompet',
-                              onTap: () => _pushLink('pembayaran'),
-                              isSelected: _isRouteActive('pembayaran'),
                               isDark: isDark,
                               isCollapsed: collapsed,
                             ),
