@@ -67,7 +67,9 @@ class CorporateVacancyItem {
   final String title;
   final String description;
   final String category; // 'magang' or 'job'
-  final String categoryLabel; // 'Magang' or 'Pekerjaan'
+  final String categoryLabel; // 'Magang' or 'Lowongan Kerja'
+  final Color? categoryBadgeColor;
+  final Color? categoryBadgeBg;
   final String status; // 'open', 'in_progress', 'closed'
   final String statusLabel; // 'Pendaftaran Dibuka', 'Sedang Berjalan', 'Ditutup'
   final Color statusBadgeColor;
@@ -86,6 +88,8 @@ class CorporateVacancyItem {
     required this.description,
     required this.category,
     required this.categoryLabel,
+    this.categoryBadgeColor,
+    this.categoryBadgeBg,
     required this.status,
     required this.statusLabel,
     required this.statusBadgeColor,
@@ -105,13 +109,7 @@ class CorporateVacancyItem {
     final isOngoing = statusLower == 'in_progress' || statusLower == 'active';
     final isClosed = statusLower == 'closed' || statusLower == 'completed';
 
-    final isMagang = opp.subRoleSlug.toLowerCase().contains('magang') ||
-        opp.title.toLowerCase().contains('magang') ||
-        opp.title.toLowerCase().contains('intern') ||
-        (opp.description != null && opp.description!.toLowerCase().contains('magang')) ||
-        opp.requirements.any((r) =>
-            r.subRoleSlug.toLowerCase().contains('magang') ||
-            (r.notes != null && (r.notes!.toLowerCase().contains('magang') || r.notes!.toLowerCase().contains('kuota'))));
+    final isMagang = opp.isMagang;
 
     final statusText = isOpen
         ? 'Pendaftaran Dibuka'
@@ -131,61 +129,86 @@ class CorporateVacancyItem {
             ? const Color(0xFFDBEAFE)
             : const Color(0xFFF1F5F9));
 
+    final categoryColor = isMagang ? const Color(0xFF0284C7) : const Color(0xFF7E22CE);
+    final categoryBg = isMagang ? const Color(0xFFE0F2FE) : const Color(0xFFF3E8FF);
+
     final regPeriod = ProgramMagangCard.formatDateDisplay(
       opp.deadline ?? opp.createdAt,
       defaultFallback: '21 Sep 2026',
     );
 
-    // Calculate quota and specifications from requirements
+    // Calculate quota and specifications from requirements (strictly position specializations)
     int totalQuota = 0;
     final specBreakdowns = <String>[];
     final reqList = <String>[];
 
     for (final r in opp.requirements) {
-      if (r.subRoleSlug == 'kualifikasi') {
-        if (r.notes != null && r.notes!.isNotEmpty) {
-          reqList.add(r.notes!);
+      final sub = r.subRoleSlug.trim().toLowerCase();
+      final notes = (r.notes ?? '').trim();
+
+      if (sub == 'kualifikasi' || sub == 'qualification' || sub == 'syarat') {
+        if (notes.isNotEmpty) {
+          reqList.add(notes);
         }
-      } else {
-        final q = r.quantity;
-        if (q > 0) {
-          totalQuota += q;
-          final roleName = r.notes?.isNotEmpty == true
-              ? r.notes!.split('(').first.replaceFirst('Spesialisasi ', '').trim()
-              : r.subRoleSlug.replaceAll('_', ' ');
-          specBreakdowns.add('$roleName: $q');
+        continue;
+      }
+
+      if (notes.isNotEmpty &&
+          !notes.toLowerCase().startsWith('spesialisasi') &&
+          (notes.startsWith('Memiliki') ||
+           notes.startsWith('Mampu') ||
+           notes.startsWith('Siswa') ||
+           notes.startsWith('Mahasiswa') ||
+           notes.startsWith('Disiplin') ||
+           notes.startsWith('Menguasai') ||
+           notes.startsWith('Siap'))) {
+        reqList.add(notes);
+        continue;
+      }
+
+      int q = r.quantity;
+      if (q <= 0 && notes.isNotEmpty) {
+        final match = RegExp(r'\((\d+)\s+kuota\)').firstMatch(notes);
+        if (match != null) {
+          q = int.tryParse(match.group(1) ?? '0') ?? 0;
         }
+      }
+
+      if (q > 0) {
+        totalQuota += q;
+        final roleName = notes.isNotEmpty
+            ? notes.split('(').first.replaceFirst('Spesialisasi ', '').trim()
+            : r.subRoleSlug.replaceAll('_', ' ');
+        specBreakdowns.add('$roleName: $q');
       }
     }
 
-    if (reqList.isEmpty) {
+    if (totalQuota <= 0) {
       for (final r in opp.requirements) {
-        if (r.notes != null && r.notes!.isNotEmpty && !r.notes!.startsWith('Spesialisasi ')) {
-          reqList.add(r.notes!);
+        final notes = r.notes ?? '';
+        final match = RegExp(r'\((\d+)\s+kuota\)').firstMatch(notes);
+        if (match != null) {
+          totalQuota += int.tryParse(match.group(1) ?? '0') ?? 0;
         }
       }
     }
-
-    if (reqList.isEmpty) {
-      reqList.addAll([
-        'Talenta kreatif terverifikasi',
-        'Memiliki portofolio karya relevan',
-        'Siap bekerja sesuai timeline & briefing',
-      ]);
+    final String calculatedQuotaText;
+    if (totalQuota > 0) {
+      final int filled = opp.approvedCreators.length;
+      final int remaining = (totalQuota - filled).clamp(0, totalQuota);
+      calculatedQuotaText = '$remaining dari $totalQuota posisi';
+    } else {
+      calculatedQuotaText = 'Terbuka';
     }
-
-    final calculatedQuotaText = isMagang
-        ? '${opp.applicationsCount} dari ${totalQuota > 0 ? totalQuota : 10} posisi'
-        : (totalQuota > 0
-            ? '$totalQuota posisi (${specBreakdowns.join(' • ')})'
-            : 'Tersedia 1-2 posisi');
 
     return CorporateVacancyItem(
       id: opp.id ?? 'opp_${DateTime.now().millisecondsSinceEpoch}',
       title: opp.title,
       description: opp.description ?? 'Lowongan kebutuhan terbuka oleh perusahaan mitra industri.',
       category: isMagang ? 'magang' : 'job',
-      categoryLabel: isMagang ? 'Magang' : 'Pekerjaan',
+      categoryLabel: isMagang ? 'Magang' : 'Lowongan Kerja',
+      categoryBadgeColor: categoryColor,
+      categoryBadgeBg: categoryBg,
       status: opp.status,
       statusLabel: statusText,
       statusBadgeColor: statusColor,
@@ -338,13 +361,15 @@ class _CorporateLowonganScreenState extends State<CorporateLowonganScreen> {
           description:
               'Memimpin perancangan kampanye visual korporat enterprise, pengawasan standar branding B2B, dan supervisi tim kreatif internal.',
           category: 'job',
-          categoryLabel: 'Pekerjaan Kreatif',
+          categoryLabel: 'Lowongan Kerja',
+          categoryBadgeColor: const Color(0xFF7E22CE),
+          categoryBadgeBg: const Color(0xFFF3E8FF),
           status: 'open',
           statusLabel: 'Pendaftaran Dibuka',
           statusBadgeColor: const Color(0xFF16A34A),
           statusBadgeBg: const Color(0xFFDCFCE7),
           registrationPeriod: '30 Nov 2026',
-          quotaText: '1 posisi tersedia',
+          quotaText: '1 dari 1 posisi',
           allowance: 'Rp 18.000.000 - 25.000.000 / bulan',
           requirements: const [
             'Minimal 4 tahun pengalaman di Creative Agency / Corporate',
@@ -368,7 +393,9 @@ class _CorporateLowonganScreenState extends State<CorporateLowonganScreen> {
           description:
               'Pengadaan komposer in-house untuk sonic branding perusahaan, scoring video korporasi, sound FX, dan jingle promosi produk.',
           category: 'job',
-          categoryLabel: 'Pekerjaan Kreatif',
+          categoryLabel: 'Lowongan Kerja',
+          categoryBadgeColor: const Color(0xFF7E22CE),
+          categoryBadgeBg: const Color(0xFFF3E8FF),
           status: 'in_progress',
           statusLabel: 'Sedang Berjalan',
           statusBadgeColor: const Color(0xFF2563EB),
@@ -448,8 +475,11 @@ class _CorporateLowonganScreenState extends State<CorporateLowonganScreen> {
 
       // 2. Tab Filter
       switch (_selectedFilter) {
+        case 'Magang':
         case 'Magang Industri':
           return item.category == 'magang';
+        case 'Lowongan Kerja':
+        case 'Pekerjaan':
         case 'Pekerjaan Kreatif':
           return item.category == 'job';
         case 'Pendaftaran Dibuka':
@@ -801,7 +831,7 @@ class _CorporateLowonganScreenState extends State<CorporateLowonganScreen> {
     const filters = [
       'Semua',
       'Magang Industri',
-      'Pekerjaan Kreatif',
+      'Lowongan Kerja',
       'Pendaftaran Dibuka',
       'Sedang Berjalan',
     ];
@@ -912,229 +942,23 @@ class _CorporateLowonganScreenState extends State<CorporateLowonganScreen> {
   }
 
   Widget _buildVacancyCard(CorporateVacancyItem item, bool isDark) {
-    if (item.category == 'magang') {
-      // Use the verified ProgramMagangCard design
-      return ProgramMagangCard(
-        title: item.title,
-        description: item.description,
-        categoryBadge: item.categoryLabel,
-        statusBadge: item.statusLabel,
-        statusBadgeColor: item.statusBadgeColor,
-        statusBadgeBg: item.statusBadgeBg,
-        registrationPeriod: item.registrationPeriod,
-        quotaText: item.quotaText,
-        requirements: item.requirements,
-        requirementsCountLabel: '${item.requirements.length} Persyaratan',
-        buttonLabel: 'Lihat Detail & Pelamar (${item.applicantsCount}) →',
-        onTap: () => _openDetailLowongan(item),
-        onDetailPressed: () => _openDetailLowongan(item),
-      );
-    }
-
-    // Custom Job Vacancy Card matching the exact styling
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.cardDark : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? Colors.white10 : Colors.grey.shade200,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Badges row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF3E8FF),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    'Pekerjaan Kreatif',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF7E22CE),
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: item.statusBadgeBg,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: item.statusBadgeColor,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        item.statusLabel,
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w600,
-                          color: item.statusBadgeColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Title
-            Text(
-              item.title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                height: 1.3,
-              ),
-            ),
-            const SizedBox(height: 6),
-
-            // Description
-            Text(
-              item.description,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 13,
-                color: isDark ? Colors.white60 : Colors.grey.shade600,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 14),
-
-            // Metadata: Deadline & Allowance
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Batas Pendaftaran',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          color: isDark ? Colors.white38 : Colors.grey.shade500,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Icon(Icons.calendar_today_outlined, size: 14, color: Colors.grey.shade500),
-                          const SizedBox(width: 6),
-                          Text(
-                            item.registrationPeriod,
-                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Kompensasi / Gaji',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          color: isDark ? Colors.white38 : Colors.grey.shade500,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          const Icon(Icons.payments_outlined, size: 14, color: Color(0xFF16A34A)),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              item.allowance,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF16A34A),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            const Divider(height: 1),
-            const SizedBox(height: 10),
-
-            // Requirements & Action
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.people_alt_outlined, size: 16, color: Colors.grey.shade500),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${item.applicantsCount} Pelamar Terdaftar',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        color: isDark ? Colors.white70 : Colors.grey.shade700,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-                TextButton(
-                  onPressed: () => _openDetailLowongan(item),
-                  style: TextButton.styleFrom(
-                    foregroundColor: const Color(0xFF2563EB),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Lihat Detail & Pelamar',
-                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
-                      ),
-                      SizedBox(width: 4),
-                      Icon(Icons.arrow_forward_rounded, size: 14),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+    return ProgramMagangCard(
+      title: item.title,
+      description: item.description,
+      categoryBadge: item.categoryLabel,
+      categoryBadgeColor: item.categoryBadgeColor,
+      categoryBadgeBg: item.categoryBadgeBg,
+      statusBadge: item.statusLabel,
+      statusBadgeColor: item.statusBadgeColor,
+      statusBadgeBg: item.statusBadgeBg,
+      registrationPeriod: item.registrationPeriod,
+      quotaText: item.quotaText,
+      requirements: item.requirements,
+      requirementsCountLabel: '${item.requirements.length} Persyaratan',
+      buttonLabel: 'Lihat Detail & Pelamar (${item.applicantsCount}) →',
+      opportunity: item.opportunity,
+      onTap: () => _openDetailLowongan(item),
+      onDetailPressed: () => _openDetailLowongan(item),
     );
   }
 
@@ -1599,7 +1423,7 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
     for (final req in _requirements) {
       reqPayload.add({
         'sub_role_slug': 'kualifikasi',
-        'quantity': 1,
+        'quantity': 0,
         'notes': req,
       });
     }
@@ -1610,6 +1434,7 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
         title: title,
         subRoleSlug: isMagang ? 'magang' : _specializations.first.roleSlug,
         type: 'project',
+        locationCategory: isMagang ? 'magang' : 'job',
         description: description,
         budgetRange: allowance,
         deadline: deadlineFormatted,

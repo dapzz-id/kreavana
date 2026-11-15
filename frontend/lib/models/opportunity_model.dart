@@ -385,6 +385,41 @@ class OpportunityModel {
 
   bool get canApply => status.toLowerCase() == 'open' && !isEventRunning;
 
+  bool get isMagang {
+    final locCat = (locationCategory ?? '').toLowerCase();
+    if (locCat == 'magang' || locCat == 'internship') return true;
+    if (locCat == 'job' || locCat == 'pekerjaan' || locCat == 'lowongan') return false;
+
+    final sub = subRoleSlug.toLowerCase();
+    final t = title.toLowerCase();
+    final d = (description ?? '').toLowerCase();
+
+    if (sub == 'magang' || sub.contains('magang') || sub.contains('intern')) return true;
+    if (t.contains('magang') || t.contains('intern') || t.contains('pkl') || t.contains('mbkm')) return true;
+    if (d.contains('program magang') ||
+        d.contains('siswa magang') ||
+        d.contains('mahasiswa magang') ||
+        d.contains('siswa vokasi') ||
+        d.contains('tempat pkl') ||
+        d.contains('penempatan magang')) {
+      return true;
+    }
+
+    return requirements.any((r) {
+      final rSub = r.subRoleSlug.toLowerCase();
+      final notes = (r.notes ?? '').toLowerCase();
+      return rSub.contains('magang') ||
+          (notes.isNotEmpty &&
+              (notes.contains('magang') ||
+                  notes.contains('pkl') ||
+                  notes.contains('mbkm') ||
+                  notes.contains('siswa smk') ||
+                  notes.contains('siswa vokasi')));
+    });
+  }
+
+  bool get isJob => !isMagang;
+
   bool get isWetSignatureBudget {
     if (isWetSignatureRequired) return true;
     if (signatureType == 'wet_signature') return true;

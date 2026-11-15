@@ -63,26 +63,7 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
   }
 
   bool _isMagangOpportunity(OpportunityModel opp) {
-    final sub = opp.subRoleSlug.toLowerCase();
-    final title = opp.title.toLowerCase();
-    final desc = (opp.description ?? '').toLowerCase();
-
-    final isExplicitMagang = sub.contains('magang') ||
-        sub.contains('intern') ||
-        title.contains('magang') ||
-        title.contains('intern') ||
-        title.contains('pkl') ||
-        title.contains('mbkm') ||
-        desc.contains('magang') ||
-        desc.contains('intern') ||
-        desc.contains('siswa vokasi') ||
-        opp.requirements.any((r) =>
-            r.subRoleSlug.toLowerCase().contains('magang') ||
-            (r.notes != null &&
-                (r.notes!.toLowerCase().contains('magang') ||
-                    r.notes!.toLowerCase().contains('kuota') ||
-                    r.notes!.toLowerCase().contains('siswa smk'))));
-
+    final isExplicitMagang = opp.isMagang;
     final isCorporatePoster = opp.poster?.selectedSubRole?.toLowerCase() == 'corporate' ||
         opp.poster?.role.toLowerCase() == 'corporate' ||
         opp.poster?.verificationType?.toLowerCase() == 'corporate';
@@ -930,12 +911,15 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
     bool isDark,
     Color accentColor,
   ) {
-    final isMyApps = _schoolTab == SchoolMagangTab.myApplications;
-    String resolveButtonLabel(OpportunityModel opp) {
-      if (isMyApps || opp.hasApplied) {
-        return 'Lihat Status & Siswa →';
+    final isExplore = _schoolTab == SchoolMagangTab.allVacancies ||
+        _schoolTab == SchoolMagangTab.partnerVacancies;
+
+    String getOpportunityButtonLabel(OpportunityModel opp) {
+      if (isExplore) {
+        return opp.isMagang ? 'Detail & Lamar Magang →' : 'Detail & Lamar Lowongan →';
+      } else {
+        return opp.isMagang ? 'Lihat Detail Program →' : 'Lihat Detail Lowongan →';
       }
-      return 'Detail & Lamar Magang →';
     }
 
     return LayoutBuilder(
@@ -956,7 +940,7 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
                       Expanded(
                         child: ProgramMagangCard.fromOpportunity(
                           first,
-                          buttonLabel: resolveButtonLabel(first),
+                          buttonLabel: getOpportunityButtonLabel(first),
                           onTap: () => _openOpportunityDetail(first),
                           onDetailPressed: () => _openOpportunityDetail(first),
                         ),
@@ -966,7 +950,7 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
                         child: second != null
                             ? ProgramMagangCard.fromOpportunity(
                                 second,
-                                buttonLabel: resolveButtonLabel(second),
+                                buttonLabel: getOpportunityButtonLabel(second),
                                 onTap: () => _openOpportunityDetail(second),
                                 onDetailPressed: () => _openOpportunityDetail(second),
                               )
@@ -987,7 +971,7 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
               padding: const EdgeInsets.only(bottom: 14),
               child: ProgramMagangCard.fromOpportunity(
                 opp,
-                buttonLabel: resolveButtonLabel(opp),
+                buttonLabel: getOpportunityButtonLabel(opp),
                 onTap: () => _openOpportunityDetail(opp),
                 onDetailPressed: () => _openOpportunityDetail(opp),
               ),

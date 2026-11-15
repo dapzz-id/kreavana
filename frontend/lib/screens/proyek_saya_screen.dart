@@ -1620,18 +1620,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
     final isMagang = !_isCorporate && !_isSchool &&
         (item.category.toLowerCase().contains('magang') ||
             item.title.toLowerCase().contains('magang') ||
-            (item.opportunity != null &&
-                (item.opportunity!.subRoleSlug.toLowerCase() == 'magang' ||
-                    item.opportunity!.subRoleSlug.toLowerCase().contains('magang') ||
-                    item.opportunity!.title.toLowerCase().contains('magang') ||
-                    item.opportunity!.title.toLowerCase().contains('intern') ||
-                    (item.opportunity!.description != null &&
-                        item.opportunity!.description!.toLowerCase().contains('magang')) ||
-                    item.opportunity!.requirements.any((r) =>
-                        r.subRoleSlug.toLowerCase().contains('magang') ||
-                        (r.notes != null &&
-                            (r.notes!.toLowerCase().contains('magang') ||
-                                r.notes!.toLowerCase().contains('kuota')))))));
+            (item.opportunity != null && item.opportunity!.isMagang));
 
     if (isMagang) {
       if (item.opportunity != null) {

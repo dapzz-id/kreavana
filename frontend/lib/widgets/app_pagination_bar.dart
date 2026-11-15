@@ -70,56 +70,27 @@ class AppPaginationBar extends StatelessWidget {
         isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0);
     final textSecondary = isDark ? Colors.white70 : const Color(0xFF64748B);
 
-    return Container(
-      width: double.infinity,
-      margin: margin ?? const EdgeInsets.only(top: 16, bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.cardBg : Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: borderColor, width: 1),
-        boxShadow: isDark
-            ? null
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.02),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-      ),
-      child: Wrap(
-        alignment: WrapAlignment.spaceBetween,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: 12,
-        runSpacing: 10,
-        children: [
-          Text(
-            infoText,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: textSecondary,
-            ),
-          ),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            crossAxisAlignment: WrapCrossAlignment.center,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 640;
+
+        final controls = SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              OutlinedButton.icon(
+              _buildNavButton(
+                label: 'Prev',
+                icon: Icons.chevron_left_rounded,
+                isLeading: true,
+                isEnabled: canPrev,
                 onPressed: canPrev ? () => onPageChanged(effectivePage - 1) : null,
-                icon: const Icon(Icons.chevron_left_rounded, size: 16),
-                label: const Text('Prev', style: TextStyle(fontSize: 12)),
-                style: OutlinedButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  side: BorderSide(color: borderColor),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
+                isDark: isDark,
+                borderColor: borderColor,
               ),
+              const SizedBox(width: 6),
               ..._buildPagePills(
                 effectivePage: effectivePage,
                 totalPages: totalPagesCount,
@@ -127,22 +98,116 @@ class AppPaginationBar extends StatelessWidget {
                 themePrimary: themePrimary,
                 borderColor: borderColor,
               ),
-              OutlinedButton.icon(
+              const SizedBox(width: 6),
+              _buildNavButton(
+                label: 'Next',
+                icon: Icons.chevron_right_rounded,
+                isLeading: false,
+                isEnabled: canNext,
                 onPressed: canNext ? () => onPageChanged(effectivePage + 1) : null,
-                icon: const Icon(Icons.chevron_right_rounded, size: 16),
-                iconAlignment: IconAlignment.end,
-                label: const Text('Next', style: TextStyle(fontSize: 12)),
-                style: OutlinedButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  side: BorderSide(color: borderColor),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
+                isDark: isDark,
+                borderColor: borderColor,
               ),
             ],
           ),
+        );
+
+        return Container(
+          width: double.infinity,
+          margin: margin ?? const EdgeInsets.only(top: 16, bottom: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: isDark ? AppTheme.cardBg : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: borderColor, width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.02),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: isCompact
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      infoText,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    controls,
+                  ],
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      infoText,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: textSecondary,
+                      ),
+                    ),
+                    controls,
+                  ],
+                ),
+        );
+      },
+    );
+  }
+
+  Widget _buildNavButton({
+    required String label,
+    required IconData icon,
+    required bool isLeading,
+    required bool isEnabled,
+    required VoidCallback? onPressed,
+    required bool isDark,
+    required Color borderColor,
+  }) {
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: isDark ? Colors.white : const Color(0xFF1E293B),
+        disabledForegroundColor: isDark ? Colors.white24 : const Color(0xFFCBD5E1),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        minimumSize: const Size(0, 36),
+        side: BorderSide(
+          color: isEnabled
+              ? borderColor
+              : (isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (isLeading) ...[
+            Icon(icon, size: 16),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (!isLeading) ...[
+            const SizedBox(width: 4),
+            Icon(icon, size: 16),
+          ],
         ],
       ),
     );
@@ -180,13 +245,16 @@ class AppPaginationBar extends StatelessWidget {
     for (final page in sorted) {
       if (lastPage != 0 && page - lastPage > 1) {
         pills.add(
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
+          Container(
+            width: 28,
+            height: 36,
+            alignment: Alignment.center,
             child: Text(
               '...',
               style: TextStyle(
                 color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
                 fontWeight: FontWeight.bold,
+                fontSize: 13,
               ),
             ),
           ),
@@ -213,30 +281,43 @@ class AppPaginationBar extends StatelessWidget {
     required Color themePrimary,
     required Color borderColor,
   }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: isActive ? null : () => onPageChanged(page),
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: isActive ? themePrimary : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isActive ? themePrimary : borderColor,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: isActive ? null : () => onPageChanged(page),
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            width: 36,
+            height: 36,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: isActive ? themePrimary : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isActive ? themePrimary : borderColor,
+                width: 1,
+              ),
+              boxShadow: isActive
+                  ? [
+                      BoxShadow(
+                        color: themePrimary.withValues(alpha: 0.35),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : null,
             ),
-          ),
-          child: Text(
-            '$page',
-            style: TextStyle(
-              color: isActive
-                  ? Colors.white
-                  : (isDark ? Colors.white70 : const Color(0xFF475569)),
-              fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-              fontSize: 12.5,
+            child: Text(
+              '$page',
+              style: TextStyle(
+                color: isActive
+                    ? Colors.white
+                    : (isDark ? Colors.white70 : const Color(0xFF475569)),
+                fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
+                fontSize: 13,
+              ),
             ),
           ),
         ),

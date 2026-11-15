@@ -125,7 +125,7 @@ class OpportunityService extends BaseService
                         OpportunityRequirement::create([
                             'opportunity_id' => $opp->id,
                             'sub_role_slug' => $req['sub_role_slug'],
-                            'quantity' => (int) ($req['quantity'] ?? 1),
+                            'quantity' => isset($req['quantity']) ? (int) $req['quantity'] : ($req['sub_role_slug'] === 'kualifikasi' ? 0 : 1),
                             'notes' => $req['notes'] ?? null,
                             'payment_scheme' => $req['payment_scheme'] ?? 'full_at_end',
                             'payment_terms' => $req['payment_terms'] ?? null,
@@ -188,7 +188,7 @@ class OpportunityService extends BaseService
                         OpportunityRequirement::create([
                             'opportunity_id' => $opp->id,
                             'sub_role_slug' => $req['sub_role_slug'],
-                            'quantity' => (int) ($req['quantity'] ?? 1),
+                            'quantity' => isset($req['quantity']) ? (int) $req['quantity'] : ($req['sub_role_slug'] === 'kualifikasi' ? 0 : 1),
                             'notes' => $req['notes'] ?? null,
                             'payment_scheme' => $req['payment_scheme'] ?? 'full_at_end',
                         ]);

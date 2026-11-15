@@ -48,7 +48,7 @@ void main() {
       expect(item.categoryLabel, equals('Magang'));
       expect(item.statusLabel, equals('Pendaftaran Dibuka'));
       expect(item.registrationPeriod, equals('21 Sep 2026'));
-      expect(item.quotaText, equals('0 dari 20 posisi'));
+      expect(item.quotaText, equals('20 dari 20 posisi'));
       expect(item.requirements, contains('Siswa SMK vokasi atau Mahasiswa aktif jurusan terkait'));
     });
 

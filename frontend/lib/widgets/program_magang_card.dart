@@ -5,6 +5,8 @@ class ProgramMagangCard extends StatelessWidget {
   final String title;
   final String? description;
   final String categoryBadge;
+  final Color? categoryBadgeColor;
+  final Color? categoryBadgeBg;
   final String statusBadge;
   final Color? statusBadgeColor;
   final Color? statusBadgeBg;
@@ -22,6 +24,8 @@ class ProgramMagangCard extends StatelessWidget {
     required this.title,
     this.description,
     this.categoryBadge = 'Magang',
+    this.categoryBadgeColor,
+    this.categoryBadgeBg,
     this.statusBadge = 'Pendaftaran Dibuka',
     this.statusBadgeColor,
     this.statusBadgeBg,
@@ -80,14 +84,17 @@ class ProgramMagangCard extends StatelessWidget {
     Key? key,
     VoidCallback? onTap,
     VoidCallback? onDetailPressed,
-    String buttonLabel = 'Lihat Detail Program →',
+    String? buttonLabel,
   }) {
-    // 1. Category badge
-    String cat = 'Magang';
-    if (opp.subRoleSlug.isNotEmpty &&
-        opp.subRoleSlug.toLowerCase() != 'magang' &&
-        opp.subRoleSlug.toLowerCase() != 'all') {
-      cat = 'Magang';
+    // 1. Category badge & colors
+    final isMagang = opp.isMagang;
+    final cat = isMagang ? 'Magang' : 'Lowongan Kerja';
+    final catColor = isMagang ? const Color(0xFF0284C7) : const Color(0xFF7E22CE);
+    final catBg = isMagang ? const Color(0xFFE0F2FE) : const Color(0xFFF3E8FF);
+
+    String resolvedButtonLabel = buttonLabel ?? (isMagang ? 'Lihat Detail Program →' : 'Lihat Detail Lowongan →');
+    if (!isMagang && resolvedButtonLabel.contains('Magang')) {
+      resolvedButtonLabel = resolvedButtonLabel.replaceAll('Magang', 'Lowongan');
     }
 
     // 2. Status badge & colors
@@ -110,14 +117,51 @@ class ProgramMagangCard extends StatelessWidget {
     final rawDate = opp.deadline ?? opp.eventDate ?? opp.eventStartDate;
     final period = formatDateDisplay(rawDate, defaultFallback: '21 Sep 2026');
 
-    // 4. Quota text from database requirements & approvals
+    // 4. Quota text from database requirements & approvals (only count specializations, ignore qualifications)
     int totalQuota = 0;
     for (final r in opp.requirements) {
-      totalQuota += r.quantity;
+      final sub = r.subRoleSlug.trim().toLowerCase();
+      if (sub == 'kualifikasi' || sub == 'qualification' || sub == 'syarat') {
+        continue;
+      }
+      final notes = (r.notes ?? '').trim();
+      if (notes.isNotEmpty &&
+          !notes.toLowerCase().startsWith('spesialisasi') &&
+          (notes.startsWith('Memiliki') ||
+           notes.startsWith('Mampu') ||
+           notes.startsWith('Siswa') ||
+           notes.startsWith('Mahasiswa') ||
+           notes.startsWith('Disiplin') ||
+           notes.startsWith('Menguasai') ||
+           notes.startsWith('Siap'))) {
+        continue;
+      }
+
+      int q = r.quantity;
+      if (q <= 0 && notes.isNotEmpty) {
+        final match = RegExp(r'\((\d+)\s+kuota\)').firstMatch(notes);
+        if (match != null) {
+          q = int.tryParse(match.group(1) ?? '0') ?? 0;
+        }
+      }
+
+      if (q > 0) {
+        totalQuota += q;
+      }
     }
-    final int filled = opp.approvedCreators.length;
+
+    if (totalQuota <= 0) {
+      for (final r in opp.requirements) {
+        final notes = r.notes ?? '';
+        final match = RegExp(r'\((\d+)\s+kuota\)').firstMatch(notes);
+        if (match != null) {
+          totalQuota += int.tryParse(match.group(1) ?? '0') ?? 0;
+        }
+      }
+    }
     final String quotaString;
     if (totalQuota > 0) {
+      final int filled = opp.approvedCreators.length;
       final int remaining = (totalQuota - filled).clamp(0, totalQuota);
       quotaString = '$remaining dari $totalQuota posisi';
     } else {
@@ -140,10 +184,11 @@ class ProgramMagangCard extends StatelessWidget {
     return ProgramMagangCard(
       key: key,
       title: opp.title,
-      description: opp.description?.isNotEmpty == true
-          ? opp.description
-          : 'Program kolaborasi magang industri dari mitra Corporate.',
+      description: opp.description ??
+          'Kerja sama penempatan siswa vokasi magang pada industri kreatif mitra.',
       categoryBadge: cat,
+      categoryBadgeColor: catColor,
+      categoryBadgeBg: catBg,
       statusBadge: statusText,
       statusBadgeColor: statusColor,
       statusBadgeBg: statusBg,
@@ -154,7 +199,7 @@ class ProgramMagangCard extends StatelessWidget {
           reqs.isNotEmpty ? '${reqs.length} Persyaratan' : 'Tidak ada syarat khusus',
       onTap: onTap,
       onDetailPressed: onDetailPressed ?? onTap,
-      buttonLabel: buttonLabel,
+      buttonLabel: resolvedButtonLabel,
       opportunity: opp,
     );
   }
@@ -226,6 +271,18 @@ class ProgramMagangCard extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
+    final isCardMagang = categoryBadge.toLowerCase().contains('magang');
+    final resolvedCatColor = categoryBadgeColor ??
+        (isDark
+            ? (isCardMagang ? const Color(0xFF38BDF8) : const Color(0xFFA855F7))
+            : (isCardMagang ? const Color(0xFF0284C7) : const Color(0xFF7E22CE)));
+    final resolvedCatBg = categoryBadgeBg ??
+        (isDark
+            ? (isCardMagang
+                ? const Color(0xFF0284C7).withValues(alpha: 0.22)
+                : const Color(0xFF7E22CE).withValues(alpha: 0.22))
+            : (isCardMagang ? const Color(0xFFE0F2FE) : const Color(0xFFF3E8FF)));
+
     final resolvedStatusColor =
         statusBadgeColor ?? (isDark ? const Color(0xFF4ADE80) : const Color(0xFF16A34A));
     final resolvedStatusBg =
@@ -264,21 +321,17 @@ class ProgramMagangCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Left Badge: Magang
+                  // Left Badge: Magang / Pekerjaan
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                     decoration: BoxDecoration(
-                      color: isDark
-                          ? const Color(0xFF0284C7).withValues(alpha: 0.22)
-                          : const Color(0xFFE0F2FE),
+                      color: resolvedCatBg,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       categoryBadge,
                       style: TextStyle(
-                        color: isDark
-                            ? const Color(0xFF38BDF8)
-                            : const Color(0xFF0284C7),
+                        color: resolvedCatColor,
                         fontSize: 12.5,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 0.1,

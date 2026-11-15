@@ -289,7 +289,7 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
       text: replacedStudent?.role ??
           (widget.opportunity.requirements.isNotEmpty
               ? widget.opportunity.requirements.first.subRoleSlug.replaceAll('_', ' ').toUpperCase()
-              : ''),
+              : 'Peserta Magang'),
     );
     final portfolioCtrl = TextEditingController();
     final noteCtrl = TextEditingController();
@@ -301,11 +301,12 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
         return StatefulBuilder(
           builder: (ctx, setDialogState) {
             final isDark = Theme.of(ctx).brightness == Brightness.dark;
+            final isMagang = widget.opportunity.isMagang;
             final title = replacedStudent != null
-                ? 'Ajukan Siswa Pengganti'
+                ? (isMagang ? 'Ajukan Siswa Pengganti' : 'Ajukan Kandidat Pengganti')
                 : (isAdditionalStudent
-                    ? 'Ajukan Siswa Tambahan'
-                    : 'Ajukan Lamaran Magang Sekolah');
+                    ? (isMagang ? 'Ajukan Siswa Tambahan' : 'Ajukan Kandidat Tambahan')
+                    : (isMagang ? 'Ajukan Lamaran Magang Sekolah' : 'Ajukan Lamaran Pekerjaan'));
 
             return AlertDialog(
               backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
@@ -518,12 +519,12 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                     foregroundColor: Colors.white,
                   ),
                 ),
-              ],
-            );
-          },
+          ],
         );
       },
     );
+  },
+);
   }
 
   @override
@@ -546,11 +547,14 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // 1. Breadcrumbs
-              const AppBreadcrumbs(
+              AppBreadcrumbs(
                 items: [
-                  BreadcrumbItem(label: 'Beranda', icon: Icons.home_outlined),
-                  BreadcrumbItem(label: 'Program & Magang', icon: Icons.work_outline_rounded),
-                  BreadcrumbItem(label: 'Detail Program Magang', icon: Icons.info_outline_rounded),
+                  const BreadcrumbItem(label: 'Beranda', icon: Icons.home_outlined),
+                  const BreadcrumbItem(label: 'Program & Magang', icon: Icons.work_outline_rounded),
+                  BreadcrumbItem(
+                    label: widget.opportunity.isMagang ? 'Detail Program Magang' : 'Detail Lowongan Pekerjaan',
+                    icon: Icons.info_outline_rounded,
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -661,15 +665,15 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE0F2FE),
+                      color: opp.isMagang ? const Color(0xFFE0F2FE) : const Color(0xFFF3E8FF),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Text(
-                      'Program Magang',
+                    child: Text(
+                      opp.isMagang ? 'Program Magang' : 'Lowongan Pekerjaan',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF0284C7),
+                        color: opp.isMagang ? const Color(0xFF0284C7) : const Color(0xFF7E22CE),
                       ),
                     ),
                   ),
@@ -742,8 +746,8 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
             icon: const Icon(Icons.person_add_alt_1_rounded, size: 18, color: Colors.white),
             label: Text(
               _schoolPartnershipStatus == 'not_applied'
-                  ? 'Ajukan Lamaran Magang'
-                  : 'Ajukan Siswa Tambahan',
+                  ? (opp.isMagang ? 'Ajukan Lamaran Magang' : 'Ajukan Lamaran Pekerjaan')
+                  : (opp.isMagang ? 'Ajukan Siswa Tambahan' : 'Ajukan Kandidat Tambahan'),
               style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
             style: ElevatedButton.styleFrom(
@@ -784,10 +788,10 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
     final pendingCount = _students.where((s) => s.status == 'Pending').length;
 
     final String subText = isApproved
-        ? 'Institusi Anda telah disetujui pada program magang ini ($acceptedCount siswa diterima${pendingCount > 0 ? ', $pendingCount siswa tambahan menunggu review' : ''}). Penambahan siswa baru tidak mengubah status persetujuan sekolah Anda.'
+        ? 'Institusi Anda telah disetujui pada ${widget.opportunity.isMagang ? 'program magang ini' : 'lowongan pekerjaan ini'} ($acceptedCount ${widget.opportunity.isMagang ? 'siswa' : 'kandidat'} diterima${pendingCount > 0 ? ', $pendingCount ${widget.opportunity.isMagang ? 'siswa' : 'kandidat'} tambahan menunggu review' : ''}). Penambahan kandidat baru tidak mengubah status persetujuan sekolah Anda.'
         : (isPending
-            ? 'Pengajuan kemitraan magang sekolah Anda sedang ditinjau oleh pihak Corporate.'
-            : 'Sekolah Anda belum mendaftarkan siswa pada program magang ini. Klik tombol Ajukan Lamaran Magang untuk mendaftarkan siswa.');
+            ? 'Pengajuan kemitraan ${widget.opportunity.isMagang ? 'magang' : 'rekrutmen'} sekolah Anda sedang ditinjau oleh pihak Corporate.'
+            : 'Sekolah Anda belum mendaftarkan ${widget.opportunity.isMagang ? 'siswa pada program magang ini' : 'kandidat pada lowongan pekerjaan ini'}. Klik tombol ${widget.opportunity.isMagang ? 'Ajukan Lamaran Magang' : 'Ajukan Lamaran Pekerjaan'} untuk mendaftarkan.');
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -988,15 +992,14 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Deskripsi Program Magang',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          Text(
+            opp.isMagang ? 'Deskripsi Program Magang' : 'Deskripsi Lowongan Pekerjaan',
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           Text(
-            opp.description?.isNotEmpty == true
-                ? opp.description!
-                : 'Belum ada deskripsi tambahan untuk program magang ini.',
+            opp.description ??
+                'Kerja sama penempatan siswa vokasi magang pada industri kreatif mitra.',
             style: TextStyle(
               fontSize: 13.5,
               height: 1.5,
@@ -1247,13 +1250,15 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                 children: [
                   const Icon(Icons.school_outlined, size: 36, color: Color(0xFF6366F1)),
                   const SizedBox(height: 10),
-                  const Text(
-                    'Belum Ada Siswa yang Diajukan',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  Text(
+                    widget.opportunity.isMagang ? 'Belum Ada Siswa yang Diajukan' : 'Belum Ada Kandidat yang Diajukan',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Daftarkan siswa sekolah Anda untuk mengikuti program magang industri ini.',
+                    widget.opportunity.isMagang
+                        ? 'Daftarkan siswa sekolah Anda untuk mengikuti program magang industri ini.'
+                        : 'Daftarkan talenta institusi Anda untuk melamar lowongan pekerjaan ini.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 12,

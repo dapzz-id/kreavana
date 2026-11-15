@@ -116,7 +116,7 @@ class OpportunityController extends Controller
             'status' => 'nullable|string|in:open,closed,in_progress,cancelled',
             'requirements' => 'nullable|array',
             'requirements.*.sub_role_slug' => 'required_with:requirements|string|max:50',
-            'requirements.*.quantity' => 'nullable|integer|min:1|max:50',
+            'requirements.*.quantity' => 'nullable|integer|min:0|max:50',
             'requirements.*.notes' => 'nullable|string|max:255',
         ]);
 
