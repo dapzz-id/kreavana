@@ -142,6 +142,7 @@ class InstitutionResourceSeeder extends Seeder
                 'metadata' => [
                     'category' => 'Animasi 3D & CGI',
                     'creator_name' => 'Tim Studio Animasi XII-A',
+                    'image_url' => 'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?auto=format&fit=crop&w=600&q=80',
                     'portfolio_url' => 'https://youtube.com/watch?v=legenda-penjaga-rimba',
                     'year' => '2026',
                 ],
@@ -155,6 +156,7 @@ class InstitutionResourceSeeder extends Seeder
                 'metadata' => [
                     'category' => 'DKV & Packaging',
                     'creator_name' => 'Clarissa Maharani & Tim DKV VI',
+                    'image_url' => 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&w=600&q=80',
                     'portfolio_url' => 'https://behance.net/gallery/kreavana-umkm-packaging',
                     'year' => '2026',
                 ],
@@ -168,6 +170,7 @@ class InstitutionResourceSeeder extends Seeder
                 'metadata' => [
                     'category' => 'Broadcasting & Film',
                     'creator_name' => 'Rizky Ramadhan & Tim Sinematografi',
+                    'image_url' => 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=600&q=80',
                     'portfolio_url' => 'https://vimeo.com/kreavana-tenun-ikat',
                     'year' => '2026',
                 ],
@@ -181,6 +184,7 @@ class InstitutionResourceSeeder extends Seeder
                 'metadata' => [
                     'category' => 'AR/VR & Game Dev',
                     'creator_name' => 'Dimas Setiawan & Tim RPL Media',
+                    'image_url' => 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=600&q=80',
                     'portfolio_url' => 'https://play.google.com/store/apps/details?id=id.kreavana.aksara',
                     'year' => '2026',
                 ],
@@ -194,6 +198,7 @@ class InstitutionResourceSeeder extends Seeder
                 'metadata' => [
                     'category' => 'DKV & Kampanye Sosial',
                     'creator_name' => 'Nadia Safitri (Mahasiswa DKV)',
+                    'image_url' => 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=600&q=80',
                     'portfolio_url' => 'https://instagram.com/lautlestari.project',
                     'year' => '2026',
                 ],
@@ -207,6 +212,7 @@ class InstitutionResourceSeeder extends Seeder
                 'metadata' => [
                     'category' => 'Produksi Audio & Musik',
                     'creator_name' => 'Kevin Pratama & Studio Audio Kampus',
+                    'image_url' => 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=600&q=80',
                     'portfolio_url' => 'https://soundcloud.com/kreavana/nadi-khatulistiwa',
                     'year' => '2026',
                 ],

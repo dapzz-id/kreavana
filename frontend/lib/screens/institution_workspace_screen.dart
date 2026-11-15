@@ -274,6 +274,12 @@ class _InstitutionWorkspaceScreenState
         hint: 'Contoh: Tim Studio Animasi XII-A / Rian Pratama',
       ),
       _WorkspaceField(
+        'image_url',
+        'URL Gambar / Preview Karya',
+        kind: _FieldKind.url,
+        hint: 'https://... (otomatis dipilih dari internet sesuai kriteria jika kosong)',
+      ),
+      _WorkspaceField(
         'portfolio_url',
         'Tautan Karya / Portofolio',
         kind: _FieldKind.url,
@@ -4736,6 +4742,129 @@ class _InstitutionWorkspaceScreenState
     );
   }
 
+  String _resolveShowcaseInternetImage(String title, String category, Map<String, dynamic> meta) {
+    // 1. Explicit direct HTTP(S) URL in metadata
+    final rawUrl = (meta['image_url'] ?? '').toString().trim();
+    if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
+      return rawUrl;
+    }
+    final rawThumb = (meta['thumbnail'] ?? '').toString().trim();
+    if (rawThumb.startsWith('http://') || rawThumb.startsWith('https://')) {
+      return rawThumb;
+    }
+
+    final text = '${title.toLowerCase()} ${category.toLowerCase()}';
+
+    // 2. Curated criteria-based internet image matches (High-res Unsplash CDN with CORS)
+    // 3D Animation, CGI & Visual Effects
+    if (text.contains('animasi') ||
+        text.contains('3d') ||
+        text.contains('cgi') ||
+        text.contains('blender') ||
+        text.contains('maya') ||
+        text.contains('vfx') ||
+        text.contains('render') ||
+        text.contains('heritage')) {
+      return 'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?auto=format&fit=crop&w=600&q=80';
+    }
+
+    // Branding, Packaging, DKV, Graphic Design, UMKM
+    if (text.contains('kemasan') ||
+        text.contains('packaging') ||
+        text.contains('rempah') ||
+        text.contains('brand') ||
+        text.contains('branding') ||
+        text.contains('dkv') ||
+        text.contains('desain grafis') ||
+        text.contains('label') ||
+        text.contains('umkm')) {
+      return 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&w=600&q=80';
+    }
+
+    // Mobile App, Software, Flutter, RPL, UI/UX
+    if (text.contains('mobile') ||
+        text.contains('flutter') ||
+        text.contains('aplikasi') ||
+        text.contains('app') ||
+        text.contains('software') ||
+        text.contains('rpl') ||
+        text.contains('kreasibudaya') ||
+        text.contains('coding') ||
+        text.contains('ui') ||
+        text.contains('ux')) {
+      return 'https://images.unsplash.com/photo-1551650975-87deedd944c3?auto=format&fit=crop&w=600&q=80';
+    }
+
+    // Tenun Tradisional, Kriya, Tekstil, Kerajinan, Busana
+    if (text.contains('tenun') ||
+        text.contains('ikat') ||
+        text.contains('kriya') ||
+        text.contains('tekstil') ||
+        text.contains('batik') ||
+        text.contains('kerajinan') ||
+        text.contains('busana') ||
+        text.contains('fashion')) {
+      return 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=600&q=80';
+    }
+
+    // AR, VR, Game Dev, Aksara Kuno, Metaverse
+    if (text.contains('game') ||
+        text.contains('ar') ||
+        text.contains('vr') ||
+        text.contains('augmented') ||
+        text.contains('virtual') ||
+        text.contains('metaverse') ||
+        text.contains('aksara') ||
+        text.contains('unity') ||
+        text.contains('unreal')) {
+      return 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=600&q=80';
+    }
+
+    // Broadcasting, Film, Video, Dokumenter, Sinematografi
+    if (text.contains('film') ||
+        text.contains('video') ||
+        text.contains('sinematografi') ||
+        text.contains('dokumenter') ||
+        text.contains('broadcast') ||
+        text.contains('movie')) {
+      return 'https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=600&q=80';
+    }
+
+    // Audio, Musik, Soundscape, Gamelan, Recording
+    if (text.contains('musik') ||
+        text.contains('audio') ||
+        text.contains('sound') ||
+        text.contains('soundscape') ||
+        text.contains('rekaman') ||
+        text.contains('khatulistiwa') ||
+        text.contains('lagu')) {
+      return 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=600&q=80';
+    }
+
+    // Kampanye Sosial & Lingkungan, Laut Bersih, Alam Lestari
+    if (text.contains('laut') ||
+        text.contains('lingkungan') ||
+        text.contains('lestari') ||
+        text.contains('sampah') ||
+        text.contains('sosial') ||
+        text.contains('kampanye') ||
+        text.contains('pesisir')) {
+      return 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=600&q=80';
+    }
+
+    // Fotografi, Studio Foto, Jurnalistik Visual
+    if (text.contains('foto') ||
+        text.contains('fotografi') ||
+        text.contains('photo') ||
+        text.contains('kamera') ||
+        text.contains('lens')) {
+      return 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=600&q=80';
+    }
+
+    // Fallback: Elegant modern creative portfolio canvas
+    return 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=600&q=80';
+  }
+
   Widget _buildShowcaseMediaThumbnail({
     required Map<String, dynamic> record,
     required String title,
@@ -4747,24 +4876,11 @@ class _InstitutionWorkspaceScreenState
     final meta = _metadata(record);
     final accentColor = discColor ?? _resolvedAccentColor;
     final icon = discIcon ?? Icons.auto_awesome_rounded;
-
-    String? assetPath;
-    String? networkUrl;
-
-    if ((meta['image_url'] ?? '').toString().isNotEmpty) {
-      networkUrl = meta['image_url'].toString();
-    } else if ((meta['thumbnail'] ?? '').toString().isNotEmpty) {
-      final t = meta['thumbnail'].toString();
-      if (t.startsWith('http')) {
-        networkUrl = t;
-      } else {
-        assetPath = t;
-      }
-    }
+    final internetImageUrl = _resolveShowcaseInternetImage(title, category, meta);
 
     return Container(
-      width: 64,
-      height: 64,
+      width: 72,
+      height: 72,
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E1B32) : const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(12),
@@ -4773,7 +4889,7 @@ class _InstitutionWorkspaceScreenState
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: isDark ? 0.2 : 0.03),
+            color: const Color(0xFF0F172A).withValues(alpha: isDark ? 0.2 : 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -4784,45 +4900,76 @@ class _InstitutionWorkspaceScreenState
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (assetPath != null)
-              Image.asset(
-                assetPath,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) {
-                  if (networkUrl != null && networkUrl.isNotEmpty) {
-                    return Image.network(
-                      networkUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => _buildDisciplineHeroFallback(icon, accentColor, isDark),
-                    );
-                  }
-                  return _buildDisciplineHeroFallback(icon, accentColor, isDark);
-                },
-              )
-            else if (networkUrl != null && networkUrl.isNotEmpty)
-              Image.network(
-                networkUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => _buildDisciplineHeroFallback(icon, accentColor, isDark),
-              )
-            else
-              _buildDisciplineHeroFallback(icon, accentColor, isDark),
+            Image.network(
+              internetImageUrl,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Container(
+                  color: isDark ? const Color(0xFF1E1B32) : const Color(0xFFF1F5F9),
+                  child: Center(
+                    child: SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded /
+                                (loadingProgress.expectedTotalBytes ?? 1)
+                            : null,
+                        color: accentColor.withValues(alpha: 0.5),
+                      ),
+                    ),
+                  ),
+                );
+              },
+              errorBuilder: (_, _, _) => _buildDisciplineHeroFallback(icon, accentColor, isDark),
+            ),
 
-            // Subtle discipline badge on bottom-right
+            // Subtle gradient scrim at bottom to ensure discipline badge stands out cleanly
             Positioned(
-              right: 4,
-              bottom: 4,
-              child: Container(
-                padding: const EdgeInsets.all(3),
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: 28,
+              child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF0F172A).withValues(alpha: 0.85) : Colors.white.withValues(alpha: 0.9),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.35),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // Discipline badge on bottom-right
+            Positioned(
+              right: 5,
+              bottom: 5,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? const Color(0xFF0F172A).withValues(alpha: 0.9)
+                      : Colors.white.withValues(alpha: 0.92),
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
                     width: 0.8,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      blurRadius: 3,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
                 ),
-                child: Icon(icon, color: accentColor, size: 10),
+                child: Icon(icon, color: accentColor, size: 11),
               ),
             ),
           ],
@@ -4856,12 +5003,35 @@ class _InstitutionWorkspaceScreenState
 
     if (catLower.contains('animasi') || catLower.contains('3d') || catLower.contains('cgi')) {
       discIcon = Icons.movie_creation_outlined;
-    } else if (catLower.contains('brand') || catLower.contains('dkv') || catLower.contains('ui') || catLower.contains('ux') || catLower.contains('desain')) {
+    } else if (catLower.contains('brand') ||
+        catLower.contains('dkv') ||
+        catLower.contains('ui') ||
+        catLower.contains('ux') ||
+        catLower.contains('desain') ||
+        catLower.contains('kemasan')) {
       discIcon = Icons.design_services_outlined;
-    } else if (catLower.contains('mobile') || catLower.contains('software') || catLower.contains('rpl') || catLower.contains('web') || catLower.contains('flutter') || catLower.contains('app')) {
+    } else if (catLower.contains('mobile') ||
+        catLower.contains('software') ||
+        catLower.contains('rpl') ||
+        catLower.contains('web') ||
+        catLower.contains('flutter') ||
+        catLower.contains('app')) {
       discIcon = Icons.code_rounded;
-    } else if (catLower.contains('film') || catLower.contains('video') || catLower.contains('broadcast') || catLower.contains('media')) {
+    } else if (catLower.contains('film') ||
+        catLower.contains('video') ||
+        catLower.contains('broadcast') ||
+        catLower.contains('media') ||
+        catLower.contains('sinematografi')) {
       discIcon = Icons.video_camera_back_outlined;
+    } else if (catLower.contains('tenun') ||
+        catLower.contains('kriya') ||
+        catLower.contains('tekstil') ||
+        catLower.contains('batik')) {
+      discIcon = Icons.dry_cleaning_outlined;
+    } else if (catLower.contains('game') || catLower.contains('ar') || catLower.contains('vr')) {
+      discIcon = Icons.sports_esports_outlined;
+    } else if (catLower.contains('musik') || catLower.contains('audio') || catLower.contains('sound')) {
+      discIcon = Icons.headphones_outlined;
     } else {
       discIcon = Icons.auto_awesome_outlined;
     }

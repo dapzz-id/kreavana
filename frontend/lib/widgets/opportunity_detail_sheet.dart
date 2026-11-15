@@ -13,6 +13,7 @@ import '../app/theme.dart';
 import '../widgets/auth_guard_dialog.dart';
 import '../widgets/user_profile_modal.dart';
 import '../widgets/opportunity_review_dialog.dart';
+import '../widgets/app_sweet_alert.dart';
 
 class OpportunityDetailSheet extends StatefulWidget {
   final OpportunityModel opportunity;
@@ -170,30 +171,28 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
       setState(() => _isRespondingCounterOffer = false);
 
       if (res['status'] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              isAccept
-                  ? 'Tawaran nego dana berhasil disetujui! Menunggu konfirmasi pemilik proyek.'
-                  : 'Tawaran nego dana telah ditolak.',
-            ),
-            backgroundColor: isAccept ? const Color(0xFF10B981) : Colors.red.shade700,
-          ),
+        AppSweetAlert.success(
+          context,
+          isAccept
+              ? 'Tawaran nego dana berhasil disetujui! Menunggu konfirmasi pemilik proyek.'
+              : 'Tawaran nego dana telah ditolak.',
+          title: isAccept ? 'Tawaran Disetujui' : 'Tawaran Ditolak',
         );
         _loadMyApplication();
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(res['message'] ?? 'Gagal memproses tanggapan.'),
-            backgroundColor: Colors.red,
-          ),
+        AppSweetAlert.error(
+          context,
+          res['message'] ?? 'Gagal memproses tanggapan.',
+          title: 'Gagal Memproses',
         );
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isRespondingCounterOffer = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Terjadi kesalahan: $e'), backgroundColor: Colors.red),
+        AppSweetAlert.error(
+          context,
+          'Terjadi kesalahan: $e',
+          title: 'Terjadi Kesalahan',
         );
       }
     }
@@ -361,27 +360,27 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
       if (mounted) {
         setState(() => _isRespondingCounterOffer = false);
         if (res['status'] == true) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Penawaran balik berhasil dikirim ke pemilik proyek.'),
-              backgroundColor: Color(0xFF10B981),
-            ),
+          AppSweetAlert.success(
+            context,
+            'Penawaran balik berhasil dikirim ke pemilik proyek.',
+            title: 'Penawaran Terkirim',
           );
           _loadMyApplication();
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(res['message'] ?? 'Gagal mengajukan penawaran.'),
-              backgroundColor: Colors.red,
-            ),
+          AppSweetAlert.error(
+            context,
+            res['message'] ?? 'Gagal mengajukan penawaran.',
+            title: 'Gagal Mengajukan',
           );
         }
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isRespondingCounterOffer = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Terjadi kesalahan: $e'), backgroundColor: Colors.red),
+        AppSweetAlert.error(
+          context,
+          'Terjadi kesalahan: $e',
+          title: 'Terjadi Kesalahan',
         );
       }
     }
@@ -446,11 +445,10 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
       final chatData = result['data'];
       if (chatData == null) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['message'] ?? 'Gagal membuka chat.'),
-              backgroundColor: Colors.red.shade700,
-            ),
+          AppSweetAlert.error(
+            context,
+            result['message'] ?? 'Gagal membuka chat.',
+            title: 'Gagal Membuka Chat',
           );
         }
         return;
@@ -498,162 +496,25 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
     }
 
     if (!widget.opportunity.canApply) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Acara atau event untuk proyek ini sudah berjalan atau telah dimulai, pendaftaran lamaran sudah ditutup.'),
-          backgroundColor: Colors.red,
-        ),
+      AppSweetAlert.warning(
+        context,
+        'Acara atau event untuk proyek ini sudah berjalan atau telah dimulai, pendaftaran lamaran sudah ditutup.',
+        title: 'Pendaftaran Ditutup',
       );
       return;
     }
 
-    final reqs = widget.opportunity.requirements.isNotEmpty
-        ? widget.opportunity.requirements
-        : [OpportunityRequirementModel(subRoleSlug: widget.opportunity.subRoleSlug)];
-
-    String selectedSlug = reqs.first.subRoleSlug;
-    final pitchCtrl = TextEditingController();
-    final questionsCtrl = TextEditingController();
-    final bidCtrl = TextEditingController();
-    bool isSubmitting = false;
-
     showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setModalState) {
-          final isDark = Theme.of(context).brightness == Brightness.dark;
-          return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: const Row(
-              children: [
-                Icon(Icons.assignment_turned_in, color: AppTheme.primaryPurple),
-                SizedBox(width: 8),
-                Text('Ambil Peluang Proyek', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              ],
-            ),
-            content: SizedBox(
-              width: 480,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Pilih posisi yang ingin Anda ambil:',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        color: isDark ? AppTheme.textMuted : Colors.grey.shade700,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: reqs.map((r) {
-                        final isSelected = selectedSlug == r.subRoleSlug;
-                        return ChoiceChip(
-                          label: Text(r.label),
-                          selected: isSelected,
-                          selectedColor: Colors.teal.withValues(alpha: 0.2),
-                          onSelected: (_) {
-                            setModalState(() => selectedSlug = r.subRoleSlug);
-                          },
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: pitchCtrl,
-                      maxLines: 3,
-                      decoration: const InputDecoration(
-                        labelText: 'Pesan / Pitching Lamaran *',
-                        hintText: 'Jelaskan mengapa Anda cocok untuk proyek ini & pengalaman relevan...',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: bidCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Penawaran Tarif / Nego Fee * (Wajib)',
-                        hintText: 'Masukkan nominal penawaran tarif Anda (misal: 1500000)',
-                        prefixText: 'Rp ',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: questionsCtrl,
-                      maxLines: 2,
-                      decoration: const InputDecoration(
-                        labelText: 'Pertanyaan untuk Klien (Opsional)',
-                        hintText: 'Misal: Mengenai rundown acara atau peralatan yang disediakan...',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
-                child: const Text('Batal'),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryPurple,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                onPressed: isSubmitting
-                    ? null
-                    : () async {
-                        final pitch = pitchCtrl.text.trim();
-                        if (pitch.length < 10) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Pesan lamaran minimal 10 karakter.')),
-                          );
-                          return;
-                        }
-
-                        final bid = double.tryParse(bidCtrl.text.trim().replaceAll('.', '').replaceAll(',', ''));
-                        if (bid == null || bid <= 0) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Penawaran tarif / nego fee wajib diisi oleh pelamar.')),
-                          );
-                          return;
-                        }
-
-                        setModalState(() => isSubmitting = true);
-                        final res = await OpportunityService.applyToOpportunity(
-                          opportunityId: widget.opportunity.id ?? '',
-                          subRoleSlug: selectedSlug,
-                          pitchMessage: pitch,
-                          bidPrice: bid,
-                          questionsNotes: questionsCtrl.text.trim().isNotEmpty ? questionsCtrl.text.trim() : null,
-                        );
-
-                        if (ctx.mounted) {
-                          Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(res['message'] ?? 'Lamaran berhasil dikirim!'),
-                              backgroundColor: res['status'] == true ? Colors.teal : Colors.red,
-                            ),
-                          );
-                        }
-                      },
-                child: isSubmitting
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : const Text('Kirim Lamaran', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          );
+      barrierDismissible: true,
+      builder: (ctx) => _OpportunityApplicationDialog(
+        opportunity: widget.opportunity,
+        onApplied: () {
+          _loadMyApplication();
         },
       ),
     );
+  }
   }
 
   void _showApplicationsManagerDialog(BuildContext context) {
