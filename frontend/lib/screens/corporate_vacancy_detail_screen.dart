@@ -160,6 +160,7 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
             }
 
             return CorporateApplicant(
+              id: a.id,
               name: resolvedName,
               institution: resolvedInstitution,
               studentDescription: resolvedStudentDesc,
@@ -176,6 +177,14 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
               showcaseItem: matchingShowcase,
             );
           }).toList();
+
+          for (final item in mapped) {
+            final instBase = _getInstitutionBaseName(item.institution);
+            if (item.status == 'Diterima' && !_institutionStatuses.containsKey(instBase)) {
+              _institutionStatuses[instBase] = 'approved';
+            }
+          }
+
           setState(() {
             _applicants = mapped;
           });
@@ -284,13 +293,41 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
   }
 
   String _getInstitutionStatus(String instName) {
-    return _institutionStatuses[instName] ?? 'pending';
+    if (_institutionStatuses.containsKey(instName)) {
+      return _institutionStatuses[instName]!;
+    }
+    final instApps = _applicants
+        .where((a) => _getInstitutionBaseName(a.institution) == instName)
+        .toList();
+    if (instApps.isNotEmpty && instApps.any((a) => a.status == 'Diterima')) {
+      return 'approved';
+    }
+    return 'pending';
   }
 
-  void _approveInstitution(String instName) {
+  Future<void> _approveInstitution(String instName) async {
     setState(() {
       _institutionStatuses[instName] = 'approved';
     });
+
+    final instApps = _applicants
+        .where((a) => _getInstitutionBaseName(a.institution) == instName)
+        .toList();
+    for (final app in instApps) {
+      if (app.id != null &&
+          app.id!.isNotEmpty &&
+          !app.id!.startsWith('corp_app_') &&
+          !app.id!.startsWith('test_')) {
+        try {
+          await OpportunityService.reviewApplication(
+            applicationId: app.id!,
+            decision: 'approve',
+          );
+        } catch (_) {}
+      }
+    }
+
+    if (!mounted) return;
     AppSweetAlert.success(
       context,
       'Kemitraan institusi $instName berhasil disetujui. Anda dapat meninjau dan menerima berkas siswa dari institusi ini.',
@@ -334,13 +371,31 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
               child: const Text('Batal'),
             ),
             FilledButton.icon(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.of(ctx).pop();
+                final instApps = _applicants
+                    .where((a) => _getInstitutionBaseName(a.institution) == instName)
+                    .toList();
                 setState(() {
                   _institutionStatuses[instName] = 'rejected';
                   _applicants.removeWhere((app) => _getInstitutionBaseName(app.institution) == instName);
                   _collapsedInstitutions.remove(instName);
                 });
+                for (final app in instApps) {
+                  if (app.id != null &&
+                      app.id!.isNotEmpty &&
+                      !app.id!.startsWith('corp_app_') &&
+                      !app.id!.startsWith('test_')) {
+                    try {
+                      await OpportunityService.reviewApplication(
+                        applicationId: app.id!,
+                        decision: 'reject',
+                        reason: 'Institusi ditolak oleh corporate',
+                      );
+                    } catch (_) {}
+                  }
+                }
+                if (!mounted) return;
                 AppSweetAlert.error(
                   context,
                   'Institusi $instName telah ditolak. Seluruh ($count) siswa dari institusi ini otomatis tidak dapat disetujui dan telah dihapus dari daftar.',
@@ -570,7 +625,7 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
     );
   }
 
-  void _updateApplicantStatus(int index, String newStatus) {
+  Future<void> _updateApplicantStatus(int index, String newStatus) async {
     if (index < 0 || index >= _applicants.length) return;
     final app = _applicants[index];
     final inst = _getInstitutionBaseName(app.institution);
@@ -584,7 +639,31 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
     }
     setState(() {
       _applicants[index] = _applicants[index].copyWith(status: newStatus);
+      if (newStatus == 'Diterima') {
+        _institutionStatuses[inst] = 'approved';
+      }
     });
+
+    if (app.id != null &&
+        app.id!.isNotEmpty &&
+        !app.id!.startsWith('corp_app_') &&
+        !app.id!.startsWith('test_')) {
+      try {
+        if (newStatus == 'Diterima') {
+          await OpportunityService.reviewApplication(
+            applicationId: app.id!,
+            decision: 'approve',
+          );
+        } else if (newStatus == 'Ditolak') {
+          await OpportunityService.reviewApplication(
+            applicationId: app.id!,
+            decision: 'reject',
+          );
+        }
+      } catch (_) {}
+    }
+
+    if (!mounted) return;
     AppSweetAlert.success(
       context,
       'Status pelamar ${_applicants[index].name} diperbarui menjadi "$newStatus".',
@@ -1560,39 +1639,35 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
                     spacing: 8,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      // Tombol Setujui
-                      OutlinedButton.icon(
-                        key: ValueKey('btn_approve_inst_$instName'),
-                        onPressed: () => _approveInstitution(instName),
-                        icon: const Icon(Icons.check_circle_outline_rounded, size: 16),
-                        label: const Text('Setujui'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF16A34A),
-                          side: const BorderSide(color: Color(0xFF86EFAC)),
-                          backgroundColor: instStatus == 'approved'
-                              ? const Color(0xFFDCFCE7)
-                              : Colors.transparent,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      // Tombol Setujui dan Tolak HANYA ditampilkan jika status institusi masih 'pending'
+                      if (instStatus == 'pending') ...[
+                        OutlinedButton.icon(
+                          key: ValueKey('btn_approve_inst_$instName'),
+                          onPressed: () => _approveInstitution(instName),
+                          icon: const Icon(Icons.check_circle_outline_rounded, size: 16),
+                          label: const Text('Setujui'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF16A34A),
+                            side: const BorderSide(color: Color(0xFF86EFAC)),
+                            backgroundColor: Colors.transparent,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
                         ),
-                      ),
-
-                      // Tombol Tolak
-                      OutlinedButton.icon(
-                        key: ValueKey('btn_reject_inst_$instName'),
-                        onPressed: () => _confirmRejectInstitution(instName, instApplicants.length),
-                        icon: const Icon(Icons.cancel_outlined, size: 16),
-                        label: const Text('Tolak'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFFDC2626),
-                          side: const BorderSide(color: Color(0xFFFCA5A5)),
-                          backgroundColor: instStatus == 'rejected'
-                              ? const Color(0xFFFEE2E2)
-                              : Colors.transparent,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        OutlinedButton.icon(
+                          key: ValueKey('btn_reject_inst_$instName'),
+                          onPressed: () => _confirmRejectInstitution(instName, instApplicants.length),
+                          icon: const Icon(Icons.cancel_outlined, size: 16),
+                          label: const Text('Tolak'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFFDC2626),
+                            side: const BorderSide(color: Color(0xFFFCA5A5)),
+                            backgroundColor: Colors.transparent,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
                         ),
-                      ),
+                      ],
 
                       // Chevron indicator
                       Icon(

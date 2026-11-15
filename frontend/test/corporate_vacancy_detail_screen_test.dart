@@ -207,6 +207,10 @@ void main() {
 
       // Verify status badge updated to Disetujui
       expect(find.text('Disetujui'), findsWidgets);
+
+      // Verify that once approved, Setujui and Tolak buttons are removed/hidden
+      expect(find.byKey(const ValueKey('btn_approve_inst_SMKN 4 Bandung')), findsNothing);
+      expect(find.byKey(const ValueKey('btn_reject_inst_SMKN 4 Bandung')), findsNothing);
     });
 
     testWidgets('Rejecting institution automatically removes it and all its applicants from list',

@@ -15,6 +15,7 @@ import '../utils/currency_formatter.dart';
 import 'corporate_vacancy_detail_screen.dart';
 
 class CorporateApplicant {
+  final String? id;
   final String name;
   final String institution;
   final String role;
@@ -29,6 +30,7 @@ class CorporateApplicant {
   final Map<String, dynamic>? showcaseItem;
 
   const CorporateApplicant({
+    this.id,
     required this.name,
     required this.institution,
     required this.role,
@@ -52,6 +54,7 @@ class CorporateApplicant {
   bool get hasPortfolio => hasShowcase || hasExternalLink;
 
   CorporateApplicant copyWith({
+    String? id,
     String? name,
     String? institution,
     String? role,
@@ -66,6 +69,7 @@ class CorporateApplicant {
     Map<String, dynamic>? showcaseItem,
   }) {
     return CorporateApplicant(
+      id: id ?? this.id,
       name: name ?? this.name,
       institution: institution ?? this.institution,
       role: role ?? this.role,
