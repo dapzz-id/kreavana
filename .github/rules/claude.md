@@ -79,10 +79,27 @@ Dilarang keras melemahkan atau menghapus lapisan keamanan yang telah dibangun. S
 
 ---
 
+## 🗄️ ATURAN 5: KEPATUHAN ATURAN PROMPT AI, DATA BERBASIS DATABASE (TANPA MOCKUP), & MIGRASI BARU
+
+1. **Baca Aturan Terlebih Dahulu (`Baca Aturan Dulu`)**:
+   - Pada setiap awal prompt/sesi, Claude **WAJIB membaca seluruh file aturan repositori terlebih dahulu** (`CLAUDE.md`, `.claude/CLAUDE.md`, `GEMINI.md`, `AGENTS.md`, `.agent/rules/*.md`, `.github/rules/*.md`, dan `.github/copilot-instructions.md`) sebelum menganalisis, merencanakan, atau mengedit kode.
+2. **Data Dummy Wajib Berdasarkan Database (DILARANG Mockup)**:
+   - Dilarang keras membuat data mockup/dummy statis hardcoded di frontend Flutter atau fallback array statis di backend controller/service.
+   - Seluruh data tampilan wajib berasal langsung dari query database nyata (`backend` / `users_api`); jika data kosong, tampilkan *empty state* jujur.
+   - Apabila dibutuhkan data dummy/contoh/testing, buatlah **langsung di database** melalui Laravel Seeder (`backend/database/seeders/` atau `users_api/database/seeders/`), Factory, atau record database asli sesuai skema tabel dan relasi foreign key.
+3. **Edit Tabel Database Wajib Membuat Migrasi Baru**:
+   - Dilarang mengubah, menyisipkan kolom, atau mengedit file migrasi yang sudah ada di `backend/database/migrations/` atau `users_api/database/migrations/`.
+   - Setiap modifikasi pada tabel yang sudah ada (tambah/ubah/ganti nama/hapus kolom, enum, index, maupun foreign key) **WAJIB membuat file migrasi baru** menggunakan `php artisan make:migration <nama_perubahan>`, menyertakan `up()` dan `down()`, memperbarui Model/Seeder terkait, serta mengecek `php -l`.
+
+---
+
 ## 📋 CHECKSUM KEPATUHAN UNTUK PROMPTING SELANJUTNYA
 
 Sebelum mengakhiri sesi pengerjaan, Claude wajib memverifikasi:
+- [ ] Seluruh aturan proyek (`.agent/rules/*.md`, `.github/rules/*.md`, `.github/copilot-instructions.md`, `CLAUDE.md`, `GEMINI.md`, `AGENTS.md`) sudah dibaca sebelum memulai pengerjaan.
 - [ ] Tidak ada perintah `git push` yang dijalankan oleh Claude.
+- [ ] Tidak ada data mockup / dummy hardcoded di frontend atau controller; seluruh data dummy dibuat di database (Seeder/Factory/DB).
+- [ ] Setiap perubahan skema tabel database yang sudah ada dibuat melalui **file migrasi baru** tanpa mengedit migrasi lama.
 - [ ] Kolom `password` tidak dimunculkan kembali di tabel `users` backend.
 - [ ] Tidak ada mekanisme fallback auth lokal yang merusak prinsip *Fail-Closed*.
 - [ ] Header keamanan HMAC (`X-Client-Id`, `X-Timestamp`, `X-Signature`, `X-Correlation-Id`) tetap aktif pada `UsersApiClient`.
