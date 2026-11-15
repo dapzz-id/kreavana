@@ -407,7 +407,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
           ? null
           : Padding(
               padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).size.width < 900 ? 76 : 0,
+                bottom: 0,
               ),
               child: FloatingActionButton.extended(
                 heroTag: 'agenda_fab',
@@ -423,7 +423,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
     );
 
     final effectiveUser = widget.user ?? currentUserNotifier.value;
-    if (isDesktop && effectiveUser != null) {
+    if (effectiveUser != null) {
       return DesktopSidebarLayout(
         user: effectiveUser,
         activeRoute: 'agenda',

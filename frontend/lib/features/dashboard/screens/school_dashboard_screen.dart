@@ -18,6 +18,7 @@ import '../../auth/screens/login_screen.dart';
 import '../../../widgets/app_bar_badge.dart';
 import '../../../widgets/app_sweet_alert.dart';
 import '../../../widgets/program_magang_card.dart';
+import '../../../widgets/role_navigation_helper.dart';
 import '../../../services/school_pdf_service.dart';
 
 class SchoolDashboardScreen extends StatefulWidget {
@@ -283,7 +284,7 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
                   isDesktop ? 24 : 16,
                   16,
                   isDesktop ? 24 : 16,
-                  110,
+                  isDesktop ? 48 : 156,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -311,10 +312,18 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
 
   // ── APP BAR FORMAL SOLID ───────────────────────────────────────────────────
   PreferredSizeWidget _buildAppBar(bool isDark) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isCompact = screenWidth < 600;
+    final isMobileShell = screenWidth <= 900;
+    final shellScope = KreavanaShellScope.maybeOf(context);
+    final showDrawerBtn = isMobileShell && (shellScope?.hasDrawer ?? false);
+
     return AppBar(
       elevation: 0,
       backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
       toolbarHeight: 72,
+      automaticallyImplyLeading: false,
+      titleSpacing: isCompact ? 6 : 16,
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(1),
         child: Container(
@@ -324,6 +333,22 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
       ),
       title: Row(
         children: [
+          if (showDrawerBtn) ...[
+            IconButton(
+              icon: Icon(
+                Icons.menu_rounded,
+                color: isDark ? Colors.white : const Color(0xFF1E293B),
+              ),
+              tooltip: 'Menu Navigasi',
+              visualDensity: VisualDensity.compact,
+              padding: isCompact ? EdgeInsets.zero : null,
+              constraints: isCompact
+                  ? const BoxConstraints(minWidth: 36, minHeight: 36)
+                  : null,
+              onPressed: shellScope!.openDrawer,
+            ),
+            SizedBox(width: isCompact ? 4 : 6),
+          ],
           Expanded(
             child: InteractiveDashboardSearchBar(
               user: widget.user,
@@ -332,19 +357,19 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
               placeholder: 'Cari program studi, mitra industri, magang, atau talenta...',
             ),
           ),
-          const SizedBox(width: 14),
+          SizedBox(width: isCompact ? 6 : 14),
           AppBarBadgeWidget(
             icon: Icons.notifications_none_outlined,
             isDark: isDark,
             accentColor: _schoolColor,
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: isCompact ? 4 : 8),
           AppBarThemeToggle(
             isDark: isDark,
             btnKey: _themeBtnKey,
             accentColor: _schoolColor,
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: isCompact ? 4 : 8),
           AppBarProfileBadge(
             user: widget.user,
             isDark: isDark,

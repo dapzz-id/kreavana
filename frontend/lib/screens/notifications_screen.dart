@@ -1313,7 +1313,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                 ),
     );
 
-    if (isDesktop && effectiveUser != null) {
+    if (effectiveUser != null) {
       return DesktopSidebarLayout(
         user: effectiveUser,
         activeRoute: 'notifikasi',

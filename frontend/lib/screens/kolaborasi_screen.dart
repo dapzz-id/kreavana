@@ -183,7 +183,7 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
           },
         ),
       );
-      if (isDesktop && effectiveUser != null) {
+      if (effectiveUser != null) {
         return DesktopSidebarLayout(
           user: effectiveUser,
           activeRoute: 'kolaborasi',
@@ -362,7 +362,7 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
       floatingActionButton: _isCreator
           ? Padding(
               padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).size.width < 900 ? 76 : 0,
+                bottom: 0,
               ),
               child: FloatingActionButton.extended(
                 heroTag: 'kolaborasi_fab',
@@ -383,15 +383,12 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
           : null,
     );
 
-    if (isDesktop) {
-      return DesktopSidebarLayout(
-        user: effectiveUser,
-        activeRoute: 'kolaborasi',
-        onUserUpdated: widget.onUserUpdated,
-        child: scaffold,
-      );
-    }
-    return scaffold;
+    return DesktopSidebarLayout(
+      user: effectiveUser,
+      activeRoute: 'kolaborasi',
+      onUserUpdated: widget.onUserUpdated,
+      child: scaffold,
+    );
   }
 
   // ── Perfectly Centered Empty State ─────────────────────────────────────────

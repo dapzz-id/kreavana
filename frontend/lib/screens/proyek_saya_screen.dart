@@ -990,7 +990,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
               isDesktop ? 32 : 16,
               isDesktop ? 32 : 16,
               isDesktop ? 32 : 16,
-              isDesktop ? 60 : 100,
+              isDesktop ? 60 : 156,
             ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1115,7 +1115,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
     );
 
     final effectiveUser = widget.user ?? currentUserNotifier.value;
-    if (isDesktop && effectiveUser != null) {
+    if (effectiveUser != null) {
       return DesktopSidebarLayout(
         user: effectiveUser,
         activeRoute: 'proyek_saya',
@@ -1698,73 +1698,79 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Top Type Pill & Status Badge ──
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: isOpportunity
-                      ? const Color(0xFF8B5CF6).withValues(alpha: 0.1)
-                      : const Color(0xFF10B981).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      isOpportunity
-                          ? Icons.campaign_rounded
-                          : Icons.handshake_rounded,
-                      size: 14,
-                      color: isOpportunity
-                          ? const Color(0xFF8B5CF6)
-                          : const Color(0xFF10B981),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      isOpportunity ? 'Kebutuhan Proyek' : 'Kontrak Kerja',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
+          SizedBox(
+            width: double.infinity,
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isOpportunity
+                        ? const Color(0xFF8B5CF6).withValues(alpha: 0.1)
+                        : const Color(0xFF10B981).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isOpportunity
+                            ? Icons.campaign_rounded
+                            : Icons.handshake_rounded,
+                        size: 14,
                         color: isOpportunity
                             ? const Color(0xFF8B5CF6)
                             : const Color(0xFF10B981),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: item.statusColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: item.statusColor,
-                        shape: BoxShape.circle,
+                      const SizedBox(width: 6),
+                      Text(
+                        isOpportunity ? 'Kebutuhan Proyek' : 'Kontrak Kerja',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: isOpportunity
+                              ? const Color(0xFF8B5CF6)
+                              : const Color(0xFF10B981),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      item.statusLabel,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: item.statusColor,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: item.statusColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: item.statusColor,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        item.statusLabel,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: item.statusColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 12),
 
@@ -1884,69 +1890,78 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                InkWell(
-                  onTap: () {
-                    final c = item.contract;
-                    if (c != null) {
-                      final partnerId = _getPartnerId(c);
-                      final partnerName = _getPartnerName(c);
-                      final partnerRole = _getPartnerRole(c);
-                      if (partnerId.isNotEmpty) {
-                        UserProfileModal.show(
-                          context,
-                          userId: partnerId,
-                          initialName: partnerName,
-                          initialRole: partnerRole,
-                          currentUser: widget.user,
-                        );
+                Expanded(
+                  child: InkWell(
+                    onTap: () {
+                      final c = item.contract;
+                      if (c != null) {
+                        final partnerId = _getPartnerId(c);
+                        final partnerName = _getPartnerName(c);
+                        final partnerRole = _getPartnerRole(c);
+                        if (partnerId.isNotEmpty) {
+                          UserProfileModal.show(
+                            context,
+                            userId: partnerId,
+                            initialName: partnerName,
+                            initialRole: partnerRole,
+                            currentUser: widget.user,
+                          );
+                        }
                       }
-                    }
-                  },
-                  borderRadius: BorderRadius.circular(6),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.person_rounded,
-                          size: 15,
-                          color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-                        ),
-                        const SizedBox(width: 6),
-                        Builder(
-                          builder: (context) {
-                            final c = item.contract;
-                            final partnerId = c != null ? _getPartnerId(c) : '';
-                            return Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  item.partnerOrApplicants ?? '-',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: isDark ? Colors.white70 : Colors.grey.shade800,
-                                    decoration: partnerId.isNotEmpty
-                                        ? TextDecoration.underline
-                                        : null,
-                                  ),
-                                ),
-                                if (partnerId.isNotEmpty) ...[
-                                  const SizedBox(width: 4),
-                                  Icon(
-                                    Icons.open_in_new_rounded,
-                                    size: 11,
-                                    color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
-                                  ),
-                                ],
-                              ],
-                            );
-                          },
-                        ),
-                      ],
+                    },
+                    borderRadius: BorderRadius.circular(6),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.person_rounded,
+                            size: 15,
+                            color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Builder(
+                              builder: (context) {
+                                final c = item.contract;
+                                final partnerId = c != null ? _getPartnerId(c) : '';
+                                return Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        item.partnerOrApplicants ?? '-',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: isDark ? Colors.white70 : Colors.grey.shade800,
+                                          decoration: partnerId.isNotEmpty
+                                              ? TextDecoration.underline
+                                              : null,
+                                        ),
+                                      ),
+                                    ),
+                                    if (partnerId.isNotEmpty) ...[
+                                      const SizedBox(width: 4),
+                                      Icon(
+                                        Icons.open_in_new_rounded,
+                                        size: 11,
+                                        color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                                      ),
+                                    ],
+                                  ],
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
+                const SizedBox(width: 8),
                 Text(
                   '${(item.progress * 100).toInt()}%',
                   style: TextStyle(

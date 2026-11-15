@@ -197,6 +197,7 @@ class _InteractiveDashboardSearchBarState
   @override
   Widget build(BuildContext context) {
     final accent = widget.accentColor ?? AppTheme.primaryPurple;
+    final isCompact = MediaQuery.of(context).size.width < 600;
 
     Widget content = Tooltip(
       message: 'Cari proyek, event, vendor, atau talent (⌘K)',
@@ -277,39 +278,47 @@ class _InteractiveDashboardSearchBarState
                           : (widget.isDark ? AppTheme.textMuted : AppTheme.textMutedLight),
                     ),
                     overflow: TextOverflow.ellipsis,
-                    child: Text(widget.placeholder),
-                  ),
-                ),
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  margin: const EdgeInsets.only(right: 10),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 7,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _isHovered
-                        ? accent.withValues(alpha: widget.isDark ? 0.28 : 0.12)
-                        : (widget.isDark ? AppTheme.inputBorder : Colors.grey.shade200),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: _isHovered
-                          ? accent.withValues(alpha: 0.5)
-                          : Colors.transparent,
-                      width: 1,
-                    ),
-                  ),
-                  child: Text(
-                    '⌘K',
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      color: _isHovered
-                          ? accent
-                          : (widget.isDark ? AppTheme.textMuted : AppTheme.textMutedLight),
-                      fontWeight: FontWeight.w600,
+                    maxLines: 1,
+                    child: Text(
+                      widget.placeholder,
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
                     ),
                   ),
                 ),
+                if (isCompact)
+                  const SizedBox(width: 10)
+                else
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: const EdgeInsets.only(right: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _isHovered
+                          ? accent.withValues(alpha: widget.isDark ? 0.28 : 0.12)
+                          : (widget.isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: _isHovered
+                            ? accent.withValues(alpha: 0.5)
+                            : Colors.transparent,
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      '⌘K',
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        color: _isHovered
+                            ? accent
+                            : (widget.isDark ? AppTheme.textMuted : AppTheme.textMutedLight),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -462,6 +471,7 @@ class _AppBarProfileBadgeState extends State<AppBarProfileBadge> {
   @override
   Widget build(BuildContext context) {
     final accent = widget.accentColor ?? AppTheme.primaryPurple;
+    final isCompact = MediaQuery.of(context).size.width < 640;
     final subRole = widget.customSubRole ??
         widget.user.subRole ??
         (widget.user.role == 'creator' ? 'Creator' : 'Klien');
@@ -478,7 +488,10 @@ class _AppBarProfileBadgeState extends State<AppBarProfileBadge> {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeOutCubic,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: EdgeInsets.symmetric(
+              horizontal: isCompact ? 3 : 8,
+              vertical: 4,
+            ),
             decoration: BoxDecoration(
               color: _isHovered
                   ? (widget.isDark
@@ -541,47 +554,49 @@ class _AppBarProfileBadgeState extends State<AppBarProfileBadge> {
                         : null,
                   ),
                 ),
-                const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    AnimatedDefaultTextStyle(
-                      duration: const Duration(milliseconds: 200),
-                      style: TextStyle(
-                        fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily,
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.bold,
-                        color: _isHovered
-                            ? accent
-                            : (widget.isDark ? Colors.white : Colors.black87),
+                if (!isCompact) ...[
+                  const SizedBox(width: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AnimatedDefaultTextStyle(
+                        duration: const Duration(milliseconds: 200),
+                        style: TextStyle(
+                          fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.bold,
+                          color: _isHovered
+                              ? accent
+                              : (widget.isDark ? Colors.white : Colors.black87),
+                        ),
+                        child: Text(widget.user.name.split(' ').first),
                       ),
-                      child: Text(widget.user.name.split(' ').first),
-                    ),
-                    Text(
-                      subRole,
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: widget.isDark
-                            ? AppTheme.textMuted
-                            : AppTheme.textMutedLight,
+                      Text(
+                        subRole,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: widget.isDark
+                              ? AppTheme.textMuted
+                              : AppTheme.textMutedLight,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(width: 4),
-                AnimatedSlide(
-                  offset: Offset(0, _isHovered ? 0.2 : 0),
-                  duration: const Duration(milliseconds: 200),
-                  child: Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                    size: 18,
-                    color: _isHovered
-                        ? accent
-                        : (widget.isDark ? AppTheme.textMuted : AppTheme.textMutedLight),
+                    ],
                   ),
-                ),
+                  const SizedBox(width: 4),
+                  AnimatedSlide(
+                    offset: Offset(0, _isHovered ? 0.2 : 0),
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      size: 18,
+                      color: _isHovered
+                          ? accent
+                          : (widget.isDark ? AppTheme.textMuted : AppTheme.textMutedLight),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -617,6 +632,7 @@ class _AppBarGuestActionsState extends State<AppBarGuestActions> {
   @override
   Widget build(BuildContext context) {
     final accent = widget.accentColor ?? AppTheme.primaryPurple;
+    final isCompact = MediaQuery.of(context).size.width < 600;
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -637,7 +653,10 @@ class _AppBarGuestActionsState extends State<AppBarGuestActions> {
             child: OutlinedButton(
               onPressed: widget.onLogin,
               style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: EdgeInsets.symmetric(
+                  horizontal: isCompact ? 10 : 14,
+                  vertical: 8,
+                ),
                 minimumSize: const Size(0, 36),
                 side: BorderSide(
                   color: _loginHovered
@@ -660,7 +679,7 @@ class _AppBarGuestActionsState extends State<AppBarGuestActions> {
             ),
           ),
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: isCompact ? 6 : 8),
         // Tombol Daftar
         MouseRegion(
           cursor: SystemMouseCursors.click,
@@ -691,7 +710,10 @@ class _AppBarGuestActionsState extends State<AppBarGuestActions> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: accent,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: EdgeInsets.symmetric(
+                  horizontal: isCompact ? 10 : 14,
+                  vertical: 8,
+                ),
                 minimumSize: const Size(0, 36),
                 elevation: _registerHovered ? 3 : 0,
                 shape: RoundedRectangleBorder(
