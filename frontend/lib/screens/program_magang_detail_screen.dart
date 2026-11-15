@@ -67,7 +67,7 @@ class SchoolMagangStudent {
     }
 
     String studentName =
-        (doc['student_name'] ?? doc['name'] ?? '').toString().trim();
+        (doc['participant_name'] ?? doc['student_name'] ?? doc['name'] ?? '').toString().trim();
     String majorClass = (doc['major_class'] ?? doc['student_class'] ?? doc['major'] ?? '').toString().trim();
     String role = (doc['role'] ?? '').toString().trim();
     String portfolioUrl = (doc['portfolio_url'] ?? doc['student_portfolio'] ?? '').toString().trim();
@@ -77,9 +77,11 @@ class SchoolMagangStudent {
     String? replacedName = doc['replaced_student_name']?.toString();
 
     // Parse fallback from legacy pitch_message format when submitted_documents is absent
-    if (studentName.isEmpty && app.pitchMessage.startsWith('Siswa:')) {
+    if (studentName.isEmpty &&
+        (app.pitchMessage.startsWith('Peserta:') || app.pitchMessage.startsWith('Siswa:'))) {
       final parts = app.pitchMessage.split('|').map((p) => p.trim()).toList();
-      final head = parts.first.replaceFirst('Siswa:', '').trim();
+      final rawPrefix = parts.first.startsWith('Peserta:') ? 'Peserta:' : 'Siswa:';
+      final head = parts.first.replaceFirst(rawPrefix, '').trim();
       final parenStart = head.lastIndexOf('(');
       final parenEnd = head.lastIndexOf(')');
       if (parenStart > 0 && parenEnd > parenStart) {
@@ -102,7 +104,7 @@ class SchoolMagangStudent {
     }
 
     if (studentName.isEmpty) {
-      studentName = app.creator?.name ?? 'Siswa Magang';
+      studentName = app.creator?.name ?? 'Peserta Magang';
     }
     if (majorClass.isEmpty) {
       majorClass = app.subRoleSlug.replaceAll('_', ' ');
@@ -132,11 +134,37 @@ class SchoolMagangStudent {
   }
 }
 
+class _ParticipantDraftForm {
+  final TextEditingController nameCtrl;
+  final TextEditingController majorCtrl;
+  final TextEditingController roleCtrl;
+  final TextEditingController portfolioCtrl;
+  final TextEditingController noteCtrl;
+  bool isExpanded;
+
+  _ParticipantDraftForm({String initialRole = 'Peserta Magang'})
+      : nameCtrl = TextEditingController(),
+        majorCtrl = TextEditingController(),
+        roleCtrl = TextEditingController(text: initialRole),
+        portfolioCtrl = TextEditingController(),
+        noteCtrl = TextEditingController(),
+        isExpanded = true;
+
+  void dispose() {
+    nameCtrl.dispose();
+    majorCtrl.dispose();
+    roleCtrl.dispose();
+    portfolioCtrl.dispose();
+    noteCtrl.dispose();
+  }
+}
+
 class ProgramMagangDetailScreen extends StatefulWidget {
   final OpportunityModel opportunity;
   final UserModel? user;
   final ValueChanged<UserModel>? onUserUpdated;
   final bool isAppliedPartnership;
+  final String? initialPartnershipStatus;
 
   const ProgramMagangDetailScreen({
     super.key,
@@ -144,6 +172,7 @@ class ProgramMagangDetailScreen extends StatefulWidget {
     this.user,
     this.onUserUpdated,
     this.isAppliedPartnership = false,
+    this.initialPartnershipStatus,
   });
 
   @override
@@ -159,9 +188,9 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
   int _studentPage = 1;
   static const int _studentPageSize = 6;
 
-  // Status institusi pada event magang ini: 'approved', 'pending', 'not_applied'
+  // Status institusi pada program ini: 'approved', 'rejected', 'pending', 'not_applied'
   late String _schoolPartnershipStatus;
-  // Apakah corporate meminta tambahan siswa
+  // Apakah corporate meminta tambahan peserta
   bool _corporateRequestsAdditional = false;
   int _corporateRequestedCount = 0;
   String _corporateRequestNote = '';
@@ -186,13 +215,26 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
   }
 
   void _initDefaultState() {
+    final myId = _currentUser?.id ?? '';
+    final myName = (_currentUser?.name ?? '').toLowerCase();
+    final isThisSchoolInApproved = widget.opportunity.approvedCreators.any(
+      (c) =>
+          (myId.isNotEmpty && c.id == myId) ||
+          (myName.isNotEmpty && c.name.toLowerCase() == myName),
+    );
     final isApplied = widget.isAppliedPartnership ||
         widget.opportunity.hasApplied ||
-        widget.opportunity.approvedCreators.isNotEmpty;
+        isThisSchoolInApproved;
 
-    _schoolPartnershipStatus = isApplied
-        ? (widget.opportunity.approvedCreators.isNotEmpty ? 'approved' : 'pending')
-        : 'not_applied';
+    if (widget.initialPartnershipStatus != null) {
+      _schoolPartnershipStatus = widget.initialPartnershipStatus!;
+    } else if (isThisSchoolInApproved) {
+      _schoolPartnershipStatus = 'approved';
+    } else if (isApplied) {
+      _schoolPartnershipStatus = 'pending';
+    } else {
+      _schoolPartnershipStatus = 'not_applied';
+    }
     _corporateRequestsAdditional = false;
     _corporateRequestedCount = 0;
     _corporateRequestNote = '';
@@ -230,25 +272,43 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
           schoolApps.any((a) => a.status.toLowerCase() == 'approved');
 
       final isSchoolApprovedByOpp = effectiveOpp.approvedCreators.any(
-        (c) => c.id == currentSchoolId || c.name.toLowerCase() == _currentUser?.name.toLowerCase(),
-      ) || (effectiveOpp.approvedCreators.isNotEmpty && (widget.isAppliedPartnership || effectiveOpp.hasApplied));
+        (c) =>
+            (currentSchoolId != null &&
+                currentSchoolId.isNotEmpty &&
+                c.id == currentSchoolId) ||
+            (_currentUser?.name.isNotEmpty == true &&
+                c.name.toLowerCase() == _currentUser!.name.toLowerCase()),
+      );
 
       final hasUnderReview = schoolApps.any((a) {
         final st = a.status.toLowerCase();
-        return st == 'under_consideration' || st == 'review' || st == 'in_review';
+        return st == 'under_consideration' ||
+            st == 'review' ||
+            st == 'in_review' ||
+            st == 'interview';
       });
 
-      final isSchoolApproved = hasApprovedStudent ||
-          isSchoolApprovedByOpp ||
-          _schoolPartnershipStatus == 'approved' ||
-          hasUnderReview;
+      final hasActivePending = schoolApps.any((a) {
+        final st = a.status.toLowerCase();
+        return st == 'pending' || st == 'submitted';
+      });
 
-      // Check real DB terms or notes for explicit corporate additional student request
+      final allAppsRejected = schoolApps.isNotEmpty &&
+          schoolApps.every((a) => a.status.toLowerCase() == 'rejected');
+
+      final isSchoolApproved =
+          hasApprovedStudent || isSchoolApprovedByOpp || hasUnderReview;
+      final isSchoolRejected =
+          !isSchoolApproved && !hasActivePending && allAppsRejected;
+
+      // Check real DB terms or notes for explicit corporate additional participant request
       bool corporateRequestsAdditional = false;
       String corporateNote = '';
       for (final term in effectiveOpp.dynamicTerms) {
-        if (term.toLowerCase().contains('tambahan siswa') ||
-            term.toLowerCase().contains('request_additional')) {
+        final low = term.toLowerCase();
+        if (low.contains('tambahan siswa') ||
+            low.contains('tambahan peserta') ||
+            low.contains('request_additional')) {
           corporateRequestsAdditional = true;
           corporateNote = term;
           break;
@@ -268,6 +328,8 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
       setState(() {
         if (isSchoolApproved) {
           _schoolPartnershipStatus = 'approved';
+        } else if (isSchoolRejected) {
+          _schoolPartnershipStatus = 'rejected';
         } else if (schoolApps.isNotEmpty || effectiveOpp.hasApplied) {
           _schoolPartnershipStatus = 'pending';
         } else {
@@ -320,8 +382,6 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
     SchoolMagangStudent? replacedStudent,
   }) async {
     final formKey = GlobalKey<FormState>();
-    final nameCtrl = TextEditingController();
-    final majorCtrl = TextEditingController();
 
     // Extract available specialization roles from requirements
     final availableRoles = <String>[];
@@ -363,55 +423,310 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
     final initialRole = replacedStudent?.role ??
         (availableRoles.isNotEmpty
             ? availableRoles.first
-            : (widget.opportunity.isMagang ? 'Peserta Magang' : 'Kandidat Lowongan'));
+            : (widget.opportunity.isMagang ? 'Peserta Magang' : 'Kandidat Program'));
 
-    final roleCtrl = TextEditingController(text: initialRole);
-    final portfolioCtrl = TextEditingController();
-    final noteCtrl = TextEditingController();
+    final List<_ParticipantDraftForm> drafts = [
+      _ParticipantDraftForm(initialRole: initialRole),
+    ];
+    bool isGeneralInfoExpanded = false;
     bool isSubmitting = false;
+    int submittedCount = 0;
 
-    Widget buildSectionCard({
+    Widget buildParticipantCard({
+      required int index,
+      required _ParticipantDraftForm draft,
       required bool isDark,
       required Color accentColor,
-      required String title,
-      required IconData icon,
-      required List<Widget> children,
+      required StateSetter setDialogState,
     }) {
+      final summaryName = draft.nameCtrl.text.trim();
+      final summaryRole = draft.roleCtrl.text.trim();
+      final headerSummary = summaryName.isNotEmpty
+          ? '$summaryName${summaryRole.isNotEmpty ? ' • $summaryRole' : ''}'
+          : 'Lengkapi data peserta #${index + 1}';
+
       return Container(
-        padding: const EdgeInsets.all(16),
+        key: ValueKey('participant_draft_card_$index'),
+        margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
           color: isDark ? Colors.white.withValues(alpha: 0.03) : const Color(0xFFF8FAFC),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+            color: draft.isExpanded
+                ? accentColor.withValues(alpha: 0.45)
+                : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
           ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(icon, size: 16, color: accentColor),
+            InkWell(
+              onTap: () {
+                setDialogState(() {
+                  draft.isExpanded = !draft.isExpanded;
+                });
+              },
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: accentColor.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '#${index + 1}',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w800,
+                          color: accentColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Peserta #${index + 1}',
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                            ),
+                          ),
+                          Text(
+                            headerSummary,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (drafts.length > 1)
+                      IconButton(
+                        tooltip: 'Hapus baris peserta #${index + 1}',
+                        visualDensity: VisualDensity.compact,
+                        onPressed: isSubmitting
+                            ? null
+                            : () {
+                                setDialogState(() {
+                                  final removed = drafts.removeAt(index);
+                                  removed.dispose();
+                                });
+                              },
+                        icon: const Icon(
+                          Icons.delete_outline_rounded,
+                          size: 18,
+                          color: Color(0xFFDC2626),
+                        ),
+                      ),
+                    Icon(
+                      draft.isExpanded
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
+                      color: isDark ? Colors.white70 : const Color(0xFF475569),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 10),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
-                    color: isDark ? Colors.white : const Color(0xFF0F172A),
-                  ),
-                ),
-              ],
+              ),
             ),
-            const SizedBox(height: 12),
-            ...children,
+            if (draft.isExpanded) ...[
+              Divider(
+                height: 1,
+                color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextFormField(
+                      key: ValueKey('participant_name_field_$index'),
+                      controller: draft.nameCtrl,
+                      onChanged: (_) => setDialogState(() {}),
+                      decoration: InputDecoration(
+                        labelText: 'Nama Lengkap Peserta *',
+                        hintText: 'Contoh: Ahmad Fauzan',
+                        prefixIcon: Icon(Icons.person_outline_rounded, size: 20, color: accentColor),
+                        filled: true,
+                        fillColor: isDark ? AppTheme.cardBg : Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                          ),
+                        ),
+                      ),
+                      validator: (v) =>
+                          (v == null || v.trim().isEmpty) ? 'Nama peserta wajib diisi' : null,
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      key: ValueKey('participant_major_field_$index'),
+                      controller: draft.majorCtrl,
+                      decoration: InputDecoration(
+                        labelText: 'Program Studi / Kelas / Jurusan *',
+                        hintText: 'Contoh: XII RPL 1 / S1 Desain Komunikasi Visual',
+                        prefixIcon: Icon(Icons.school_outlined, size: 20, color: accentColor),
+                        filled: true,
+                        fillColor: isDark ? AppTheme.cardBg : Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                          ),
+                        ),
+                      ),
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? 'Program studi / kelas / jurusan wajib diisi'
+                          : null,
+                    ),
+                    const SizedBox(height: 12),
+                    if (availableRoles.isNotEmpty) ...[
+                      Text(
+                        'Pilih Posisi / Bidang Terbuka:',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? Colors.white70 : const Color(0xFF475569),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: availableRoles.map((roleOpt) {
+                          final isSelected = draft.roleCtrl.text.trim().toLowerCase() ==
+                              roleOpt.trim().toLowerCase();
+                          return InkWell(
+                            onTap: () {
+                              setDialogState(() {
+                                draft.roleCtrl.text = roleOpt;
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(10),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? accentColor.withValues(alpha: 0.15)
+                                    : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? accentColor
+                                      : (isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+                                  width: isSelected ? 1.5 : 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.check_circle_rounded,
+                                    size: 14,
+                                    color: isSelected ? accentColor : Colors.grey.shade400,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    roleOpt,
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                      color: isSelected
+                                          ? accentColor
+                                          : (isDark ? Colors.white70 : const Color(0xFF334155)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                    TextFormField(
+                      key: ValueKey('participant_role_field_$index'),
+                      controller: draft.roleCtrl,
+                      onChanged: (_) => setDialogState(() {}),
+                      decoration: InputDecoration(
+                        labelText: 'Posisi / Spesialisasi yang Dilamar *',
+                        hintText: 'Contoh: Videographer / UI UX Intern / Electrician',
+                        prefixIcon: Icon(Icons.workspace_premium_outlined, size: 20, color: accentColor),
+                        filled: true,
+                        fillColor: isDark ? AppTheme.cardBg : Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                          ),
+                        ),
+                      ),
+                      validator: (v) =>
+                          (v == null || v.trim().isEmpty) ? 'Posisi spesialisasi wajib diisi' : null,
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      key: ValueKey('participant_portfolio_field_$index'),
+                      controller: draft.portfolioCtrl,
+                      decoration: InputDecoration(
+                        labelText: 'Tautan Portofolio / CV / LinkedIn (Opsional)',
+                        hintText: 'https://behance.net/... atau link Google Drive',
+                        prefixIcon: const Icon(Icons.link_rounded, size: 20, color: Color(0xFF64748B)),
+                        filled: true,
+                        fillColor: isDark ? AppTheme.cardBg : Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      key: ValueKey('participant_note_field_$index'),
+                      controller: draft.noteCtrl,
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        labelText: 'Catatan Rekomendasi untuk Corporate (Opsional)',
+                        hintText: 'Tuliskan kompetensi unggulan, karakter kerja, atau rekomendasi pembimbing / koordinator institusi...',
+                        prefixIcon: const Icon(Icons.rate_review_outlined, size: 20, color: Color(0xFF64748B)),
+                        filled: true,
+                        fillColor: isDark ? AppTheme.cardBg : Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       );
@@ -427,18 +742,22 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
       final String subtitle;
 
       if (replacedStudent != null) {
-        title = isMagang ? 'Ajukan Siswa Pengganti' : 'Ajukan Kandidat Pengganti';
-        badgeText = 'Penggantian Siswa';
-        subtitle = 'Gantikan kandidat yang ditolak dengan kandidat lain yang memenuhi kualifikasi.';
+        title = 'Ajukan Peserta Pengganti';
+        badgeText = 'Penggantian Peserta';
+        subtitle = 'Gantikan peserta yang ditolak dengan kandidat lain yang memenuhi kualifikasi.';
       } else if (isAdditionalStudent) {
-        title = isMagang ? 'Ajukan Siswa Tambahan' : 'Ajukan Kandidat Tambahan';
+        title = 'Tambah Peserta Tambahan';
         badgeText = 'Kemitraan Resmi';
-        subtitle = 'Daftarkan siswa tambahan untuk memperkuat alokasi talenta institusi sekolah.';
+        subtitle = 'Daftarkan satu atau beberapa peserta tambahan dari institusi Anda.';
       } else {
-        title = isMagang ? 'Ajukan Kandidat Siswa Magang' : 'Ajukan Kandidat Pekerjaan';
+        title = isMagang ? 'Tambah Peserta Program Magang' : 'Tambah Peserta Lowongan';
         badgeText = 'Pendaftaran Resmi';
-        subtitle = 'Daftarkan data siswa berprestasi untuk seleksi dan penempatan pada lowongan ini.';
+        subtitle = 'Daftarkan satu atau beberapa peserta institusi untuk seleksi program ini.';
       }
+
+      final corpName = widget.opportunity.poster?.name.isNotEmpty == true
+          ? widget.opportunity.poster!.name
+          : 'Mitra Corporate';
 
       return Form(
         key: formKey,
@@ -447,7 +766,7 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. TOP HEADER (Icon box, title, badge, subtitle, close button)
+              // 1. TOP HEADER
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -471,28 +790,27 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                         ),
                       ],
                     ),
-                    child: const Icon(Icons.school_rounded, color: Colors.white, size: 24),
+                    child: const Icon(Icons.groups_rounded, color: Colors.white, size: 24),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            Flexible(
-                              child: Text(
-                                title,
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
-                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
-                                  letterSpacing: -0.3,
-                                ),
-                                overflow: TextOverflow.ellipsis,
+                            Text(
+                              title,
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                letterSpacing: -0.3,
                               ),
                             ),
-                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                               decoration: BoxDecoration(
@@ -531,11 +849,10 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
 
-              // 2. GUIDANCE BANNER
+              // 2. COLLAPSIBLE DROPDOWN: INFORMASI UMUM & PANDUAN PENGAJUAN
               Container(
-                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: isDark
@@ -546,263 +863,232 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                   ),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: isDark ? const Color(0xFF3B82F6).withValues(alpha: 0.3) : const Color(0xFFBFDBFE),
+                    color: isDark
+                        ? const Color(0xFF3B82F6).withValues(alpha: 0.3)
+                        : const Color(0xFFBFDBFE),
                   ),
                 ),
-                child: Row(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2563EB).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(Icons.lightbulb_rounded, size: 18, color: Color(0xFF2563EB)),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Panduan Pengajuan Siswa & Seleksi Kemitraan:',
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w800,
-                              color: isDark ? const Color(0xFF93C5FD) : const Color(0xFF1E3A8A),
+                    InkWell(
+                      key: const Key('general_info_dropdown_toggle'),
+                      onTap: () {
+                        setDialogState(() {
+                          isGeneralInfoExpanded = !isGeneralInfoExpanded;
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(14),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF2563EB).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.info_outline_rounded,
+                                size: 17,
+                                color: Color(0xFF2563EB),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            replacedStudent != null
-                                ? '• Pengajuan ini menggantikan berkas kandidat ${replacedStudent.name} (${replacedStudent.role}) yang sebelumnya ditolak.\n'
-                                  '• Pastikan data identitas siswa lengkap dan berkas portofolio relevan dengan kriteria industri.\n'
-                                  '• Pengajuan pengganti akan langsung tersimpan dan diverifikasi oleh pihak Corporate industri.'
-                                : (isAdditionalStudent && _schoolPartnershipStatus == 'approved')
-                                    ? '• Status kemitraan sekolah tetap Disetujui (Approved). Siswa tambahan akan masuk dalam status Pending.\n'
-                                      '• Masukkan identitas siswa dan pilih posisi spesialisasi yang diinginkan sesuai kebutuhan kuota.\n'
-                                      '• Corporate akan meninjau kualifikasi berkas siswa tambahan secara terintegrasi.'
-                                    : '• Pastikan data identitas siswa (Nama Lengkap, Kelas / Jurusan) sesuai dengan data administrasi sekolah.\n'
-                                      '• Pilih posisi spesialisasi yang sesuai dengan keahlian dan kompetensi portofolio siswa.\n'
-                                      '• Pengajuan yang dikirim akan otomatis tercatat di database dan diverifikasi oleh tim Corporate.',
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              color: isDark ? Colors.white70 : const Color(0xFF1E293B).withValues(alpha: 0.85),
-                              height: 1.45,
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Informasi Umum & Panduan Pengajuan',
+                                    style: TextStyle(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: isDark
+                                          ? const Color(0xFF93C5FD)
+                                          : const Color(0xFF1E3A8A),
+                                    ),
+                                  ),
+                                  Text(
+                                    isGeneralInfoExpanded
+                                        ? 'Ketuk untuk menyembunyikan informasi umum'
+                                        : 'Ketuk untuk melihat ringkasan program & panduan pengajuan',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: isDark ? Colors.white60 : const Color(0xFF475569),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF2563EB).withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    isGeneralInfoExpanded ? 'Tutup' : 'Buka',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF2563EB),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Icon(
+                                    isGeneralInfoExpanded
+                                        ? Icons.keyboard_arrow_up_rounded
+                                        : Icons.keyboard_arrow_down_rounded,
+                                    size: 16,
+                                    color: const Color(0xFF2563EB),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
+                    if (isGeneralInfoExpanded) ...[
+                      Divider(
+                        height: 1,
+                        color: isDark
+                            ? const Color(0xFF334155)
+                            : const Color(0xFFBFDBFE).withValues(alpha: 0.7),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Program: ${widget.opportunity.title} ($corpName)',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              ),
+                            ),
+                            if (widget.opportunity.totalQuota > 0) ...[
+                              const SizedBox(height: 3),
+                              Text(
+                                'Sisa Kuota Tersedia: ${widget.opportunity.remainingQuota} dari ${widget.opportunity.totalQuota} posisi',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: isDark ? Colors.white70 : const Color(0xFF334155),
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 8),
+                            Text(
+                              'Panduan Pengajuan Peserta & Seleksi Kemitraan:',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: isDark
+                                    ? const Color(0xFF93C5FD)
+                                    : const Color(0xFF1E3A8A),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              replacedStudent != null
+                                  ? '• Pengajuan ini menggantikan berkas peserta ${replacedStudent.name} (${replacedStudent.role}) yang sebelumnya ditolak.\n'
+                                    '• Pastikan data identitas peserta lengkap dan relevan dengan kriteria mitra.\n'
+                                    '• Pengajuan pengganti langsung tersimpan ke database untuk ditinjau Corporate.'
+                                  : '• Pastikan data identitas peserta (Nama Lengkap, Program Studi / Kelas / Jurusan) sesuai data administrasi institusi.\n'
+                                    '• Anda dapat menambahkan beberapa peserta sekaligus dalam satu pengajuan melalui tombol "+ Tambah Peserta Lain".\n'
+                                    '• Seluruh peserta yang diajukan otomatis tercatat di database dan diverifikasi oleh tim Corporate.',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: isDark
+                                    ? Colors.white70
+                                    : const Color(0xFF1E293B).withValues(alpha: 0.85),
+                                height: 1.45,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
               const SizedBox(height: 16),
 
-              // 3. GROUP 1: INFORMASI POKOK SISWA / KANDIDAT
-              buildSectionCard(
-                isDark: isDark,
-                accentColor: accentColor,
-                title: 'Informasi Pokok Kandidat / Siswa',
-                icon: Icons.badge_outlined,
+              // 3. HEADER BAR MULTI-PESERTA + TOMBOL TAMBAH BARIS
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  TextFormField(
-                    controller: nameCtrl,
-                    decoration: InputDecoration(
-                      labelText: isMagang ? 'Nama Lengkap Siswa *' : 'Nama Lengkap Kandidat *',
-                      hintText: 'Contoh: Ahmad Fauzan',
-                      prefixIcon: const Icon(Icons.person_outline_rounded, size: 20, color: accentColor),
-                      filled: true,
-                      fillColor: isDark ? AppTheme.cardBg : Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
-                        ),
+                  Text(
+                    'Daftar Peserta yang Diajukan (${drafts.length} Peserta)',
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                  ),
+                  if (replacedStudent == null)
+                    OutlinedButton.icon(
+                      key: const Key('btn_add_another_participant'),
+                      onPressed: isSubmitting
+                          ? null
+                          : () {
+                              setDialogState(() {
+                                for (final d in drafts) {
+                                  if (d.nameCtrl.text.trim().isNotEmpty &&
+                                      d.majorCtrl.text.trim().isNotEmpty) {
+                                    d.isExpanded = false;
+                                  }
+                                }
+                                drafts.add(_ParticipantDraftForm(initialRole: initialRole));
+                              });
+                            },
+                      icon: const Icon(Icons.person_add_alt_1_rounded, size: 16),
+                      label: const Text(
+                        '+ Tambah Peserta Lain',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: accentColor,
+                        side: BorderSide(color: accentColor.withValues(alpha: 0.5)),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
-                    validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? 'Nama siswa wajib diisi' : null,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: majorCtrl,
-                    decoration: InputDecoration(
-                      labelText: isMagang ? 'Kelas & Jurusan Siswa *' : 'Jurusan / Pendidikan Terakhir *',
-                      hintText: isMagang ? 'Contoh: XII Rekayasa Perangkat Lunak 1' : 'Contoh: D4 Teknik Elektro',
-                      prefixIcon: const Icon(Icons.school_outlined, size: 20, color: accentColor),
-                      filled: true,
-                      fillColor: isDark ? AppTheme.cardBg : Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
-                        ),
-                      ),
-                    ),
-                    validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? 'Kelas/jurusan wajib diisi' : null,
-                  ),
                 ],
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
 
-              // 4. GROUP 2: POSISI & SPESIALISASI
-              buildSectionCard(
-                isDark: isDark,
-                accentColor: accentColor,
-                title: 'Pilihan Posisi & Spesialisasi',
-                icon: Icons.work_outline_rounded,
-                children: [
-                  if (availableRoles.isNotEmpty) ...[
-                    Text(
-                      'Pilih Posisi / Sub-Role Terbuka:',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: isDark ? Colors.white70 : const Color(0xFF475569),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: availableRoles.map((roleOpt) {
-                        final isSelected =
-                            roleCtrl.text.trim().toLowerCase() == roleOpt.trim().toLowerCase();
-                        return InkWell(
-                          onTap: () {
-                            setDialogState(() {
-                              roleCtrl.text = roleOpt;
-                            });
-                          },
-                          borderRadius: BorderRadius.circular(10),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 180),
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? accentColor.withValues(alpha: 0.15)
-                                  : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: isSelected
-                                    ? accentColor
-                                    : (isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
-                                width: isSelected ? 1.5 : 1,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.check_circle_rounded,
-                                  size: 14,
-                                  color: isSelected ? accentColor : Colors.grey.shade400,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  roleOpt,
-                                  style: TextStyle(
-                                    fontSize: 11.5,
-                                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                    color: isSelected
-                                        ? accentColor
-                                        : (isDark ? Colors.white70 : const Color(0xFF334155)),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                  TextFormField(
-                    controller: roleCtrl,
-                    onChanged: (_) => setDialogState(() {}),
-                    decoration: InputDecoration(
-                      labelText: 'Posisi / Spesialisasi yang Dilamar *',
-                      hintText: 'Contoh: Electrician / Videographer / UI UX Intern',
-                      prefixIcon: const Icon(Icons.workspace_premium_outlined, size: 20, color: accentColor),
-                      filled: true,
-                      fillColor: isDark ? AppTheme.cardBg : Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
-                        ),
-                      ),
-                    ),
-                    validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? 'Posisi spesialisasi wajib diisi' : null,
-                  ),
-                ],
+              // 4. LIST KARTU FORM PESERTA (MULTIPLE PESERTA)
+              ...drafts.asMap().entries.map(
+                (entry) => buildParticipantCard(
+                  index: entry.key,
+                  draft: entry.value,
+                  isDark: isDark,
+                  accentColor: accentColor,
+                  setDialogState: setDialogState,
+                ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
 
-              // 5. GROUP 3: PORTOFOLIO & CATATAN INSTITUSI
-              buildSectionCard(
-                isDark: isDark,
-                accentColor: accentColor,
-                title: 'Portofolio & Rekomendasi Institusi',
-                icon: Icons.folder_shared_outlined,
-                children: [
-                  TextFormField(
-                    controller: portfolioCtrl,
-                    decoration: InputDecoration(
-                      labelText: 'Tautan Portofolio / CV / LinkedIn (Opsional)',
-                      hintText: 'https://behance.net/... atau link Google Drive',
-                      prefixIcon: const Icon(Icons.link_rounded, size: 20, color: Color(0xFF64748B)),
-                      filled: true,
-                      fillColor: isDark ? AppTheme.cardBg : Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: noteCtrl,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      labelText: 'Catatan Rekomendasi untuk Corporate (Opsional)',
-                      hintText: 'Tuliskan kompetensi unggulan, karakter kerja, atau rekomendasi khusus guru pembimbing...',
-                      prefixIcon: const Icon(Icons.rate_review_outlined, size: 20, color: Color(0xFF64748B)),
-                      filled: true,
-                      fillColor: isDark ? AppTheme.cardBg : Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              // 6. FOOTER ACTIONS
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              // 5. FOOTER ACTIONS
+              Wrap(
+                spacing: 12,
+                runSpacing: 10,
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(Icons.shield_outlined, size: 16, color: Color(0xFF64748B)),
                       const SizedBox(width: 6),
@@ -816,6 +1102,7 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                     ],
                   ),
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       OutlinedButton(
                         onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
@@ -842,7 +1129,11 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                               )
                             : const Icon(Icons.send_rounded, size: 18),
                         label: Text(
-                          isSubmitting ? 'Mengirim...' : 'Kirim Pengajuan',
+                          isSubmitting
+                              ? 'Mengirim ($submittedCount/${drafts.length})...'
+                              : (drafts.length > 1
+                                  ? 'Kirim Pengajuan (${drafts.length} Peserta)'
+                                  : 'Kirim Pengajuan'),
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         style: FilledButton.styleFrom(
@@ -854,58 +1145,124 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                         onPressed: isSubmitting
                             ? null
                             : () async {
+                                // Expand any draft with empty required fields so validators highlight visibly
+                                bool expandedAny = false;
+                                for (final d in drafts) {
+                                  if (d.nameCtrl.text.trim().isEmpty ||
+                                      d.majorCtrl.text.trim().isEmpty ||
+                                      d.roleCtrl.text.trim().isEmpty) {
+                                    if (!d.isExpanded) {
+                                      d.isExpanded = true;
+                                      expandedAny = true;
+                                    }
+                                  }
+                                }
+                                if (expandedAny) {
+                                  setDialogState(() {});
+                                  await Future<void>.delayed(const Duration(milliseconds: 50));
+                                }
+
                                 if (!(formKey.currentState?.validate() ?? false)) return;
+
+                                // Check duplicate names inside the batch
+                                final seenNames = <String>{};
+                                for (final d in drafts) {
+                                  final norm = d.nameCtrl.text.trim().toLowerCase();
+                                  if (!seenNames.add(norm)) {
+                                    if (mounted) {
+                                      AppSweetAlert.error(
+                                        context,
+                                        'Terdapat nama peserta duplikat (${d.nameCtrl.text.trim()}) pada daftar pengajuan.',
+                                      );
+                                    }
+                                    return;
+                                  }
+                                }
 
                                 final oppId = widget.opportunity.id ?? '';
                                 if (oppId.isEmpty) {
-                                  AppSweetAlert.error(
-                                    context,
-                                    'ID lowongan magang tidak ditemukan di database.',
-                                  );
+                                  if (mounted) {
+                                    AppSweetAlert.error(
+                                      context,
+                                      'ID program tidak ditemukan di database.',
+                                    );
+                                  }
                                   return;
                                 }
 
-                                final studentName = nameCtrl.text.trim();
-                                final major = majorCtrl.text.trim();
-                                final role = roleCtrl.text.trim();
-                                final portfolio = portfolioCtrl.text.trim();
-                                final note = noteCtrl.text.trim().isNotEmpty
-                                    ? noteCtrl.text.trim()
-                                    : (replacedStudent != null
-                                        ? 'Siswa pengganti menggantikan ${replacedStudent.name}.'
-                                        : 'Siswa diajukan oleh institusi untuk program magang.');
-                                final additionalFlag = isAdditionalStudent;
+                                setDialogState(() {
+                                  isSubmitting = true;
+                                  submittedCount = 0;
+                                });
 
-                                setDialogState(() => isSubmitting = true);
+                                final totalToSend = drafts.length;
+                                final succeededNames = <String>[];
+                                String? failedMessage;
 
-                                final res = await OpportunityService.applyInstitutionStudent(
-                                  opportunityId: oppId,
-                                  subRoleSlug: role.toLowerCase().replaceAll(' ', '_'),
-                                  pitchMessage:
-                                      'Siswa: $studentName ($major)${portfolio.isNotEmpty ? ' | Portofolio: $portfolio' : ''} | $note',
-                                  studentDocument: {
-                                    'student_name': studentName,
-                                    'major_class': major,
-                                    'role': role,
-                                    'portfolio_url': portfolio,
-                                    'note': note,
-                                    'is_additional': additionalFlag,
-                                    'is_replacement': replacedStudent != null,
-                                    if (replacedStudent != null)
-                                      'replaced_student_name': replacedStudent.name,
-                                  },
-                                );
+                                // Submit sequentially so every draft saves cleanly to database
+                                while (drafts.isNotEmpty) {
+                                  final current = drafts.first;
+                                  final participantName = current.nameCtrl.text.trim();
+                                  final major = current.majorCtrl.text.trim();
+                                  final role = current.roleCtrl.text.trim();
+                                  final portfolio = current.portfolioCtrl.text.trim();
+                                  final note = current.noteCtrl.text.trim().isNotEmpty
+                                      ? current.noteCtrl.text.trim()
+                                      : (replacedStudent != null
+                                          ? 'Peserta pengganti menggantikan ${replacedStudent.name}.'
+                                          : 'Peserta diajukan oleh institusi untuk program ini.');
+
+                                  final res = await OpportunityService.applyInstitutionStudent(
+                                    opportunityId: oppId,
+                                    subRoleSlug: role.toLowerCase().replaceAll(' ', '_'),
+                                    pitchMessage:
+                                        'Peserta: $participantName ($major)${portfolio.isNotEmpty ? ' | Portofolio: $portfolio' : ''} | $note',
+                                    studentDocument: {
+                                      'participant_name': participantName,
+                                      'student_name': participantName,
+                                      'major_class': major,
+                                      'role': role,
+                                      'portfolio_url': portfolio,
+                                      'note': note,
+                                      'is_additional': isAdditionalStudent,
+                                      'is_replacement': replacedStudent != null,
+                                      if (replacedStudent != null)
+                                        'replaced_student_name': replacedStudent.name,
+                                    },
+                                  );
+
+                                  if (res['status'] != true) {
+                                    failedMessage = res['message']?.toString() ??
+                                        'Gagal menyimpan pengajuan peserta $participantName ke database.';
+                                    break;
+                                  }
+
+                                  succeededNames.add(participantName);
+                                  if (ctx.mounted) {
+                                    setDialogState(() {
+                                      submittedCount++;
+                                      final done = drafts.removeAt(0);
+                                      done.dispose();
+                                    });
+                                  } else {
+                                    drafts.removeAt(0).dispose();
+                                  }
+                                }
 
                                 if (ctx.mounted) {
                                   setDialogState(() => isSubmitting = false);
                                 }
 
-                                if (res['status'] != true) {
+                                if (failedMessage != null) {
+                                  if (succeededNames.isNotEmpty) {
+                                    await _loadServerData();
+                                  }
                                   if (mounted) {
                                     AppSweetAlert.error(
                                       context,
-                                      res['message']?.toString() ??
-                                          'Gagal menyimpan pengajuan siswa ke database.',
+                                      succeededNames.isNotEmpty
+                                          ? '${succeededNames.length} peserta berhasil diajukan, namun terhenti: $failedMessage'
+                                          : failedMessage,
                                     );
                                   }
                                   return;
@@ -920,11 +1277,15 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                                     _searchController.clear();
                                     _studentPage = 1;
                                   });
+                                  final namesPreview = succeededNames.take(3).join(', ');
+                                  final moreCount = succeededNames.length > 3
+                                      ? ' dan ${succeededNames.length - 3} peserta lainnya'
+                                      : '';
                                   AppSweetAlert.success(
                                     context,
-                                    additionalFlag
-                                        ? 'Siswa tambahan $studentName berhasil diajukan dengan status Pending. Status kemitraan sekolah tetap Disetujui.'
-                                        : 'Lamaran siswa $studentName berhasil dikirim ke Corporate.',
+                                    totalToSend > 1
+                                        ? 'Sebanyak $totalToSend peserta ($namesPreview$moreCount) berhasil dikirim ke Corporate.'
+                                        : 'Pengajuan peserta ${succeededNames.first} berhasil dikirim ke Corporate.',
                                     title: 'Pengajuan Berhasil',
                                   );
                                 }
@@ -941,52 +1302,58 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
     }
 
     final isDesktop = MediaQuery.of(context).size.width > 700;
-    if (isDesktop) {
-      await showDialog<void>(
-        context: context,
-        builder: (ctx) => Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          clipBehavior: Clip.antiAlias,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 680, maxHeight: 850),
-            child: StatefulBuilder(
+    try {
+      if (isDesktop) {
+        await showDialog<void>(
+          context: context,
+          builder: (ctx) => Dialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            clipBehavior: Clip.antiAlias,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 700, maxHeight: 860),
+              child: StatefulBuilder(
+                builder: (ctx, setDialogState) {
+                  final isDark = Theme.of(ctx).brightness == Brightness.dark;
+                  return Container(
+                    color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                    padding: const EdgeInsets.fromLTRB(26, 24, 26, 24),
+                    child: buildFormContent(setDialogState, ctx),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      } else {
+        await showModalBottomSheet<void>(
+          context: context,
+          isScrollControlled: true,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          builder: (ctx) {
+            return StatefulBuilder(
               builder: (ctx, setDialogState) {
                 final isDark = Theme.of(ctx).brightness == Brightness.dark;
                 return Container(
                   color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                  padding: const EdgeInsets.fromLTRB(26, 24, 26, 24),
+                  padding: EdgeInsets.fromLTRB(
+                    20,
+                    20,
+                    20,
+                    MediaQuery.of(ctx).viewInsets.bottom + 24,
+                  ),
                   child: buildFormContent(setDialogState, ctx),
                 );
               },
-            ),
-          ),
-        ),
-      );
-    } else {
-      await showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        builder: (ctx) {
-          return StatefulBuilder(
-            builder: (ctx, setDialogState) {
-              final isDark = Theme.of(ctx).brightness == Brightness.dark;
-              return Container(
-                color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                padding: EdgeInsets.fromLTRB(
-                  20,
-                  20,
-                  20,
-                  MediaQuery.of(ctx).viewInsets.bottom + 24,
-                ),
-                child: buildFormContent(setDialogState, ctx),
-              );
-            },
-          );
-        },
-      );
+            );
+          },
+        );
+      }
+    } finally {
+      for (final d in drafts) {
+        d.dispose();
+      }
     }
   }
 
@@ -1056,7 +1423,7 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                       tabs: [
                         const Tab(text: 'Ringkasan & Detail Program'),
                         Tab(
-                          text: 'Daftar Siswa (${_students.length})',
+                          text: 'Daftar Peserta (${_students.length})',
                         ),
                       ],
                     ),
@@ -1209,35 +1576,55 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
 
   Widget _buildSchoolStatusBanner(bool isDark, bool isDesktop, Color accentColor) {
     final bool isApproved = _schoolPartnershipStatus == 'approved';
+    final bool isRejected = _schoolPartnershipStatus == 'rejected';
     final bool isPending = _schoolPartnershipStatus == 'pending';
 
     final Color bg = isApproved
         ? const Color(0xFFECFDF5)
-        : (isPending ? const Color(0xFFFFFBEB) : const Color(0xFFF1F5F9));
+        : (isRejected
+            ? const Color(0xFFFEF2F2)
+            : (isPending ? const Color(0xFFFFFBEB) : const Color(0xFFF1F5F9)));
     final Color border = isApproved
         ? const Color(0xFFA7F3D0)
-        : (isPending ? const Color(0xFFFDE68A) : const Color(0xFFCBD5E1));
+        : (isRejected
+            ? const Color(0xFFFECACA)
+            : (isPending ? const Color(0xFFFDE68A) : const Color(0xFFCBD5E1)));
     final Color iconColor = isApproved
         ? const Color(0xFF059669)
-        : (isPending ? const Color(0xFFD97706) : const Color(0xFF475569));
+        : (isRejected
+            ? const Color(0xFFDC2626)
+            : (isPending ? const Color(0xFFD97706) : const Color(0xFF475569)));
     final IconData icon = isApproved
         ? Icons.verified_rounded
-        : (isPending ? Icons.hourglass_top_rounded : Icons.info_outline_rounded);
+        : (isRejected
+            ? Icons.cancel_rounded
+            : (isPending ? Icons.hourglass_top_rounded : Icons.info_outline_rounded));
 
     final String titleText = isApproved
-        ? 'Status Sekolah: Disetujui / Bermitra (Approved)'
-        : (isPending
-            ? 'Status Sekolah: Menunggu Persetujuan Corporate (Pending)'
-            : 'Status Sekolah: Belum Mengajukan Lamaran');
+        ? 'Status Institusi: Disetujui / Bermitra (Approved)'
+        : (isRejected
+            ? 'Status Institusi: Ditolak oleh Corporate (Rejected)'
+            : (isPending
+                ? 'Status Institusi: Menunggu Persetujuan Corporate (Pending)'
+                : 'Status Institusi: Belum Mengajukan Lamaran'));
 
-    final acceptedCount = _students.where((s) => s.status == 'Diterima' || s.status.toLowerCase().contains('diterima')).length;
-    final reviewCount = _students.where((s) => s.status == 'Review' || s.status == 'Pending' || s.status.toLowerCase().contains('menunggu')).length;
+    final acceptedCount = _students
+        .where((s) => s.status == 'Diterima' || s.status.toLowerCase().contains('diterima'))
+        .length;
+    final reviewCount = _students
+        .where((s) =>
+            s.status == 'Review' ||
+            s.status == 'Pending' ||
+            s.status.toLowerCase().contains('menunggu'))
+        .length;
 
     final String subText = isApproved
-        ? 'Institusi Anda telah disetujui pada ${widget.opportunity.isMagang ? 'program magang ini' : 'lowongan pekerjaan ini'}${acceptedCount > 0 ? ' ($acceptedCount ${widget.opportunity.isMagang ? 'siswa' : 'kandidat'} diterima' : ''}${reviewCount > 0 ? (acceptedCount > 0 ? ', $reviewCount dalam review' : ' ($reviewCount ${widget.opportunity.isMagang ? 'siswa' : 'kandidat'} dalam review') : ''}${acceptedCount > 0 || reviewCount > 0 ? ')' : ''}. Penambahan kandidat baru tidak mengubah status persetujuan sekolah Anda.'
-        : (isPending
-            ? 'Pengajuan kemitraan ${widget.opportunity.isMagang ? 'magang' : 'rekrutmen'} sekolah Anda sedang ditinjau oleh pihak Corporate.'
-            : 'Sekolah Anda belum mendaftarkan ${widget.opportunity.isMagang ? 'siswa pada program magang ini' : 'kandidat pada lowongan pekerjaan ini'}. Buka tab "Daftar Siswa" lalu klik "+ Ajukan Siswa" untuk mendaftarkan kandidat.');
+        ? 'Institusi Anda telah disetujui pada ${widget.opportunity.isMagang ? 'program magang ini' : 'lowongan ini'}${acceptedCount > 0 ? ' ($acceptedCount peserta diterima' : ''}${reviewCount > 0 ? (acceptedCount > 0 ? ', $reviewCount dalam review' : ' ($reviewCount peserta dalam review') : ''}${acceptedCount > 0 || reviewCount > 0 ? ')' : ''}. Penambahan peserta baru sudah ditutup.'
+        : (isRejected
+            ? 'Pengajuan kemitraan institusi Anda pada program ini telah ditolak oleh pihak Corporate. Penambahan peserta baru tidak lagi tersedia.'
+            : (isPending
+                ? 'Pengajuan kemitraan ${widget.opportunity.isMagang ? 'magang' : 'rekrutmen'} institusi Anda sedang ditinjau oleh pihak Corporate.'
+                : 'Institusi Anda belum mendaftarkan peserta pada ${widget.opportunity.isMagang ? 'program magang ini' : 'lowongan ini'}. Buka tab "Daftar Peserta" lalu klik "+ Tambah Peserta" untuk mendaftarkan peserta.'));
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1271,26 +1658,31 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                   ),
                 ),
                 const SizedBox(height: 4),
-                  Text(
-                    subText,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      color: isDark ? Colors.white70 : const Color(0xFF334155),
-                      height: 1.4,
-                    ),
+                Text(
+                  subText,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: isDark ? Colors.white70 : const Color(0xFF334155),
+                    height: 1.4,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildCorporateRequestBanner(bool isDark, bool isDesktop) {
-    if (_schoolPartnershipStatus == 'not_applied') {
+    if (_schoolPartnershipStatus == 'not_applied' ||
+        _schoolPartnershipStatus == 'rejected') {
       return const SizedBox.shrink();
     }
+
+    final bool isPartnershipLocked = _schoolPartnershipStatus == 'approved' ||
+        _schoolPartnershipStatus == 'rejected' ||
+        widget.opportunity.isClosed;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1332,8 +1724,8 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
             children: [
               Text(
                 _corporateRequestsAdditional
-                    ? 'Permintaan Tambahan Siswa dari Corporate ($_corporateRequestedCount Siswa)'
-                    : 'Permintaan Tambahan Siswa: Tidak Ada Permintaan Khusus',
+                    ? 'Permintaan Tambahan Peserta dari Corporate ($_corporateRequestedCount Peserta)'
+                    : 'Permintaan Tambahan Peserta: Tidak Ada Permintaan Khusus',
                 style: TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.bold,
@@ -1347,8 +1739,10 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
               const SizedBox(height: 3),
               Text(
                 _corporateRequestsAdditional
-                    ? '$_corporateRequestNote Siswa baru yang diajukan akan masuk dalam status Pending.'
-                    : 'Saat ini Corporate belum meminta tambahan siswa baru. Anda tetap dapat mengajukan siswa tambahan jika kuota masih tersedia.',
+                    ? '$_corporateRequestNote Peserta baru yang diajukan akan masuk dalam status Pending.'
+                    : (isPartnershipLocked
+                        ? 'Status kemitraan institusi Anda telah Disetujui oleh Corporate. Pengajuan peserta baru sudah dikunci.'
+                        : 'Saat ini Corporate belum meminta tambahan peserta baru. Anda masih dapat menambah peserta sebelum kemitraan diproses.'),
                 style: TextStyle(
                   fontSize: 12,
                   color: isDark ? Colors.white70 : Colors.grey.shade700,
@@ -1356,7 +1750,7 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
               ),
             ],
           );
-          final actionButton = _corporateRequestsAdditional
+          final Widget? actionButton = (_corporateRequestsAdditional && !isPartnershipLocked)
               ? ElevatedButton(
                   onPressed: () =>
                       _openSubmitStudentDialog(isAdditionalStudent: true),
@@ -1366,7 +1760,7 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8)),
                   ),
-                  child: const Text('Kirim Siswa Tambahan',
+                  child: const Text('Tambah Peserta',
                       style: TextStyle(fontSize: 12)),
                 )
               : null;
@@ -1442,7 +1836,7 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
           const SizedBox(height: 8),
           Text(
             opp.description ??
-                'Kerja sama penempatan siswa vokasi magang pada industri kreatif mitra.',
+                'Kerja sama penempatan peserta magang pada industri kreatif mitra.',
             style: TextStyle(
               fontSize: 13.5,
               height: 1.5,
@@ -1591,7 +1985,7 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
           ),
           const SizedBox(height: 16),
 
-          // Closed info banner
+          // Closed / Approved / Rejected info banner (disables adding more participants)
           if (widget.opportunity.isClosed) ...[
             Container(
               margin: const EdgeInsets.only(bottom: 14),
@@ -1607,8 +2001,52 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Pendaftaran program ini telah ditutup karena kuota posisi telah terpenuhi atau periode pendaftaran telah berakhir. Penambahan siswa baru dinonaktifkan.',
+                      'Pendaftaran program ini telah ditutup karena kuota posisi telah terpenuhi atau periode pendaftaran telah berakhir. Penambahan peserta baru dinonaktifkan.',
                       style: TextStyle(fontSize: 12, color: Color(0xFF475569), fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else if (_schoolPartnershipStatus == 'approved') ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFECFDF5),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFA7F3D0)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.verified_outlined, size: 18, color: Color(0xFF059669)),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Status kemitraan institusi pada program ini telah Disetujui oleh Corporate. Penambahan peserta baru sudah ditutup.',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF065F46), fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else if (_schoolPartnershipStatus == 'rejected') ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFFECACA)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.cancel_outlined, size: 18, color: Color(0xFFDC2626)),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Pengajuan institusi pada program ini telah Ditolak oleh Corporate. Penambahan peserta baru dinonaktifkan.',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF991B1B), fontWeight: FontWeight.w500),
                     ),
                   ),
                 ],
@@ -1623,7 +2061,7 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                 controller: _searchController,
                 onChanged: (_) => setState(() => _studentPage = 1),
                 decoration: InputDecoration(
-                  hintText: 'Cari nama siswa, kelas, atau posisi...',
+                  hintText: 'Cari nama peserta, jurusan/kelas, atau posisi...',
                   prefixIcon: const Icon(Icons.search_rounded, size: 18),
                   isDense: true,
                   border: OutlineInputBorder(
@@ -1631,18 +2069,20 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                   ),
                 ),
               );
-              final canAddStudent = !widget.opportunity.isClosed;
-              final addButton = canAddStudent
+              // Pastikan button Tambah Peserta tidak muncul saat program ditutup ATAU status institusi di-approve / di-reject oleh Corporate
+              final bool canAddParticipant = !widget.opportunity.isClosed &&
+                  _schoolPartnershipStatus != 'approved' &&
+                  _schoolPartnershipStatus != 'rejected';
+              final addButton = canAddParticipant
                   ? ElevatedButton.icon(
+                      key: const Key('btn_tambah_peserta'),
                       onPressed: () => _openSubmitStudentDialog(
                         isAdditionalStudent: false,
                       ),
                       icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
-                      label: Text(
-                        _schoolPartnershipStatus == 'approved'
-                            ? 'Tambah Siswa'
-                            : 'Ajukan Siswa',
-                        style: const TextStyle(
+                      label: const Text(
+                        'Tambah Peserta',
+                        style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                         ),
@@ -1733,15 +2173,15 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                 children: [
                   const Icon(Icons.school_outlined, size: 36, color: Color(0xFF6366F1)),
                   const SizedBox(height: 10),
-                  Text(
-                    widget.opportunity.isMagang ? 'Belum Ada Siswa yang Diajukan' : 'Belum Ada Kandidat yang Diajukan',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  const Text(
+                    'Belum Ada Peserta yang Diajukan',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     widget.opportunity.isMagang
-                        ? 'Daftarkan siswa sekolah Anda untuk mengikuti program magang industri ini.'
-                        : 'Daftarkan talenta institusi Anda untuk melamar lowongan pekerjaan ini.',
+                        ? 'Daftarkan peserta institusi Anda untuk mengikuti program magang industri ini.'
+                        : 'Daftarkan peserta institusi Anda untuk melamar lowongan ini.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 12,
@@ -1759,7 +2199,7 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
               currentPage: safePage,
               pageSize: _studentPageSize,
               accentColor: accentColor,
-              itemLabel: 'siswa',
+              itemLabel: 'peserta',
               onPageChanged: (page) => setState(() => _studentPage = page),
             ),
           ],
@@ -1867,7 +2307,7 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              s.isReplacement ? 'Siswa Pengganti' : 'Siswa Tambahan',
+                              s.isReplacement ? 'Peserta Pengganti' : 'Peserta Tambahan',
                               style: const TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
@@ -1950,8 +2390,8 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                   const SizedBox(width: 6),
                   Text(
                     widget.opportunity.isMagang
-                        ? 'Siswa resmi diterima mengikuti program magang industri ini'
-                        : 'Kandidat resmi diterima pada lowongan pekerjaan ini',
+                        ? 'Peserta resmi diterima mengikuti program magang industri ini'
+                        : 'Peserta resmi diterima pada lowongan ini',
                     style: const TextStyle(
                       fontSize: 11.5,
                       fontWeight: FontWeight.w600,

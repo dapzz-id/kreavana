@@ -507,12 +507,15 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       // Check banner status is Approved
-      expect(find.text('Status Sekolah: Disetujui / Bermitra (Approved)'), findsOneWidget);
+      expect(find.text('Status Institusi: Disetujui / Bermitra (Approved)'), findsOneWidget);
 
-      // Tap Daftar Siswa tab
-      final daftarSiswaTab = find.textContaining('Daftar Siswa');
-      expect(daftarSiswaTab, findsOneWidget);
-      await tester.tap(daftarSiswaTab);
+      // Tap Daftar Peserta tab
+      final daftarPesertaTab = find.descendant(
+        of: find.byType(TabBar),
+        matching: find.textContaining('Daftar Peserta'),
+      );
+      expect(daftarPesertaTab, findsOneWidget);
+      await tester.tap(daftarPesertaTab);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -590,18 +593,229 @@ void main() {
       // Top status badge should display 'Pendaftaran Ditutup'
       expect(find.text('Pendaftaran Ditutup'), findsOneWidget);
 
-      // Tap Daftar Siswa tab
-      final daftarSiswaTab = find.textContaining('Daftar Siswa');
-      await tester.tap(daftarSiswaTab);
+      // Tap Daftar Peserta tab
+      final daftarPesertaTab = find.descendant(
+        of: find.byType(TabBar),
+        matching: find.textContaining('Daftar Peserta'),
+      );
+      await tester.tap(daftarPesertaTab);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      // Ensure Tambah Siswa / Ajukan Siswa button does NOT exist
+      // Ensure Tambah Peserta button does NOT exist
+      expect(find.byKey(const Key('btn_tambah_peserta')), findsNothing);
+      expect(find.text('Tambah Peserta'), findsNothing);
       expect(find.text('Tambah Siswa'), findsNothing);
       expect(find.text('Ajukan Siswa'), findsNothing);
 
       // Closed info banner should be visible
       expect(find.textContaining('Pendaftaran program ini telah ditutup karena kuota posisi telah terpenuhi'), findsOneWidget);
+    });
+
+    testWidgets('ProgramMagangDetailScreen hides Tambah Peserta button when institution status is Approved even if program is still open', (tester) async {
+      final oppOpenApproved = OpportunityModel(
+        id: 'test_opp_open_approved_1',
+        title: 'Program Magang 3D Modeler',
+        subRoleSlug: 'magang',
+        status: 'open',
+        requirements: [
+          OpportunityRequirementModel(
+            subRoleSlug: 'modeler',
+            quantity: 5,
+            notes: 'Spesialisasi 3D Modeler',
+          ),
+        ],
+        approvedCreators: [
+          OpportunityApprovedCreatorModel(id: 'inst-1', name: 'Kreavana Demo Institution', username: 'inst_demo'),
+        ],
+      );
+
+      final institutionUser = UserModel(
+        id: 'inst-1',
+        name: 'Kreavana Demo Institution',
+        username: 'inst_demo',
+        email: 'inst@demo.id',
+        role: 'institution',
+        subRole: 'institution',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ProgramMagangDetailScreen(
+            opportunity: oppOpenApproved,
+            user: institutionUser,
+            isAppliedPartnership: true,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Status Institusi: Disetujui / Bermitra (Approved)'), findsOneWidget);
+
+      await tester.tap(
+        find.descendant(
+          of: find.byType(TabBar),
+          matching: find.textContaining('Daftar Peserta'),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.byKey(const Key('btn_tambah_peserta')), findsNothing);
+      expect(find.text('Tambah Peserta'), findsNothing);
+      expect(
+        find.textContaining('Status kemitraan institusi pada program ini telah Disetujui oleh Corporate'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('ProgramMagangDetailScreen hides Tambah Peserta button when institution status is Rejected', (tester) async {
+      final oppRejected = OpportunityModel(
+        id: 'test_opp_rejected_1',
+        title: 'Program Magang Animator',
+        subRoleSlug: 'magang',
+        status: 'open',
+        requirements: [
+          OpportunityRequirementModel(
+            subRoleSlug: 'animator',
+            quantity: 3,
+            notes: 'Animator 2D/3D',
+          ),
+        ],
+      );
+
+      final institutionUser = UserModel(
+        id: 'inst-1',
+        name: 'Kreavana Demo Institution',
+        username: 'inst_demo',
+        email: 'inst@demo.id',
+        role: 'institution',
+        subRole: 'institution',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ProgramMagangDetailScreen(
+            opportunity: oppRejected,
+            user: institutionUser,
+            initialPartnershipStatus: 'rejected',
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Status Institusi: Ditolak oleh Corporate (Rejected)'), findsOneWidget);
+
+      await tester.tap(
+        find.descendant(
+          of: find.byType(TabBar),
+          matching: find.textContaining('Daftar Peserta'),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.byKey(const Key('btn_tambah_peserta')), findsNothing);
+      expect(find.text('Tambah Peserta'), findsNothing);
+      expect(
+        find.textContaining('Pengajuan institusi pada program ini telah Ditolak oleh Corporate'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Tambah Peserta popup supports collapsible general info dropdown and multiple participants', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(900, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final oppOpen = OpportunityModel(
+        id: 'test_opp_multi_add_1',
+        title: 'Program Magang UI/UX Designer',
+        subRoleSlug: 'magang',
+        status: 'open',
+        requirements: [
+          OpportunityRequirementModel(
+            subRoleSlug: 'uiux',
+            quantity: 5,
+            notes: 'UI/UX Designer',
+          ),
+        ],
+      );
+
+      final institutionUser = UserModel(
+        id: 'inst-1',
+        name: 'Kreavana Demo Institution',
+        username: 'inst_demo',
+        email: 'inst@demo.id',
+        role: 'institution',
+        subRole: 'institution',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ProgramMagangDetailScreen(
+            opportunity: oppOpen,
+            user: institutionUser,
+            initialPartnershipStatus: 'not_applied',
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(
+        find.descendant(
+          of: find.byType(TabBar),
+          matching: find.textContaining('Daftar Peserta'),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final addBtn = find.byKey(const Key('btn_tambah_peserta'));
+      expect(addBtn, findsOneWidget);
+
+      await tester.tap(addBtn);
+      await tester.pumpAndSettle();
+
+      // Popup title & general info collapsed by default
+      expect(find.text('Tambah Peserta Program Magang'), findsOneWidget);
+      expect(find.text('Informasi Umum & Panduan Pengajuan'), findsOneWidget);
+      expect(find.text('Buka'), findsOneWidget);
+      expect(find.text('Panduan Pengajuan Peserta & Seleksi Kemitraan:'), findsNothing);
+
+      // Expand general info dropdown
+      await tester.tap(find.byKey(const Key('general_info_dropdown_toggle')));
+      await tester.pumpAndSettle();
+      expect(find.text('Tutup'), findsOneWidget);
+      expect(find.text('Panduan Pengajuan Peserta & Seleksi Kemitraan:'), findsOneWidget);
+
+      // Collapse again so form entry stays uncluttered
+      await tester.tap(find.byKey(const Key('general_info_dropdown_toggle')));
+      await tester.pumpAndSettle();
+      expect(find.text('Buka'), findsOneWidget);
+      expect(find.text('Panduan Pengajuan Peserta & Seleksi Kemitraan:'), findsNothing);
+
+      // Multi-participant support: starts with 1 participant, add another
+      expect(find.text('Daftar Peserta yang Diajukan (1 Peserta)'), findsOneWidget);
+      expect(find.text('Peserta #1'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('btn_add_another_participant')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Daftar Peserta yang Diajukan (2 Peserta)'), findsOneWidget);
+      expect(find.text('Peserta #2'), findsOneWidget);
+      expect(find.text('Kirim Pengajuan (2 Peserta)'), findsOneWidget);
+
+      // Delete second participant
+      final deleteParticipant2 = find.byTooltip('Hapus baris peserta #2');
+      await tester.ensureVisible(deleteParticipant2);
+      await tester.tap(deleteParticipant2);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Daftar Peserta yang Diajukan (1 Peserta)'), findsOneWidget);
+      expect(find.text('Peserta #2'), findsNothing);
     });
   });
 }

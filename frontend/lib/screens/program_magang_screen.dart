@@ -493,7 +493,7 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Pantau program kemitraan magang siswa dan jelajahi lowongan magang industri mitra.',
+                'Pantau program kemitraan magang peserta dan jelajahi lowongan magang industri mitra.',
                 style: TextStyle(
                   fontSize: 13,
                   color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
@@ -1110,7 +1110,7 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
                             ),
                           ),
                           Text(
-                            '${students.length} Siswa Diterima & Aktif Magang',
+                            '${students.length} Peserta Diterima & Aktif Magang',
                             style: const TextStyle(
                               fontSize: 12.5,
                               fontWeight: FontWeight.bold,
@@ -1136,7 +1136,7 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Rekapan Siswa Institusi yang Diterima & Sedang Aktif:',
+                      'Rekapan Peserta Institusi yang Diterima & Sedang Aktif:',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
@@ -1371,7 +1371,7 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
       case SchoolMagangTab.myApplications:
         title = 'Belum Ada Lamaran Magang';
         subtitle =
-            'Institusi Anda belum mengajukan lamaran magang ke Corporate mana pun. Buka tab Magang Corporate Mitra atau Semua Lowongan Magang untuk mendaftarkan siswa.';
+            'Institusi Anda belum mengajukan lamaran magang ke Corporate mana pun. Buka tab Magang Corporate Mitra atau Semua Lowongan Magang untuk mendaftarkan peserta.';
         break;
       case SchoolMagangTab.partnerVacancies:
         title = _partnerCorporates.isEmpty

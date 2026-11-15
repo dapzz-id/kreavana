@@ -322,9 +322,9 @@ class OpportunityService extends BaseService
                 $studentName = '';
                 if (is_array($submittedDocuments)) {
                     if (isset($submittedDocuments[0]) && is_array($submittedDocuments[0])) {
-                        $studentName = trim((string) ($submittedDocuments[0]['student_name'] ?? $submittedDocuments[0]['name'] ?? ''));
+                        $studentName = trim((string) ($submittedDocuments[0]['participant_name'] ?? $submittedDocuments[0]['student_name'] ?? $submittedDocuments[0]['name'] ?? ''));
                     } else {
-                        $studentName = trim((string) ($submittedDocuments['student_name'] ?? $submittedDocuments['name'] ?? ''));
+                        $studentName = trim((string) ($submittedDocuments['participant_name'] ?? $submittedDocuments['student_name'] ?? $submittedDocuments['name'] ?? ''));
                     }
                 }
 
@@ -339,12 +339,12 @@ class OpportunityService extends BaseService
                         $docs = is_array($existingApp->submitted_documents) ? $existingApp->submitted_documents : [];
                         $existingName = '';
                         if (isset($docs[0]) && is_array($docs[0])) {
-                            $existingName = trim((string) ($docs[0]['student_name'] ?? $docs[0]['name'] ?? ''));
-                        } elseif (isset($docs['student_name']) || isset($docs['name'])) {
-                            $existingName = trim((string) ($docs['student_name'] ?? $docs['name'] ?? ''));
+                            $existingName = trim((string) ($docs[0]['participant_name'] ?? $docs[0]['student_name'] ?? $docs[0]['name'] ?? ''));
+                        } elseif (isset($docs['participant_name']) || isset($docs['student_name']) || isset($docs['name'])) {
+                            $existingName = trim((string) ($docs['participant_name'] ?? $docs['student_name'] ?? $docs['name'] ?? ''));
                         }
                         if ($existingName !== '' && mb_strtolower($existingName) === $normalizedCandidate) {
-                            abort(409, "Siswa {$studentName} sudah terdaftar pada program magang ini.");
+                            abort(409, "Peserta {$studentName} sudah terdaftar pada program ini.");
                         }
                     }
                 }
@@ -2617,15 +2617,16 @@ class OpportunityService extends BaseService
                 $major = '';
                 $docs = is_array($app->submitted_documents) ? $app->submitted_documents : [];
                 if (isset($docs[0]) && is_array($docs[0])) {
-                    $studentName = trim((string) ($docs[0]['student_name'] ?? $docs[0]['name'] ?? ''));
-                    $major = trim((string) ($docs[0]['major'] ?? $docs[0]['jurusan'] ?? ''));
-                } elseif (isset($docs['student_name']) || isset($docs['name'])) {
-                    $studentName = trim((string) ($docs['student_name'] ?? $docs['name'] ?? ''));
-                    $major = trim((string) ($docs['major'] ?? $docs['jurusan'] ?? ''));
+                    $studentName = trim((string) ($docs[0]['participant_name'] ?? $docs[0]['student_name'] ?? $docs[0]['name'] ?? ''));
+                    $major = trim((string) ($docs[0]['major_class'] ?? $docs[0]['major'] ?? $docs[0]['jurusan'] ?? ''));
+                } elseif (isset($docs['participant_name']) || isset($docs['student_name']) || isset($docs['name'])) {
+                    $studentName = trim((string) ($docs['participant_name'] ?? $docs['student_name'] ?? $docs['name'] ?? ''));
+                    $major = trim((string) ($docs['major_class'] ?? $docs['major'] ?? $docs['jurusan'] ?? ''));
                 }
-                if ($studentName === '' && !empty($app->pitch_message) && str_starts_with($app->pitch_message, 'Siswa:')) {
+                if ($studentName === '' && !empty($app->pitch_message) && (str_starts_with($app->pitch_message, 'Peserta:') || str_starts_with($app->pitch_message, 'Siswa:'))) {
                     $parts = array_map('trim', explode('|', $app->pitch_message));
-                    $head = trim(str_replace('Siswa:', '', $parts[0] ?? ''));
+                    $rawPrefix = str_starts_with($parts[0] ?? '', 'Peserta:') ? 'Peserta:' : 'Siswa:';
+                    $head = trim(str_replace($rawPrefix, '', $parts[0] ?? ''));
                     if (preg_match('/^(.*?)\s*\((.*?)\)$/', $head, $pm)) {
                         $studentName = trim($pm[1]);
                         if ($major === '') $major = trim($pm[2]);
