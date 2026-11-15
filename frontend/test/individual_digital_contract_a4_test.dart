@@ -51,6 +51,46 @@ void main() {
       expect(AppPaginationBar.slicePage(apps, 3, pageSize: 5).length, 3);
     });
 
+    test('Supports 10 needed positions with distinct per-person dynamic clauses & individual fees', () {
+      const roles = [
+        'videographer',
+        'photographer',
+        'editor',
+        'animator',
+        'mc',
+        'singer',
+        'makeup_artist',
+        'drone',
+        'desain_grafis',
+        'tukang_kendang',
+      ];
+      final tenContracts = List.generate(10, (i) {
+        final idx = i + 1;
+        final role = roles[i];
+        final fee = (i + 2) * 1500000.0;
+        return OpportunityApprovedCreatorModel.fromJson({
+          'id': 'worker-$idx',
+          'application_id': 'app-10-$idx',
+          'name': 'Pekerja Spesialis $idx',
+          'username': 'pekerja_$idx',
+          'sub_role': role,
+          'capability': role,
+          'agreed_price': fee,
+          'contract_number': 'KVN/TAK/CTR/20261115/OPP10-W$idx',
+          'dynamic_terms': [
+            'Lingkup Tugas Individu: Pekerja Spesialis $idx bertugas sebagai $role.',
+            'Honorarium Individu: Rp ${fee.toInt()} untuk Pekerja Spesialis $idx ($role).',
+          ],
+        });
+      });
+
+      expect(tenContracts.length, 10);
+      // Every worker has distinct dynamic clauses and fee
+      final firstClauses = tenContracts.map((c) => c.dynamicTerms.first).toSet();
+      expect(firstClauses.length, 10);
+      expect(tenContracts.first.agreedPrice, isNot(equals(tenContracts.last.agreedPrice)));
+    });
+
     test('OpportunityApprovedCreatorModel parses individual contract fields & finality lock', () {
       final unsignedModel = OpportunityApprovedCreatorModel.fromJson({
         'id': 'creator-1',

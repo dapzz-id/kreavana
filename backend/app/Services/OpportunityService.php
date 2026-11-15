@@ -425,14 +425,18 @@ class OpportunityService extends BaseService
 
         $applications = $query->orderBy('created_at', 'desc')->get();
         $opp = Opportunity::where('id', $opportunityId)->first();
+        $approvedCount = max(1, $applications->where('status', 'approved')->count());
 
-        return $applications->map(function ($app) use ($opp) {
+        return $applications->map(function ($app) use ($opp, $approvedCount) {
             $clientSig = $app->client_signature ?? $opp?->client_signature;
             $clientSignedAt = $app->client_signed_at ?? $opp?->client_signed_at;
             $creatorSig = $app->creator_signature;
             $creatorSignedAt = $app->creator_signed_at;
             $contractNumber = $app->contract_number ?: self::generateContractNumber($app->opportunity_id, $app->id, $app->reviewed_at ?? $app->created_at);
-            $agreedPrice = (float) ($app->counter_offer_price ?: $app->bid_price ?: 0);
+            $agreedPrice = self::resolveIndividualAgreedPrice($opp, $app, $approvedCount);
+            $resolvedTerms = !empty($app->dynamic_terms)
+                ? $app->dynamic_terms
+                : ($opp ? self::buildIndividualDefaultTerms($opp, $app, $agreedPrice) : []);
 
             return [
                 'id' => $app->id,
@@ -475,7 +479,7 @@ class OpportunityService extends BaseService
                 'creator_signature' => $creatorSig,
                 'creator_signed_at' => $creatorSignedAt?->toIso8601String(),
                 'is_contract_final' => !empty($clientSig) && !empty($clientSignedAt) && !empty($creatorSig) && !empty($creatorSignedAt),
-                'dynamic_terms' => !empty($app->dynamic_terms) ? $app->dynamic_terms : ($opp?->dynamic_terms ?? []),
+                'dynamic_terms' => $resolvedTerms,
                 'status' => $app->status,
                 'rejection_reason' => $app->rejection_reason,
                 'reviewed_at' => $app->reviewed_at?->toIso8601String(),
@@ -491,6 +495,93 @@ class OpportunityService extends BaseService
     {
         $dateStr = $date ? \Carbon\Carbon::parse($date)->format('Ymd') : date('Ymd');
         return 'KVN/TAK/CTR/' . $dateStr . '/' . strtoupper(substr($oppId, 0, 4)) . '-' . strtoupper(substr($appId, 0, 4));
+    }
+
+    /**
+     * Hitung nominal kesepakatan kontrak individu per pelamar (fallback proporsional dari escrow/budget jika belum ada bid_price).
+     */
+    public static function resolveIndividualAgreedPrice($opp, $app, int $approvedCount = 1): float
+    {
+        $explicit = (float) ($app->counter_offer_price ?: $app->bid_price ?: 0);
+        if ($explicit > 0) {
+            return $explicit;
+        }
+        $divider = max(1, $approvedCount);
+        $escrow = (float) ($opp?->escrow_amount ?? 0);
+        if ($escrow > 0) {
+            return round($escrow / $divider, 0);
+        }
+        if (!empty($opp?->budget_range) && preg_match('/(\d[\d\.\,]*)/', (string) $opp->budget_range, $matches)) {
+            $cleaned = (float) str_replace(['.', ','], '', $matches[1]);
+            if ($cleaned > 0) {
+                return round($cleaned / $divider, 0);
+            }
+        }
+        return 0.0;
+    }
+
+    /**
+     * Susun klausul dinamis default yang berbeda untuk setiap individu & posisi/sub-role.
+     */
+    public static function buildIndividualDefaultTerms($opp, $app, float $agreedPrice): array
+    {
+        $creatorName = $app->creator?->name ?? 'Pekerja Kreatif';
+        $rawRole = $app->sub_role_slug
+            ?: (is_string($app->creator?->sub_role) ? $app->creator?->sub_role : ($app->creator?->sub_role?->value ?? ($opp->sub_role_slug ?? 'Kreator')));
+        $roleLabels = [
+            'videographer' => 'Videografer',
+            'videografi' => 'Videografer',
+            'photographer' => 'Fotografer',
+            'fotografi' => 'Fotografer',
+            'editor' => 'Video Editor',
+            'animator' => 'Animator & Motion Artist',
+            'desain_grafis' => 'Desainer Grafis',
+            'designer' => 'Desainer Kreatif',
+            'illustrator' => 'Ilustrator',
+            'mc' => 'Master of Ceremony (MC)',
+            'singer' => 'Penyanyi / Vokalis',
+            'tukang_kendang' => 'Musisi / Pengrawit Kendang',
+            'makeup_artist' => 'Make Up Artist (MUA)',
+            'model' => 'Model & Talent',
+            'drone' => 'Pilot Drone / Aerial',
+            'event_organizer' => 'Event Organizer (EO)',
+            'wedding_organizer' => 'Wedding Organizer (WO)',
+        ];
+        $slugKey = strtolower(trim((string) $rawRole));
+        $roleLabel = $roleLabels[$slugKey] ?? ucwords(str_replace('_', ' ', $slugKey));
+        $oppTitle = $opp->title ?? 'Proyek Kreavana';
+        $formattedPrice = 'Rp ' . number_format(max(0, $agreedPrice), 0, ',', '.');
+        $schemeLabel = ($app->payment_scheme ?? 'full_at_end') === 'termin'
+            ? 'Bertahap (Termin Progress)'
+            : 'Penuh di Akhir Acara (100% Lunas via Escrow)';
+
+        $terms = [
+            "Lingkup Tugas Individu: Pihak Kedua ({$creatorName}) bertugas khusus sebagai {$roleLabel} pada proyek '{$oppTitle}' dan bertanggung jawab penuh atas target kerja posisi {$roleLabel} sesuai jadwal penyelenggara.",
+        ];
+
+        if (in_array($slugKey, ['videographer', 'videografi', 'photographer', 'fotografi', 'drone'])) {
+            $terms[] = "Spesifikasi Teknis & Perangkat ({$roleLabel}): Penyediaan unit kamera utama, lensa, memori, baterai cadangan, serta penyerahan file mentah (RAW/Footage) dan hasil akhir kurasi untuk posisi {$roleLabel} ({$creatorName}) disepakati bersama Penyelenggara.";
+        } elseif (in_array($slugKey, ['editor', 'animator', 'desain_grafis', 'designer', 'illustrator'])) {
+            $terms[] = "Spesifikasi Produksi & Revisi ({$roleLabel}): Pihak Kedua ({$creatorName}) wajib menyerahkan preview draf tepat waktu, mengakomodasi revisi sesuai kesepakatan kerja, dan menyerahkan master file resolusi penuh.";
+        } elseif (in_array($slugKey, ['mc', 'singer', 'tukang_kendang', 'model'])) {
+            $terms[] = "Kesiapan Panggung & Gladi Bersih ({$roleLabel}): Pihak Kedua ({$creatorName}) wajib mengikuti sesi briefing/gladi bersih (soundcheck), mematuhi ketentuan kostum/wardrobe acara, dan tampil tepat waktu sesuai rundown.";
+        } elseif ($slugKey === 'makeup_artist') {
+            $terms[] = "Standar Perlengkapan & Higienitas ({$roleLabel}): Pihak Kedua ({$creatorName}) wajib menyediakan perlengkapan kosmetik berstandar profesional yang higienis dan hadir sesuai jadwal persiapan talent.";
+        } else {
+            $terms[] = "Fasilitas & Koordinasi Teknis ({$roleLabel}): Penyediaan peralatan kerja utama, akses lokasi, konsumsi, dan koordinasi teknis di lapangan untuk {$creatorName} ({$roleLabel}) disepakati tertulis bersama Penyelenggara.";
+        }
+
+        $terms[] = "Honorarium Individu & Proteksi Escrow: Nilai kontrak individu untuk {$creatorName} ({$roleLabel}) disepakati sebesar {$formattedPrice} dengan skema pembayaran {$schemeLabel}, dijamin melalui Rekening Bersama CV Transforma Alam Kreasi (Aplikasi Kreavana).";
+
+        if (!empty($app->counter_offer_notes)) {
+            $terms[] = "Catatan Kesepakatan Negosiasi ({$creatorName}): " . trim((string) $app->counter_offer_notes);
+        } elseif (!empty($app->questions_notes)) {
+            $terms[] = "Catatan Teknis & Fasilitas Pelamar ({$creatorName}): " . trim((string) $app->questions_notes);
+        } else {
+            $terms[] = "Pengesahan 2 Arah & Finalitas: Kontrak individu ini mengikat secara sah dan terkunci permanen (Kontrak Fix) setelah disetujui serta ditandatangani secara elektronik oleh Pembuat Acara dan {$creatorName}.";
+        }
+
+        return $terms;
     }
 
     /**
@@ -743,12 +834,25 @@ class OpportunityService extends BaseService
                     abort(422, 'Kontrak ini telah disetujui dan ditandatangani oleh kedua belah pihak (Kontrak Fix & Final) sehingga tidak dapat diedit lagi.');
                 }
 
+                // Jika salah satu pihak mengubah klausul sebelum kontrak final, reset tanda tangan sementara pada kontrak ini
+                // agar kedua belah pihak wajib menyetujui & menandatangani versi klausul yang sama (Mutual Approval).
                 $targetApp->dynamic_terms = $cleanedTerms;
+                $targetApp->client_signature = null;
+                $targetApp->client_signed_at = null;
+                $targetApp->creator_signature = null;
+                $targetApp->creator_signed_at = null;
                 $targetApp->save();
 
                 JobContract::where('opportunity_id', $opp->id)
                     ->where('creator_id', $targetApp->creator_id)
-                    ->update(['dynamic_terms' => $cleanedTerms]);
+                    ->update([
+                        'dynamic_terms' => $cleanedTerms,
+                        'client_signature' => null,
+                        'client_signed_at' => null,
+                        'creator_signature' => null,
+                        'creator_signed_at' => null,
+                        'creator_approved' => false,
+                    ]);
             } else {
                 $approvedApps = OpportunityApplication::where('opportunity_id', $opp->id)
                     ->where('status', 'approved')
@@ -1981,8 +2085,10 @@ class OpportunityService extends BaseService
                 if (empty($application->contract_number)) {
                     $application->contract_number = self::generateContractNumber($opp->id, $application->id, $application->reviewed_at);
                 }
-                if (empty($application->dynamic_terms) && !empty($opp->dynamic_terms)) {
-                    $application->dynamic_terms = $opp->dynamic_terms;
+                if (empty($application->dynamic_terms)) {
+                    $application->loadMissing('creator');
+                    $agreedPrice = self::resolveIndividualAgreedPrice($opp, $application, max(1, (int) $approvedCount + 1));
+                    $application->dynamic_terms = self::buildIndividualDefaultTerms($opp, $application, $agreedPrice);
                 }
                 $application->save();
 
@@ -2197,8 +2303,9 @@ class OpportunityService extends BaseService
         $adminSignedAt = $opp->admin_signed_at ?: now();
 
         $approvedApps = $opp->approvedApplications;
-        if ($approvedApps->isNotEmpty()) {
-            return $approvedApps->map(function ($app) use ($opp, $contractsByCreator, $defaultTerms, $adminName, $adminTitle, $adminSignatureUrl, $adminSignedAt) {
+                if ($approvedApps->isNotEmpty()) {
+            $approvedCount = max(1, $approvedApps->count());
+            return $approvedApps->map(function ($app) use ($opp, $contractsByCreator, $approvedCount, $adminName, $adminTitle, $adminSignatureUrl, $adminSignedAt) {
                 $c = $contractsByCreator->get($app->creator_id);
                 $creator = $app->creator ?: $c?->creator;
                 $client = $c?->client ?: $opp->user;
@@ -2207,7 +2314,7 @@ class OpportunityService extends BaseService
                     ?: $app->contract_number
                     ?: self::generateContractNumber($opp->id, $app->id, $app->reviewed_at ?? $app->created_at);
 
-                $agreedPrice = (float) ($c?->agreed_price ?: $app->counter_offer_price ?: $app->bid_price ?: 0);
+                $agreedPrice = (float) ($c?->agreed_price ?: self::resolveIndividualAgreedPrice($opp, $app, $approvedCount));
                 $clientSig = $c?->client_signature ?? $app->client_signature ?? $opp->client_signature;
                 $clientSignedAt = $c?->client_signed_at ?? $app->client_signed_at ?? $opp->client_signed_at;
                 $creatorSig = $c?->creator_signature ?? $app->creator_signature;
@@ -2216,7 +2323,7 @@ class OpportunityService extends BaseService
 
                 $terms = !empty($c?->dynamic_terms)
                     ? $c->dynamic_terms
-                    : (!empty($app->dynamic_terms) ? $app->dynamic_terms : ($opp->dynamic_terms ?: $defaultTerms));
+                    : (!empty($app->dynamic_terms) ? $app->dynamic_terms : self::buildIndividualDefaultTerms($opp, $app, $agreedPrice));
 
                 return [
                     'id' => $c?->id ?? $app->id,
@@ -2447,13 +2554,17 @@ class OpportunityService extends BaseService
 
         // Format public approved creators (1 orang = 1 kontrak digital individu)
         if ($opp->relationLoaded('approvedApplications')) {
-            $data['approved_creators'] = $opp->approvedApplications->map(function ($app) use ($opp) {
+            $approvedCount = max(1, $opp->approvedApplications->count());
+            $data['approved_creators'] = $opp->approvedApplications->map(function ($app) use ($opp, $approvedCount) {
                 $clientSig = $app->client_signature ?? $opp->client_signature;
                 $clientSignedAt = $app->client_signed_at ?? $opp->client_signed_at;
                 $creatorSig = $app->creator_signature;
                 $creatorSignedAt = $app->creator_signed_at;
                 $contractNumber = $app->contract_number ?: self::generateContractNumber($opp->id, $app->id, $app->reviewed_at ?? $app->created_at);
-                $agreedPrice = (float) ($app->counter_offer_price ?: $app->bid_price ?: 0);
+                $agreedPrice = self::resolveIndividualAgreedPrice($opp, $app, $approvedCount);
+                $resolvedTerms = !empty($app->dynamic_terms)
+                    ? $app->dynamic_terms
+                    : self::buildIndividualDefaultTerms($opp, $app, $agreedPrice);
 
                 return [
                     'id' => $app->creator?->id,
@@ -2470,7 +2581,7 @@ class OpportunityService extends BaseService
                     'creator_signature' => $creatorSig,
                     'creator_signed_at' => $creatorSignedAt?->toIso8601String(),
                     'is_contract_final' => !empty($clientSig) && !empty($clientSignedAt) && !empty($creatorSig) && !empty($creatorSignedAt),
-                    'dynamic_terms' => !empty($app->dynamic_terms) ? $app->dynamic_terms : ($opp->dynamic_terms ?? []),
+                    'dynamic_terms' => $resolvedTerms,
                 ];
             })->filter(fn ($c) => !empty($c['id']))->values()->toArray();
         }

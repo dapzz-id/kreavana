@@ -159,9 +159,15 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                       ]
                     : <OpportunityApprovedCreatorModel>[]);
 
+            final fallbackCount = approvedList.isNotEmpty ? approvedList.length : 1;
+            final fallbackPerPerson = (_opp.escrowAmount ?? 0) > 0
+                ? (_opp.escrowAmount! / fallbackCount)
+                : (widget.initialContract?.agreedPrice ?? 0.0);
             _applications = approvedList.map((c) {
               return OpportunityApplicationModel(
-                id: 'app_${c.id}',
+                id: (c.applicationId != null && c.applicationId!.isNotEmpty)
+                    ? c.applicationId!
+                    : 'app_${c.id}',
                 opportunityId: _opp.id ?? '',
                 rawCreatorId: c.id,
                 creator: OpportunityApplicantModel(
@@ -172,12 +178,18 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                   subRole: c.subRole ?? _opp.subRoleSlug,
                   isVerified: true,
                 ),
-                subRoleSlug: c.subRole ?? _opp.subRoleSlug,
+                subRoleSlug: c.capability ?? c.subRole ?? _opp.subRoleSlug,
                 pitchMessage: widget.initialContract?.description ?? 'Kontrak kerja sama aktif untuk proyek ${_opp.title}.',
-                bidPrice: widget.initialContract?.agreedPrice,
+                bidPrice: c.agreedPrice > 0
+                    ? c.agreedPrice
+                    : (fallbackPerPerson > 0 ? fallbackPerPerson : null),
                 status: 'approved',
+                contractNumber: c.contractNumber,
+                clientSignature: c.clientSignature ?? _opp.clientSignature,
+                clientSignedAt: c.clientSignedAt ?? _opp.clientSignedAt,
                 creatorSignature: c.creatorSignature,
                 creatorSignedAt: c.creatorSignedAt,
+                dynamicTerms: c.dynamicTerms,
                 workerStatus: widget.initialContract?.workStatus ?? 'in_progress',
                 workerProgress: widget.initialContract?.workerProgress ?? 0,
                 submittedDeliverables: widget.initialContract?.deliverables ?? const [],
@@ -212,9 +224,15 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                       ]
                     : <OpportunityApprovedCreatorModel>[]);
 
+            final fallbackCount = approvedList.isNotEmpty ? approvedList.length : 1;
+            final fallbackPerPerson = (_opp.escrowAmount ?? 0) > 0
+                ? (_opp.escrowAmount! / fallbackCount)
+                : (widget.initialContract?.agreedPrice ?? 0.0);
             _applications = approvedList.map((c) {
               return OpportunityApplicationModel(
-                id: 'app_${c.id}',
+                id: (c.applicationId != null && c.applicationId!.isNotEmpty)
+                    ? c.applicationId!
+                    : 'app_${c.id}',
                 opportunityId: _opp.id ?? '',
                 rawCreatorId: c.id,
                 creator: OpportunityApplicantModel(
@@ -225,12 +243,18 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                   subRole: c.subRole ?? _opp.subRoleSlug,
                   isVerified: true,
                 ),
-                subRoleSlug: c.subRole ?? _opp.subRoleSlug,
+                subRoleSlug: c.capability ?? c.subRole ?? _opp.subRoleSlug,
                 pitchMessage: widget.initialContract?.description ?? 'Kontrak kerja sama aktif untuk proyek ${_opp.title}.',
-                bidPrice: widget.initialContract?.agreedPrice,
+                bidPrice: c.agreedPrice > 0
+                    ? c.agreedPrice
+                    : (fallbackPerPerson > 0 ? fallbackPerPerson : null),
                 status: 'approved',
+                contractNumber: c.contractNumber,
+                clientSignature: c.clientSignature ?? _opp.clientSignature,
+                clientSignedAt: c.clientSignedAt ?? _opp.clientSignedAt,
                 creatorSignature: c.creatorSignature,
                 creatorSignedAt: c.creatorSignedAt,
+                dynamicTerms: c.dynamicTerms,
                 workerStatus: widget.initialContract?.workStatus ?? 'in_progress',
                 workerProgress: widget.initialContract?.workerProgress ?? 0,
                 submittedDeliverables: widget.initialContract?.deliverables ?? const [],
@@ -1276,6 +1300,100 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
     'Honorarium kerja diamankan 100% pada sistem Escrow Rekber Aplikasi Kreavana (CV Transforma Alam Kreasi) dan hanya dicairkan setelah hasil pekerjaan disetujui.',
   ];
 
+  double _parseBudgetFallback() {
+    if ((_opp.escrowAmount ?? 0) > 0) return _opp.escrowAmount!;
+    final raw = _opp.budgetRange ?? '';
+    final match = RegExp(r'(\d[\d\.\,]*)').firstMatch(raw);
+    if (match != null) {
+      final cleaned = match.group(1)!.replaceAll(RegExp(r'[\.\,]'), '');
+      final parsed = double.tryParse(cleaned);
+      if (parsed != null && parsed > 0) return parsed;
+    }
+    return 0.0;
+  }
+
+  /// Menghasilkan klausul kontrak dinamis yang berbeda-beda sesuai nama pekerja, posisi/sub-role, nominal, dan catatan negosiasi individu.
+  List<String> _buildIndividualDefaultTerms({
+    required String creatorName,
+    required String subRoleSlug,
+    required String subRoleLabel,
+    required double agreedPrice,
+    required bool isTermPayment,
+    String? counterOfferNotes,
+    String? questionsNotes,
+  }) {
+    final currencyFmt = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
+    final formattedPrice = agreedPrice > 0
+        ? currencyFmt.format(agreedPrice)
+        : (_opp.budgetRange ?? 'Sesuai Kesepakatan');
+    final schemeLabel = isTermPayment
+        ? 'Bertahap (Termin Progress)'
+        : 'Penuh di Akhir Acara (100% Lunas via Escrow)';
+    final slugKey = subRoleSlug.trim().toLowerCase();
+
+    final terms = <String>[
+      'Lingkup Tugas Individu: Pihak Kedua ($creatorName) bertugas khusus sebagai $subRoleLabel pada proyek "${_opp.title}" dan bertanggung jawab penuh atas target kerja posisi $subRoleLabel sesuai jadwal penyelenggara.',
+    ];
+
+    if ([
+      'videographer',
+      'videografi',
+      'photographer',
+      'fotografi',
+      'drone',
+    ].contains(slugKey)) {
+      terms.add(
+        'Spesifikasi Teknis & Perangkat ($subRoleLabel): Penyediaan unit kamera utama, lensa, memori, baterai cadangan, serta penyerahan file mentah (RAW/Footage) dan hasil akhir kurasi untuk posisi $subRoleLabel ($creatorName) disepakati bersama Penyelenggara.',
+      );
+    } else if ([
+      'editor',
+      'animator',
+      'desain_grafis',
+      'designer',
+      'illustrator',
+    ].contains(slugKey)) {
+      terms.add(
+        'Spesifikasi Produksi & Revisi ($subRoleLabel): Pihak Kedua ($creatorName) wajib menyerahkan preview draf tepat waktu, mengakomodasi revisi sesuai kesepakatan kerja, dan menyerahkan master file resolusi penuh.',
+      );
+    } else if (['mc', 'singer', 'tukang_kendang', 'model'].contains(slugKey)) {
+      terms.add(
+        'Kesiapan Panggung & Gladi Bersih ($subRoleLabel): Pihak Kedua ($creatorName) wajib mengikuti sesi briefing/gladi bersih (soundcheck), mematuhi ketentuan kostum/wardrobe acara, dan tampil tepat waktu sesuai rundown.',
+      );
+    } else if (slugKey == 'makeup_artist') {
+      terms.add(
+        'Standar Perlengkapan & Higienitas ($subRoleLabel): Pihak Kedua ($creatorName) wajib menyediakan perlengkapan kosmetik berstandar profesional yang higienis dan hadir sesuai jadwal persiapan talent.',
+      );
+    } else {
+      terms.add(
+        'Fasilitas & Koordinasi Teknis ($subRoleLabel): Penyediaan peralatan kerja utama, akses lokasi, konsumsi, dan koordinasi teknis di lapangan untuk $creatorName ($subRoleLabel) disepakati tertulis bersama Penyelenggara.',
+      );
+    }
+
+    terms.add(
+      'Honorarium Individu & Proteksi Escrow: Nilai kontrak individu untuk $creatorName ($subRoleLabel) disepakati sebesar $formattedPrice dengan skema pembayaran $schemeLabel, dijamin melalui Rekening Bersama CV Transforma Alam Kreasi (Aplikasi Kreavana).',
+    );
+
+    if (counterOfferNotes != null && counterOfferNotes.trim().isNotEmpty) {
+      terms.add(
+        'Catatan Kesepakatan Negosiasi ($creatorName): ${counterOfferNotes.trim()}',
+      );
+    } else if (questionsNotes != null && questionsNotes.trim().isNotEmpty) {
+      terms.add(
+        'Catatan Teknis & Fasilitas Pelamar ($creatorName): ${questionsNotes.trim()}',
+      );
+    } else {
+      terms.add(
+        'Pengesahan 2 Arah & Finalitas: Kontrak individu ini mengikat secara sah dan terkunci permanen (Kontrak Fix) setelah disetujui serta ditandatangani secara elektronik oleh Pembuat Acara dan $creatorName.',
+      );
+    }
+
+    return terms;
+  }
+
   String _fallbackContractNumber(String appOrCreatorId) {
     final oppPrefix = (_opp.id != null && _opp.id!.length >= 4)
         ? _opp.id!.substring(0, 4).toUpperCase()
@@ -1288,16 +1406,24 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
   }
 
   /// Menghasilkan daftar kontrak individu (1 orang = 1 kontrak 3 pihak).
-  /// Jika terdapat 13 pelamar yang disetujui, maka daftar ini menghasilkan 13 kontrak terpisah.
+  /// Jika terdapat 10 atau 13 pelamar yang disetujui, maka daftar ini menghasilkan 10/13 kontrak terpisah dengan klausul & nominal masing-masing.
   List<_IndividualContractEntry> _getIndividualContractEntries([
     List<JobContract> fetchedContracts = const [],
   ]) {
     final approvedApps = _applications.where((a) => a.isApproved).toList();
     final entries = <_IndividualContractEntry>[];
     final seenCreatorIds = <String>{};
+    final totalApprovedCount = approvedApps.isNotEmpty
+        ? approvedApps.length
+        : (_opp.approvedCreators.isNotEmpty ? _opp.approvedCreators.length : 1);
+    final totalBudgetFallback = _parseBudgetFallback();
+    final perPersonFallbackFee = totalBudgetFallback > 0
+        ? (totalBudgetFallback / totalApprovedCount).roundToDouble()
+        : 0.0;
 
     for (final app in approvedApps) {
       final cid = app.creatorId;
+      if (cid.isNotEmpty && seenCreatorIds.contains(cid)) continue;
       if (cid.isNotEmpty) seenCreatorIds.add(cid);
       final matchedCreator = _opp.approvedCreators
           .where((c) => (app.id.isNotEmpty && c.applicationId == app.id) || (cid.isNotEmpty && c.id == cid))
@@ -1321,29 +1447,43 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
           matchedCreator?.creatorSignedAt ??
           matchedJobContract?.creatorSignedAt?.toIso8601String();
 
+      final fee = app.agreedFee > 0
+          ? app.agreedFee
+          : (matchedCreator != null && matchedCreator.agreedPrice > 0
+              ? matchedCreator.agreedPrice
+              : ((matchedJobContract?.agreedPrice ?? 0.0) > 0
+                  ? matchedJobContract!.agreedPrice
+                  : perPersonFallbackFee));
+
+      final creatorName = app.creator?.name ?? matchedCreator?.name ?? 'Pekerja Kreatif';
+      final rawSubRole = app.subRoleSlug.isNotEmpty
+          ? app.subRoleSlug
+          : (app.creator?.subRole ?? matchedCreator?.capability ?? matchedCreator?.subRole ?? _opp.subRoleSlug);
+      final subRoleLabel = app.subRoleLabel;
+
       final terms = app.dynamicTerms.isNotEmpty
           ? List<String>.from(app.dynamicTerms)
           : (matchedCreator != null && matchedCreator.dynamicTerms.isNotEmpty
               ? List<String>.from(matchedCreator.dynamicTerms)
               : (matchedJobContract != null && matchedJobContract.dynamicTerms.isNotEmpty
                   ? List<String>.from(matchedJobContract.dynamicTerms)
-                  : (_opp.dynamicTerms.isNotEmpty
-                      ? List<String>.from(_opp.dynamicTerms)
-                      : List<String>.from(_defaultContractTerms))));
-
-      final fee = app.agreedFee > 0
-          ? app.agreedFee
-          : (matchedCreator != null && matchedCreator.agreedPrice > 0
-              ? matchedCreator.agreedPrice
-              : (matchedJobContract?.agreedPrice ?? 0.0));
+                  : _buildIndividualDefaultTerms(
+                      creatorName: creatorName,
+                      subRoleSlug: rawSubRole,
+                      subRoleLabel: subRoleLabel,
+                      agreedPrice: fee,
+                      isTermPayment: app.isTermPayment,
+                      counterOfferNotes: app.counterOfferNotes,
+                      questionsNotes: app.questionsNotes,
+                    )));
 
       entries.add(
         _IndividualContractEntry(
           applicationId: app.id,
           creatorId: cid,
-          creatorName: app.creator?.name ?? matchedCreator?.name ?? 'Pekerja Kreatif',
+          creatorName: creatorName,
           creatorUsername: app.creator?.username ?? matchedCreator?.username ?? 'kreator',
-          subRoleLabel: app.subRoleLabel,
+          subRoleLabel: subRoleLabel,
           contractNumber: (app.contractNumber != null && app.contractNumber!.isNotEmpty)
               ? app.contractNumber!
               : ((matchedCreator?.contractNumber != null && matchedCreator!.contractNumber!.isNotEmpty)
@@ -1379,27 +1519,38 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
       final creatorSignedAt = c.creatorSignedAt ??
           matchedJobContract?.creatorSignedAt?.toIso8601String();
 
+      final fee = c.agreedPrice > 0
+          ? c.agreedPrice
+          : ((matchedJobContract?.agreedPrice ?? 0.0) > 0
+              ? matchedJobContract!.agreedPrice
+              : perPersonFallbackFee);
+      final creatorName = c.name.isNotEmpty ? c.name : 'Pekerja Kreatif';
+      final rawSubRole = c.capability ?? c.subRole ?? _opp.subRoleSlug;
+      final subRoleLabel = rawSubRole.replaceAll('_', ' ');
+
       final terms = c.dynamicTerms.isNotEmpty
           ? List<String>.from(c.dynamicTerms)
           : (matchedJobContract != null && matchedJobContract.dynamicTerms.isNotEmpty
               ? List<String>.from(matchedJobContract.dynamicTerms)
-              : (_opp.dynamicTerms.isNotEmpty
-                  ? List<String>.from(_opp.dynamicTerms)
-                  : List<String>.from(_defaultContractTerms)));
+              : _buildIndividualDefaultTerms(
+                  creatorName: creatorName,
+                  subRoleSlug: rawSubRole,
+                  subRoleLabel: subRoleLabel,
+                  agreedPrice: fee,
+                  isTermPayment: false,
+                ));
 
       entries.add(
         _IndividualContractEntry(
           applicationId: c.applicationId,
           creatorId: c.id,
-          creatorName: c.name.isNotEmpty ? c.name : 'Pekerja Kreatif',
+          creatorName: creatorName,
           creatorUsername: c.username.isNotEmpty ? c.username : 'kreator',
-          subRoleLabel: (c.capability ?? c.subRole ?? _opp.subRoleSlug).replaceAll('_', ' '),
+          subRoleLabel: subRoleLabel,
           contractNumber: (c.contractNumber != null && c.contractNumber!.isNotEmpty)
               ? c.contractNumber!
               : (matchedJobContract?.contractNumber ?? _fallbackContractNumber(c.applicationId ?? c.id)),
-          agreedPrice: c.agreedPrice > 0
-              ? c.agreedPrice
-              : (matchedJobContract?.agreedPrice ?? 0.0),
+          agreedPrice: fee,
           paymentSchemeLabel: 'Pembayaran Sekaligus (100% Setelah Pekerjaan Selesai)',
           clientSignature: clientSig,
           clientSignedAt: clientSignedAt,
@@ -2093,10 +2244,10 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    const Expanded(
+                                    Expanded(
                                       child: Text(
-                                        'PASAL 3 — KETENTUAN KHUSUS & KLAUSUL KESEPAKATAN:',
-                                        style: TextStyle(
+                                        'PASAL 3 — KETENTUAN KHUSUS & KLAUSUL INDIVIDU (${activeEntry.creatorName} • ${activeEntry.subRoleLabel}):',
+                                        style: const TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 12.5,
                                         ),
@@ -2122,7 +2273,7 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                                           color: Color(0xFF2563EB),
                                         ),
                                         label: const Text(
-                                          'Tambah Klausul',
+                                          'Tambah Klausul Individu',
                                           style: TextStyle(
                                             fontSize: 11.5,
                                             fontWeight: FontWeight.bold,
@@ -2165,8 +2316,8 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                                 const SizedBox(height: 4),
                                 Text(
                                   isContractLocked
-                                      ? 'Kontrak ini telah disetujui dan ditandatangani kedua belah pihak (Kontrak Fix & Final) sehingga seluruh klausul telah dikunci secara permanen.'
-                                      : 'Klausul di bawah ini dapat disepakati sebelum kedua belah pihak menandatangani kontrak. Setelah kedua pihak tanda tangan, kontrak menjadi FINAL dan terkunci:',
+                                      ? 'Kontrak individu untuk ${activeEntry.creatorName} (${activeEntry.subRoleLabel}) telah disetujui dan ditandatangani kedua belah pihak (Kontrak Fix & Final) sehingga seluruh klausul telah dikunci secara permanen.'
+                                      : 'Klausul khusus untuk ${activeEntry.creatorName} (${activeEntry.subRoleLabel}) ini terpisah dari pelamar lain dan dapat diedit oleh Pembuat Acara maupun Pelamar ini. Jika ada perubahan klausul, kedua belah pihak wajib menandatangani versi terbaru hingga menjadi FINAL:',
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
@@ -8847,7 +8998,6 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
   // ── Event Progress Milestone Tracker ───────────────────────────────────────
   Widget _buildEventProgressCard(bool isDark) {
     final progress = _opp.eventProgress;
-    final approvedList = _applications.where((a) => a.isApproved).toList();
 
     return Container(
       width: double.infinity,
@@ -8977,65 +9127,84 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
           const Divider(),
           const SizedBox(height: 12),
 
-          // Participating Creators
-          Row(
-            children: [
-              const Icon(Icons.groups_rounded, size: 18, color: Color(0xFF059669)),
-              const SizedBox(width: 8),
-              Text(
-                'Kreator yang Berpartisipasi (${approvedList.length + _opp.approvedCreators.length})',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-              ),
-            ],
+          // Participating Creators (Deduplicated 1 Orang = 1 Kontrak Individu)
+          Builder(
+            builder: (context) {
+              final participatingEntries = _getIndividualContractEntries();
+              final currencyFmt = NumberFormat.currency(
+                locale: 'id_ID',
+                symbol: 'Rp ',
+                decimalDigits: 0,
+              );
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.groups_rounded, size: 18, color: Color(0xFF059669)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Kreator yang Berpartisipasi (${participatingEntries.length} Orang • ${participatingEntries.length} Kontrak Individu)',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  if (participatingEntries.isEmpty)
+                    Text(
+                      'Belum ada nama kreator yang disetujui.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                      ),
+                    )
+                  else
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: participatingEntries.asMap().entries.map((entry) {
+                        final idx = entry.key;
+                        final item = entry.value;
+                        final feeStr = item.agreedPrice > 0
+                            ? ' • ${currencyFmt.format(item.agreedPrice)}'
+                            : '';
+                        return ActionChip(
+                          onPressed: () => _showTripartiteContractModal(
+                            initialIndex: idx,
+                            initialApplicationId: item.applicationId,
+                            initialCreatorId: item.creatorId,
+                          ),
+                          avatar: CircleAvatar(
+                            backgroundColor: const Color(0xFF059669).withValues(alpha: 0.2),
+                            child: Text(
+                              item.creatorName.isNotEmpty
+                                  ? item.creatorName[0].toUpperCase()
+                                  : 'K',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF059669),
+                              ),
+                            ),
+                          ),
+                          label: Text(
+                            '${item.creatorName} (${item.subRoleLabel}$feeStr)',
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          backgroundColor: const Color(0xFF10B981).withValues(alpha: 0.1),
+                          side: const BorderSide(color: Color(0xFF10B981), width: 0.6),
+                        );
+                      }).toList(),
+                    ),
+                ],
+              );
+            },
           ),
-          const SizedBox(height: 10),
-
-          if (approvedList.isEmpty && _opp.approvedCreators.isEmpty)
-            Text(
-              'Belum ada nama kreator yang disetujui.',
-              style: TextStyle(fontSize: 12, color: isDark ? AppTheme.textMuted : Colors.grey.shade600),
-            )
-          else
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ...approvedList.map((app) {
-                  return Chip(
-                    avatar: CircleAvatar(
-                      backgroundImage: app.creator?.avatarUrl != null
-                          ? CachedNetworkImageProvider(app.creator!.avatarUrl!)
-                          : null,
-                      child: app.creator?.avatarUrl == null
-                          ? Text(
-                              app.creator?.name.isNotEmpty == true ? app.creator!.name[0].toUpperCase() : 'K',
-                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-                            )
-                          : null,
-                    ),
-                    label: Text('${app.creator?.name ?? "Kreator"} (${app.subRoleSlug.replaceAll('_', ' ')})'),
-                    backgroundColor: const Color(0xFF10B981).withValues(alpha: 0.1),
-                    side: const BorderSide(color: Color(0xFF10B981), width: 0.5),
-                  );
-                }),
-                ..._opp.approvedCreators.map((c) {
-                  return Chip(
-                    avatar: CircleAvatar(
-                      backgroundImage: c.avatarUrl != null ? CachedNetworkImageProvider(c.avatarUrl!) : null,
-                      child: c.avatarUrl == null
-                          ? Text(
-                              c.name.isNotEmpty ? c.name[0].toUpperCase() : 'K',
-                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-                            )
-                          : null,
-                    ),
-                    label: Text('${c.name} (${c.subRole ?? "Kreator"})'),
-                    backgroundColor: const Color(0xFF10B981).withValues(alpha: 0.1),
-                    side: const BorderSide(color: Color(0xFF10B981), width: 0.5),
-                  );
-                }),
-              ],
-            ),
         ],
       ),
     );
@@ -9089,12 +9258,24 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
       // Standard Escrow & Dynamic Signature Card (< 100 Jt) — 1 Orang 1 Kontrak Individu (3 Pihak)
       final contractEntries = _getIndividualContractEntries();
       final totalContracts = contractEntries.length;
+      final totalRequiredPositions = _opp.requirements.isNotEmpty
+          ? _opp.requirements.fold<int>(0, (sum, r) => sum + (r.quantity > 0 ? r.quantity : 1))
+          : (totalContracts > 0 ? totalContracts : 1);
       final finalContractsCount =
           contractEntries.where((e) => e.isContractFinal).length;
       final clientSignedCount =
           contractEntries.where((e) => e.isClientSigned).length;
       final creatorSignedCount =
           contractEntries.where((e) => e.isCreatorSigned).length;
+      final totalIndividualContractValue = contractEntries.fold<double>(
+        0.0,
+        (sum, e) => sum + e.agreedPrice,
+      );
+      final displayEscrowTotal = (_opp.escrowAmount ?? 0) > 0
+          ? _opp.escrowAmount!
+          : (totalIndividualContractValue > 0
+              ? totalIndividualContractValue
+              : _parseBudgetFallback());
 
       final isClientSigned = totalContracts > 0
           ? (clientSignedCount == totalContracts)
@@ -9137,6 +9318,27 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
         safeContractPage,
         pageSize: _contractListPageSize,
       );
+
+      final String bottomButtonLabel;
+      if (totalContracts == 1) {
+        final first = contractEntries.first;
+        final feeLabel = first.agreedPrice > 0
+            ? currencyFmt.format(first.agreedPrice)
+            : (displayEscrowTotal > 0 ? currencyFmt.format(displayEscrowTotal) : 'Sesuai Kesepakatan');
+        bottomButtonLabel =
+            'Lihat Dokumen Kontrak: ${first.creatorName} (${first.subRoleLabel}) — $feeLabel';
+      } else if (totalContracts > 1) {
+        final previewNames = contractEntries
+            .take(2)
+            .map((e) => '${e.creatorName} (${currencyFmt.format(e.agreedPrice)})')
+            .join(', ');
+        final suffix = totalContracts > 2 ? ', +${totalContracts - 2} lainnya' : '';
+        bottomButtonLabel =
+            'Kelola & Lihat $totalContracts Dokumen Kontrak Individu: $previewNames$suffix • Total ${currencyFmt.format(displayEscrowTotal)}';
+      } else {
+        bottomButtonLabel =
+            'Pratinjau Draf Kontrak Digital Resmi A4 (Target Kebutuhan: $totalRequiredPositions Orang — 1 Orang 1 Kontrak)';
+      }
 
       return Container(
         width: double.infinity,
@@ -9200,7 +9402,7 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Sistem 1 Orang = 1 Kontrak Digital Resmi A4 (3 Pihak: Penyelenggara, Pekerja Individu, dan CV Transforma Alam Kreasi — Aplikasi Kreavana). Sebelum acara dimulai, seluruh kontrak wajib disetujui & ditandatangani kedua belah pihak hingga menjadi Kontrak Fix (Final & Terkunci).',
+                        'Sistem 1 Orang = 1 Kontrak Digital Resmi A4 (Kop CV Transforma Alam Kreasi — Aplikasi Kreavana). Jika proyek membutuhkan $totalRequiredPositions pekerja, maka diterbitkan $totalRequiredPositions dokumen kontrak terpisah dengan nominal & klausul khusus sesuai posisi masing-masing.',
                         style: TextStyle(
                           fontSize: 12.2,
                           color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
@@ -9212,6 +9414,60 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                 ),
               ],
             ),
+            const SizedBox(height: 12),
+
+            // PANDUAN KONSEP PERSETUJUAN KEDUA BELAH PIHAK (PEMBUAT ACARA & PELAMAR)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFF1E1B2E)
+                    : const Color(0xFFF0F9FF),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: const Color(0xFF0284C7).withValues(alpha: 0.25),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(
+                        Icons.verified_user_outlined,
+                        size: 15,
+                        color: Color(0xFF0284C7),
+                      ),
+                      SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Alur Persetujuan Kontrak Digital 2 Arah (Pembuat Acara ↔ Pelamar Individu):',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0284C7),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '1. Pilih & ACC Pelamar (1 Orang 1 Kontrak sesuai bidang & nominal)  →  '
+                    '2. Susun Klausul Khusus per Posisi (Bisa diedit Klien/Pelamar; jika klausul diubah, tanda tangan di-reset agar disepakati ulang)  →  '
+                    '3. Tanda Tangan Pihak Pertama (Pembuat Acara) & Pihak Kedua (Pelamar)  →  '
+                    '4. Kontrak Fix & Final (Terkunci permanen, siap diunduh A4, & acara dapat dimulai).',
+                    style: TextStyle(
+                      fontSize: 11,
+                      height: 1.4,
+                      color: isDark ? Colors.white70 : const Color(0xFF0F172A),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
             const SizedBox(height: 12),
             const Divider(height: 1),
             const SizedBox(height: 10),
@@ -9238,10 +9494,10 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                     const SizedBox(width: 6),
                     Text(
                       isEscrowHeld
-                          ? 'Escrow Ditahan: ${currencyFmt.format(_opp.escrowAmount ?? 0)}'
+                          ? 'Total Escrow Ditahan: ${currencyFmt.format(displayEscrowTotal)} ($totalContracts Kontrak Individu)'
                           : (isFullySigned
-                              ? 'Seluruh $totalContracts Kontrak Fix & Final'
-                              : 'Total Kontrak Individu: $totalContracts Dokumen (1 Orang 1 Kontrak)'),
+                              ? 'Seluruh $totalContracts Kontrak Fix & Final (${currencyFmt.format(displayEscrowTotal)})'
+                              : 'Kebutuhan: $totalRequiredPositions Posisi  •  Kontrak Aktif: $totalContracts Dokumen (${currencyFmt.format(displayEscrowTotal)})'),
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -9265,7 +9521,7 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
               ],
             ),
 
-            // DAFTAR KONTRAK INDIVIDU (1 ORANG = 1 KONTRAK, TERPAGINASI)
+            // DAFTAR KONTRAK INDIVIDU (1 ORANG = 1 KONTRAK, TERPAGINASI, DENGAN NAMA, POSISI, NOMINAL, & KLAUSUL KHUSUS)
             if (contractEntries.isNotEmpty) ...[
               const SizedBox(height: 12),
               ...pagedEntries.asMap().entries.map((mapEntry) {
@@ -9273,6 +9529,11 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                     (safeContractPage - 1) * _contractListPageSize + mapEntry.key;
                 final item = mapEntry.value;
                 final isFinal = item.isContractFinal;
+                final itemFee = item.agreedPrice > 0
+                    ? item.agreedPrice
+                    : (totalContracts > 0
+                        ? (displayEscrowTotal / totalContracts)
+                        : displayEscrowTotal);
                 final statusLabel = isFinal
                     ? 'KONTRAK FIX (FINAL)'
                     : (item.isClientSigned && !item.isCreatorSigned
@@ -9285,139 +9546,204 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                     : (item.isClientSigned || item.isCreatorSigned
                         ? const Color(0xFFD97706)
                         : const Color(0xFF2563EB));
+                final clausePreview = item.dynamicTerms.length > 1
+                    ? item.dynamicTerms[1]
+                    : (item.dynamicTerms.isNotEmpty ? item.dynamicTerms.first : '');
 
                 return Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
                   decoration: BoxDecoration(
                     color: isDark
                         ? const Color(0xFF1E1B2E)
                         : const Color(0xFFF8FAFC),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: statusColor.withValues(alpha: 0.3),
+                      color: statusColor.withValues(alpha: 0.35),
                     ),
                   ),
-                  child: Wrap(
-                    spacing: 10,
-                    runSpacing: 8,
-                    alignment: WrapAlignment.spaceBetween,
-                    crossAxisAlignment: WrapCrossAlignment.center,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 8,
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Container(
-                            width: 28,
-                            height: 28,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: statusColor.withValues(alpha: 0.14),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              '#${globalIdx + 1}',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: statusColor,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(
-                                '${item.creatorName} (${item.subRoleLabel})',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12.5,
+                              Container(
+                                width: 30,
+                                height: 30,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: statusColor.withValues(alpha: 0.14),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '#${globalIdx + 1}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: statusColor,
+                                  ),
                                 ),
                               ),
-                              Text(
-                                'No: ${item.contractNumber} • Kop: CV Transforma Alam Kreasi',
-                                style: TextStyle(
-                                  fontSize: 10.5,
-                                  color: isDark
-                                      ? AppTheme.textMuted
-                                      : Colors.grey.shade600,
+                              const SizedBox(width: 10),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 4,
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    children: [
+                                      Text(
+                                        'Kontrak ${item.creatorName} (${item.subRoleLabel})',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12.8,
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 7,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF059669).withValues(alpha: 0.12),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          currencyFmt.format(itemFee),
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF059669),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'No: ${item.contractNumber} • ${item.paymentSchemeLabel}',
+                                    style: TextStyle(
+                                      fontSize: 10.5,
+                                      color: isDark
+                                          ? AppTheme.textMuted
+                                          : Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: statusColor.withValues(alpha: 0.14),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  statusLabel,
+                                  style: TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: statusColor,
+                                  ),
+                                ),
+                              ),
+                              OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  visualDensity: VisualDensity.compact,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
+                                  side: BorderSide(
+                                    color: statusColor.withValues(alpha: 0.5),
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                onPressed: () => _showTripartiteContractModal(
+                                  initialIndex: globalIdx,
+                                  initialApplicationId: item.applicationId,
+                                  initialCreatorId: item.creatorId,
+                                ),
+                                icon: Icon(
+                                  isFinal
+                                      ? Icons.visibility_outlined
+                                      : Icons.draw_rounded,
+                                  size: 14,
+                                  color: statusColor,
+                                ),
+                                label: Text(
+                                  isFinal
+                                      ? 'Kontrak Fix: ${item.creatorName} (${currencyFmt.format(itemFee)})'
+                                      : 'Buka & TTD: ${item.creatorName} (${currencyFmt.format(itemFee)})',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: statusColor,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                visualDensity: VisualDensity.compact,
+                                tooltip:
+                                    'Unduh PDF Kontrak Resmi A4 — ${item.creatorName} (${currencyFmt.format(itemFee)})',
+                                onPressed: () => _downloadOfficialContractA4(item),
+                                icon: const Icon(
+                                  Icons.download_rounded,
+                                  size: 18,
+                                  color: Color(0xFF1E3A8A),
                                 ),
                               ),
                             ],
                           ),
                         ],
                       ),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: statusColor.withValues(alpha: 0.14),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              statusLabel,
-                              style: TextStyle(
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.bold,
-                                color: statusColor,
-                              ),
+                      if (clausePreview.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 9,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? const Color(0xFF13111E)
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.grey.withValues(alpha: 0.2),
                             ),
                           ),
-                          OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              visualDensity: VisualDensity.compact,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
-                              ),
-                              side: BorderSide(
-                                color: statusColor.withValues(alpha: 0.5),
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            onPressed: () => _showTripartiteContractModal(
-                              initialIndex: globalIdx,
-                              initialApplicationId: item.applicationId,
-                              initialCreatorId: item.creatorId,
-                            ),
-                            icon: Icon(
-                              isFinal
-                                  ? Icons.visibility_outlined
-                                  : Icons.draw_rounded,
-                              size: 14,
-                              color: statusColor,
-                            ),
-                            label: Text(
-                              isFinal ? 'Lihat Kontrak Fix' : 'Buka & TTD',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: statusColor,
-                              ),
+                          child: Text(
+                            'Klausul Dinamis (${item.subRoleLabel} • ${item.dynamicTerms.length} Butir): $clausePreview',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              color: isDark ? Colors.white70 : Colors.grey.shade700,
                             ),
                           ),
-                          IconButton(
-                            visualDensity: VisualDensity.compact,
-                            tooltip: 'Unduh PDF Kontrak Resmi A4 (${item.creatorName})',
-                            onPressed: () => _downloadOfficialContractA4(item),
-                            icon: const Icon(
-                              Icons.download_rounded,
-                              size: 18,
-                              color: Color(0xFF1E3A8A),
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ],
                   ),
                 );
@@ -9440,15 +9766,14 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
               child: OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
                   side: BorderSide(color: const Color(0xFF06B6D4).withValues(alpha: 0.5)),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
                 onPressed: () => _showTripartiteContractModal(),
                 icon: const Icon(Icons.description_outlined, size: 16, color: Color(0xFF06B6D4)),
                 label: Text(
-                  totalContracts > 1
-                      ? 'Buka Dokumen Kontrak Digital A4 ($totalContracts Kontrak Individu — 3 Pihak)'
-                      : 'Lihat Dokumen Kontrak Digital Resmi A4 (3 Pihak)',
+                  bottomButtonLabel,
+                  textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF06B6D4)),
                 ),
               ),
