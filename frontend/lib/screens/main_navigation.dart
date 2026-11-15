@@ -943,6 +943,17 @@ class _MainNavigationState extends State<MainNavigation> {
           isCollapsed: isCollapsed,
           isMobileDrawer: isMobileDrawer,
         ),
+      if (_isSchool && (SystemSettingsService.isWalletEnabled || _currentUser.isAdmin))
+        _buildSidebarItem(
+          icon: Icons.account_balance_wallet_outlined,
+          activeIcon: Icons.account_balance_wallet_rounded,
+          label: 'Dompet & Pembayaran',
+          index: 7,
+          theme: theme,
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isMobileDrawer: isMobileDrawer,
+        ),
       if (!_hasSpecificCreatorSubRole && !_isCompany && !_isSchool && !_isGovernment) ...[
         if (SystemSettingsService.isMarketplaceEnabled || _currentUser.isAdmin)
           _buildSidebarItem(
