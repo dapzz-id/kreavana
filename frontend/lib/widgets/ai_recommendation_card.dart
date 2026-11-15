@@ -31,6 +31,7 @@ class AiRecommendationCard extends StatefulWidget {
 
 class _AiRecommendationCardState extends State<AiRecommendationCard> {
   bool _isLoading = false;
+  String? _summary;
   List<dynamic>? _recommendations;
   List<dynamic>? _matchedItems;
 
@@ -112,10 +113,12 @@ class _AiRecommendationCardState extends State<AiRecommendationCard> {
     if (res != null && res['status'] == true && res['data'] != null) {
       final recs = res['data']['recommendations'] as List?;
       final matched = res['data']['matched_items'] as List?;
+      final summary = res['data']['summary']?.toString();
       setState(() {
         _isLoading = false;
         _recommendations = recs;
         _matchedItems = matched;
+        _summary = summary;
       });
     } else {
       setState(() => _isLoading = false);
@@ -680,67 +683,174 @@ class _AiRecommendationCardState extends State<AiRecommendationCard> {
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // AI Summary Banner if present
+                      if (_summary != null && _summary!.isNotEmpty) ...[
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: accent.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: accent.withValues(alpha: 0.22),
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(Icons.insights_rounded, size: 16, color: accent),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _summary!,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: isDark ? Colors.white.withValues(alpha: 0.9) : const Color(0xFF2E1065),
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
                       // AI Insights Highlights
                       ..._recommendations!.map((rec) {
+                        final title = (rec['title'] ?? '').toString();
+                        final reason = (rec['reason'] ?? '').toString();
+                        final impact = (rec['impact'] ?? '').toString();
+                        final category = (rec['category'] ?? 'Peluang Proyek').toString();
+                        final matchScore = (rec['match_score'] ?? '98% Cocok').toString();
+
                         return Container(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          padding: const EdgeInsets.all(12),
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
                             color: isDark ? const Color(0xFF1B182B) : Colors.white,
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(14),
                             border: Border.all(
-                              color: accent.withValues(alpha: 0.15),
+                              color: accent.withValues(alpha: 0.18),
                             ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Top Header: Category Badge & Match Score
                               Row(
                                 children: [
-                                  const Icon(
-                                    Icons.stars_rounded,
-                                    color: accent,
-                                    size: 16,
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: accent.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(
+                                        color: accent.withValues(alpha: 0.25),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.auto_awesome_rounded, size: 11, color: accent),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          category,
+                                          style: TextStyle(
+                                            fontSize: 10.5,
+                                            fontWeight: FontWeight.bold,
+                                            color: accent,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                  const SizedBox(width: 6),
-                                  Expanded(
+                                  const Spacer(),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
                                     child: Text(
-                                      rec['title'] ?? '',
+                                      matchScore,
                                       style: const TextStyle(
-                                        fontSize: 13,
+                                        fontSize: 10,
                                         fontWeight: FontWeight.bold,
+                                        color: Color(0xFF059669),
                                       ),
                                     ),
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 6),
+                              const SizedBox(height: 10),
+
+                              // Title
                               Text(
-                                rec['reason'] ?? '',
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  color: isDark ? Colors.white70 : Colors.black87,
+                                title,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  height: 1.3,
                                 ),
                               ),
-                              const SizedBox(height: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: accent.withValues(alpha: 0.08),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  'Dampak: ${rec['impact'] ?? ''}',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: accent,
-                                    fontWeight: FontWeight.w600,
+
+                              // Reason / Explanation
+                              if (reason.isNotEmpty) ...[
+                                const SizedBox(height: 6),
+                                Text(
+                                  reason,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    height: 1.45,
+                                    color: isDark ? Colors.white70 : Colors.black87,
                                   ),
                                 ),
-                              ),
+                              ],
+
+                              // Impact Section
+                              if (impact.isNotEmpty) ...[
+                                const SizedBox(height: 10),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                                  decoration: BoxDecoration(
+                                    color: accent.withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: accent.withValues(alpha: 0.2),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      const Icon(
+                                        Icons.trending_up_rounded,
+                                        size: 15,
+                                        color: AppTheme.primaryPurple,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'Dampak: $impact',
+                                          style: const TextStyle(
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppTheme.primaryPurple,
+                                            height: 1.3,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         );
@@ -774,6 +884,7 @@ class _AiRecommendationCardState extends State<AiRecommendationCard> {
                             itemBuilder: (ctx, i) {
                               final item = _matchedItems![i];
                               final isOpp = item['type'] == 'opportunity';
+                              final avatarUrl = item['avatar_url']?.toString();
                               return Container(
                                 width: 220,
                                 padding: const EdgeInsets.all(10),
@@ -799,11 +910,16 @@ class _AiRecommendationCardState extends State<AiRecommendationCard> {
                                         CircleAvatar(
                                           radius: 14,
                                           backgroundColor: accent.withValues(alpha: 0.15),
-                                          child: Icon(
-                                            isOpp ? Icons.work_outline : Icons.person_outline,
-                                            size: 15,
-                                            color: accent,
-                                          ),
+                                          backgroundImage: (!isOpp && avatarUrl != null && avatarUrl.isNotEmpty)
+                                              ? NetworkImage(avatarUrl)
+                                              : null,
+                                          child: (!isOpp && avatarUrl != null && avatarUrl.isNotEmpty)
+                                              ? null
+                                              : Icon(
+                                                  isOpp ? Icons.work_outline : Icons.person_outline,
+                                                  size: 15,
+                                                  color: accent,
+                                                ),
                                         ),
                                         const SizedBox(width: 6),
                                         Expanded(
@@ -878,7 +994,7 @@ class _AiRecommendationCardState extends State<AiRecommendationCard> {
                                               final opp = OpportunityModel(
                                                 id: item['id']?.toString() ?? '1',
                                                 title: item['title']?.toString() ?? 'Peluang Proyek AI',
-                                                description: 'Peluang proyek yang direkomendasikan secara khusus oleh Kreavana AI.',
+                                                description: (item['description'] ?? 'Peluang proyek yang direkomendasikan secara khusus oleh Kreavana AI.').toString(),
                                                 subRoleSlug: item['sub_role']?.toString() ?? 'kreator',
                                                 type: 'project',
                                                 location: item['location']?.toString() ?? 'Indonesia',
@@ -917,6 +1033,35 @@ class _AiRecommendationCardState extends State<AiRecommendationCard> {
                                 ),
                               );
                             },
+                          ),
+                        ),
+                      ] else if (_matchedItems != null && _matchedItems!.isEmpty) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF1B182B) : const Color(0xFFF9F7FD),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: accent.withValues(alpha: 0.15),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.info_outline_rounded, size: 16, color: accent),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  'Belum ada proyek atau kreator terbuka spesifik untuk filter $_selectedSubRoleLabel di $_activeLocationLabel. Anda dapat mempublikasikan proyek baru atau menjelajahi seluruh komunitas.',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    color: isDark ? Colors.white70 : Colors.black87,
+                                    height: 1.35,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
