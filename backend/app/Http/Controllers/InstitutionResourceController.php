@@ -123,10 +123,8 @@ class InstitutionResourceController extends Controller
 
     public function searchCorporates(Request $request)
     {
-        $q = trim((string) $request->query('q', ''));
-        if (empty($q)) {
-            return $this->successResponse('Daftar akun corporate mitra', []);
-        }
+        $rawQ = trim((string) $request->query('q', ''));
+        $cleanQ = ltrim($rawQ, '@');
 
         $currentUserId = $request->user()->id;
         $corporateKeywords = ['corporate', 'company', 'business', 'perusahaan', 'bisnis', 'enterprise', 'b2b'];
@@ -138,12 +136,16 @@ class InstitutionResourceController extends Controller
                     ->orWhereIn('role', $corporateKeywords)
                     ->orWhere('username', 'corporate_demo')
                     ->orWhere('email', 'like', 'corporate%@%');
-            })
-            ->where(function ($filter) use ($q) {
-                $filter->where('name', 'like', '%' . $q . '%')
-                    ->orWhere('username', 'like', '%' . $q . '%')
-                    ->orWhere('email', 'like', '%' . $q . '%');
             });
+
+        if ($cleanQ !== '') {
+            $pattern = '%' . mb_strtolower($cleanQ) . '%';
+            $query->where(function ($filter) use ($pattern) {
+                $filter->whereRaw('LOWER(name) LIKE ?', [$pattern])
+                    ->orWhereRaw('LOWER(username) LIKE ?', [$pattern])
+                    ->orWhereRaw('LOWER(email) LIKE ?', [$pattern]);
+            });
+        }
 
         $corporates = $query->select([
             'id',
@@ -157,7 +159,9 @@ class InstitutionResourceController extends Controller
             'is_verified',
             'verification_type',
         ])
-        ->limit(6)
+        ->orderByDesc('is_verified')
+        ->orderBy('name')
+        ->limit(10)
         ->get();
 
         return $this->successResponse('Daftar akun corporate mitra', $corporates);
@@ -170,29 +174,131 @@ class InstitutionResourceController extends Controller
         ]);
 
         $file = $request->file('mou_file');
+        $ext = strtolower((string) $file->getClientOriginalExtension());
+        if ($ext !== '' && !in_array($ext, ['pdf', 'doc', 'docx'], true)) {
+            return $this->errorResponse('Format berkas kerjasama harus PDF, DOC, atau DOCX.', 422);
+        }
+
         /** @var \App\Services\StorageService $storageService */
         $storageService = app(\App\Services\StorageService::class);
         $storageFile = $storageService->store($request->user(), $file, 'mou_documents', 'public');
 
         $bytes = $file->getSize() ?: 0;
-        $formattedSize = $bytes >= 1048576 
-            ? round($bytes / 1048576, 1) . ' MB' 
+        $formattedSize = $bytes >= 1048576
+            ? round($bytes / 1048576, 1) . ' MB'
             : round($bytes / 1024, 0) . ' KB';
 
-        return $this->successResponse('Dokumen MoU berhasil diunggah.', [
+        return $this->successResponse('Berkas kerjasama berhasil diunggah.', [
             'url' => $storageFile->url,
             'filename' => $file->getClientOriginalName(),
             'filesize' => $formattedSize,
-            'extension' => $file->getClientOriginalExtension() ?: 'pdf',
+            'extension' => $ext ?: 'pdf',
         ]);
+    }
+
+    private function normalizeMouFiles(array $meta): array
+    {
+        $files = [];
+        if (isset($meta['mou_files']) && is_array($meta['mou_files'])) {
+            foreach ($meta['mou_files'] as $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+                $url = trim((string) ($item['url'] ?? ''));
+                if ($url === '') {
+                    continue;
+                }
+                $filename = trim((string) ($item['filename'] ?? ''));
+                if ($filename === '') {
+                    $pathPart = (string) parse_url($url, PHP_URL_PATH);
+                    $filename = basename($pathPart) ?: 'Dokumen-Kerjasama.pdf';
+                }
+                $ext = strtolower(trim((string) ($item['extension'] ?? '')));
+                if ($ext === '') {
+                    $ext = strtolower((string) pathinfo($filename, PATHINFO_EXTENSION)) ?: 'pdf';
+                }
+                $files[] = [
+                    'url' => $url,
+                    'filename' => $filename,
+                    'filesize' => trim((string) ($item['filesize'] ?? '')) ?: 'Dokumen Digital',
+                    'extension' => $ext,
+                ];
+            }
+        }
+
+        if (empty($files) && !empty($meta['mou_url'])) {
+            $url = trim((string) $meta['mou_url']);
+            if ($url !== '') {
+                $filename = trim((string) ($meta['mou_filename'] ?? '')) ?: 'Dokumen-MoU-Kemitraan.pdf';
+                $ext = strtolower(trim((string) ($meta['mou_extension'] ?? '')));
+                if ($ext === '') {
+                    $ext = strtolower((string) pathinfo($filename, PATHINFO_EXTENSION)) ?: 'pdf';
+                }
+                $files[] = [
+                    'url' => $url,
+                    'filename' => $filename,
+                    'filesize' => trim((string) ($meta['mou_filesize'] ?? '')) ?: 'Dokumen Digital',
+                    'extension' => $ext,
+                ];
+            }
+        }
+
+        return array_values($files);
+    }
+
+    private function applyMouMetadata(array $meta, array $mouFiles): array
+    {
+        $normalized = array_values($mouFiles);
+        $meta['mou_files'] = $normalized;
+        if (!empty($normalized)) {
+            $first = $normalized[0];
+            $meta['mou_url'] = $first['url'];
+            $meta['mou_filename'] = $first['filename'];
+            $meta['mou_filesize'] = $first['filesize'];
+            $meta['mou_extension'] = $first['extension'];
+        } else {
+            unset($meta['mou_url'], $meta['mou_filename'], $meta['mou_filesize'], $meta['mou_extension']);
+        }
+        return $meta;
+    }
+
+    private function resolveAuthorizedPartnerAccess(Request $request, InstitutionResource $resource): bool
+    {
+        $user = $request->user();
+        if (!$user) {
+            return false;
+        }
+        $ctx = $this->resolveInstitutionContext($request);
+        $ownerId = $ctx['owner_id'] ?: $user->id;
+
+        if ((string) $resource->user_id === (string) $ownerId) {
+            if ($ctx['is_staff']) {
+                return in_array('mitra_industri', $ctx['permissions'], true);
+            }
+            return true;
+        }
+
+        $meta = is_array($resource->metadata) ? $resource->metadata : [];
+        $corpId = (string) ($meta['corporate_user_id'] ?? '');
+        if ($corpId !== '' && ($corpId === (string) $user->id || $corpId === (string) $ownerId)) {
+            return true;
+        }
+
+        $corpUsername = strtolower(trim((string) ($meta['corporate_username'] ?? '')));
+        $userUsername = strtolower(trim((string) ($user->username ?? '')));
+        return $corpUsername !== '' && $userUsername !== '' && $corpUsername === $userUsername;
     }
 
     public function approve(Request $request, string $id)
     {
         $user = $request->user();
-        $resource = InstitutionResource::find($id);
+        $resource = InstitutionResource::where('resource_type', 'partners')->find($id);
         if (!$resource) {
             return $this->errorResponse('Data mitra tidak ditemukan.', 404);
+        }
+
+        if (!$this->resolveAuthorizedPartnerAccess($request, $resource)) {
+            return $this->errorResponse('Anda tidak memiliki wewenang untuk menyetujui kemitraan ini.', 403);
         }
 
         $meta = is_array($resource->metadata) ? $resource->metadata : [];
@@ -205,41 +311,8 @@ class InstitutionResourceController extends Controller
             'metadata' => $meta,
         ]);
 
-        // CRITICAL: Automatically create/sync into "Dokumen & MoU" for the school
-        $mouUrl = $meta['mou_url'] ?? null;
-        $partnerName = $resource->title;
-        $docTitle = "Perjanjian Kerjasama (MoU) - {$partnerName}";
-
-        $document = InstitutionResource::updateOrCreate(
-            [
-                'user_id' => $resource->user_id,
-                'resource_type' => 'documents',
-                'title' => $docTitle,
-            ],
-            [
-                'description' => "Dokumen resmi legalitas Perjanjian Kerjasama (MoU) kemitraan industri yang telah disetujui bersama {$partnerName}.",
-                'status' => 'published',
-                'published_at' => now(),
-                'metadata' => [
-                    'document_number' => 'MOU-' . strtoupper(substr(md5($resource->id), 0, 8)) . '/' . date('Y'),
-                    'category' => 'MoU Kemitraan',
-                    'valid_until' => now()->addYears(3)->format('Y-m-d'),
-                    'url' => $mouUrl ?: null,
-                    'file_url' => $mouUrl ?: null,
-                    'file_name' => $meta['mou_filename'] ?? null,
-                    'file_format' => strtoupper($meta['mou_extension'] ?? 'PDF'),
-                    'file_size' => $meta['mou_filesize'] ?? 'Dokumen Digital',
-                    'partner_name' => $partnerName,
-                    'partner_resource_id' => $resource->id,
-                    'corporate_user_id' => $meta['corporate_user_id'] ?? null,
-                    'verified' => true,
-                    'approved_at' => now()->toIso8601String(),
-                ],
-            ]
-        );
-
-        $meta['linked_document_id'] = $document->id;
-        $resource->update(['metadata' => $meta]);
+        // CRITICAL: Automatically create/sync into "Dokumen & MoU" for school & corporate
+        $document = $this->syncMouDocument($resource->fresh(), $user->name);
 
         return $this->successResponse('Kemitraan berhasil disetujui dan dokumen MoU otomatis diterbitkan di menu Dokumen & MoU.', [
             'partner' => $resource->fresh(),
@@ -249,9 +322,13 @@ class InstitutionResourceController extends Controller
 
     public function reject(Request $request, string $id)
     {
-        $resource = InstitutionResource::find($id);
+        $resource = InstitutionResource::where('resource_type', 'partners')->find($id);
         if (!$resource) {
             return $this->errorResponse('Data mitra tidak ditemukan.', 404);
+        }
+
+        if (!$this->resolveAuthorizedPartnerAccess($request, $resource)) {
+            return $this->errorResponse('Anda tidak memiliki wewenang untuk menolak kemitraan ini.', 403);
         }
 
         $meta = is_array($resource->metadata) ? $resource->metadata : [];
@@ -322,13 +399,14 @@ class InstitutionResourceController extends Controller
             'corporate', 'company', 'business', 'perusahaan', 'bisnis'
         ], true);
 
-        $query = InstitutionResource::query();
+        $query = InstitutionResource::query()->with('owner:id,name,username,email,avatar_url,sub_role');
 
-        if ($type === 'partners' && $isCorporate) {
-            $query->where(function ($q) use ($ownerId, $request) {
+        if (in_array($type, ['partners', 'documents'], true) && $isCorporate) {
+            $corpUsername = trim((string) ($request->user()->username ?? ''));
+            $query->where(function ($q) use ($ownerId, $request, $corpUsername) {
                 $q->where('user_id', $ownerId)
                   ->orWhere('metadata->corporate_user_id', $request->user()->id)
-                  ->orWhere('metadata->corporate_username', $request->user()->username);
+                  ->when($corpUsername !== '', fn ($sub) => $sub->orWhere('metadata->corporate_username', $corpUsername));
             });
         } elseif (in_array($type, ['showcases', 'talents', 'announcements'], true) && ($isCorporate || $request->has('institution_id') || $request->has('user_id'))) {
             // Public/industry showcases and talents viewable across institutions or filtered by institution
@@ -408,6 +486,43 @@ class InstitutionResourceController extends Controller
         }
 
         $meta = $validated['metadata'] ?? [];
+
+        if ($resType === 'partners') {
+            $description = trim((string) ($validated['description'] ?? ''));
+            if ($description === '') {
+                return $this->errorResponse('Deskripsi kerjasama wajib diisi.', 422);
+            }
+            $validated['description'] = $description;
+
+            $mouFiles = $this->normalizeMouFiles(is_array($meta) ? $meta : []);
+            if (count($mouFiles) > 3) {
+                return $this->errorResponse('Maksimal 3 berkas kerjasama yang dapat diunggah.', 422);
+            }
+            if (count($mouFiles) < 1) {
+                return $this->errorResponse('Berkas kerjasama wajib diunggah (minimal 1, maksimal 3 berkas).', 422);
+            }
+
+            $meta = $this->applyMouMetadata(is_array($meta) ? $meta : [], $mouFiles);
+
+            $ownerUser = (string) $ownerId === (string) $user->id ? $user : \App\Models\User::find($ownerId);
+            if ($ownerUser) {
+                $meta['institution_user_id'] = $ownerUser->id;
+                $meta['institution_name'] = $meta['institution_name'] ?? $ownerUser->name;
+                $meta['institution_username'] = $meta['institution_username'] ?? $ownerUser->username;
+                $meta['institution_email'] = $meta['institution_email'] ?? $ownerUser->email;
+            }
+
+            if (!empty($meta['corporate_user_id'])) {
+                $targetCorp = \App\Models\User::find($meta['corporate_user_id']);
+                if ($targetCorp) {
+                    $meta['corporate_user_id'] = $targetCorp->id;
+                    $meta['corporate_name'] = $meta['corporate_name'] ?? $targetCorp->name;
+                    $meta['corporate_username'] = $meta['corporate_username'] ?? $targetCorp->username;
+                }
+            }
+
+            $validated['metadata'] = $meta;
+        }
 
         // If creating a team member (app-local sub-account of this institution, managed in backend)
         $subAccountPasswordHash = null;
@@ -544,10 +659,12 @@ class InstitutionResourceController extends Controller
         $ownerId = $ctx['owner_id'] ?: $request->user()->id;
         $isStaff = $ctx['is_staff'];
 
+        $corpUsername = trim((string) ($request->user()->username ?? ''));
         $resource = InstitutionResource::query()
-            ->where(function ($q) use ($ownerId, $request) {
+            ->where(function ($q) use ($ownerId, $request, $corpUsername) {
                 $q->where('user_id', $ownerId)
-                  ->orWhere('metadata->corporate_user_id', $request->user()->id);
+                  ->orWhere('metadata->corporate_user_id', $request->user()->id)
+                  ->when($corpUsername !== '', fn ($sub) => $sub->orWhere('metadata->corporate_username', $corpUsername));
             })
             ->find($id);
 
@@ -665,8 +782,22 @@ class InstitutionResourceController extends Controller
 
                 $validated['metadata'] = $newMeta;
             } else {
+                if ($resource->resource_type === 'partners') {
+                    $mouFiles = $this->normalizeMouFiles($newMeta);
+                    if (count($mouFiles) > 3) {
+                        return $this->errorResponse('Maksimal 3 berkas kerjasama yang dapat diunggah.', 422);
+                    }
+                    if ((array_key_exists('mou_files', $validated['metadata']) || array_key_exists('mou_url', $validated['metadata'])) && count($mouFiles) < 1) {
+                        return $this->errorResponse('Berkas kerjasama wajib diunggah (minimal 1, maksimal 3 berkas).', 422);
+                    }
+                    $newMeta = $this->applyMouMetadata($newMeta, $mouFiles);
+                }
                 $validated['metadata'] = $newMeta;
             }
+        }
+
+        if ($resource->resource_type === 'partners' && $request->has('description') && trim((string) ($validated['description'] ?? '')) === '') {
+            return $this->errorResponse('Deskripsi kerjasama wajib diisi.', 422);
         }
 
         $status = $validated['status'] ?? $resource->status;
@@ -679,18 +810,23 @@ class InstitutionResourceController extends Controller
         $resource->update($validated);
 
         if ($resource->resource_type === 'partners' && in_array($resource->status, ['active', 'approved'])) {
-            $this->syncMouDocument($resource);
+            $this->syncMouDocument($resource->fresh());
         }
 
         return $this->successResponse('Data berhasil diperbarui.', $resource->fresh());
     }
 
-    private function syncMouDocument(InstitutionResource $resource): ?InstitutionResource
+    private function syncMouDocument(InstitutionResource $resource, ?string $approvedBy = null): ?InstitutionResource
     {
         $meta = is_array($resource->metadata) ? $resource->metadata : [];
-        $mouUrl = $meta['mou_url'] ?? null;
+        $mouFiles = $this->normalizeMouFiles($meta);
+        $primaryFile = $mouFiles[0] ?? null;
+        $mouUrl = $primaryFile['url'] ?? ($meta['mou_url'] ?? null);
         $partnerName = $resource->title;
         $docTitle = "Perjanjian Kerjasama (MoU) - {$partnerName}";
+        $ownerUser = $resource->owner;
+        $institutionName = $meta['institution_name'] ?? $ownerUser?->name;
+        $institutionUsername = $meta['institution_username'] ?? $ownerUser?->username;
 
         $document = InstitutionResource::updateOrCreate(
             [
@@ -699,7 +835,8 @@ class InstitutionResourceController extends Controller
                 'title' => $docTitle,
             ],
             [
-                'description' => "Dokumen resmi legalitas Perjanjian Kerjasama (MoU) kemitraan industri yang telah disetujui bersama {$partnerName}.",
+                'description' => "Dokumen resmi legalitas Perjanjian Kerjasama (MoU) kemitraan industri yang telah disetujui bersama {$partnerName}."
+                    . (trim((string) $resource->description) !== '' ? "\n\nRuang Lingkup: " . trim((string) $resource->description) : ''),
                 'status' => 'published',
                 'published_at' => now(),
                 'metadata' => [
@@ -708,14 +845,21 @@ class InstitutionResourceController extends Controller
                     'valid_until' => now()->addYears(3)->format('Y-m-d'),
                     'url' => $mouUrl ?: null,
                     'file_url' => $mouUrl ?: null,
-                    'file_name' => $meta['mou_filename'] ?? null,
-                    'file_format' => strtoupper($meta['mou_extension'] ?? 'PDF'),
-                    'file_size' => $meta['mou_filesize'] ?? 'Dokumen Digital',
+                    'file_name' => $primaryFile['filename'] ?? ($meta['mou_filename'] ?? null),
+                    'file_format' => strtoupper($primaryFile['extension'] ?? ($meta['mou_extension'] ?? 'PDF')),
+                    'file_size' => $primaryFile['filesize'] ?? ($meta['mou_filesize'] ?? 'Dokumen Digital'),
+                    'mou_files' => $mouFiles,
                     'partner_name' => $partnerName,
                     'partner_resource_id' => $resource->id,
                     'corporate_user_id' => $meta['corporate_user_id'] ?? null,
+                    'corporate_username' => $meta['corporate_username'] ?? null,
+                    'corporate_name' => $meta['corporate_name'] ?? $partnerName,
+                    'institution_user_id' => $meta['institution_user_id'] ?? $resource->user_id,
+                    'institution_name' => $institutionName,
+                    'institution_username' => $institutionUsername,
+                    'approved_by' => $approvedBy ?? ($meta['approved_by'] ?? null),
                     'verified' => true,
-                    'approved_at' => now()->toIso8601String(),
+                    'approved_at' => $meta['approved_at'] ?? now()->toIso8601String(),
                 ],
             ]
         );

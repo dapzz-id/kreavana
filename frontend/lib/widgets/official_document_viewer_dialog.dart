@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../services/api_service.dart';
 import 'app_sweet_alert.dart';
 
 class OfficialDocumentViewerDialog extends StatelessWidget {
@@ -97,6 +98,67 @@ class OfficialDocumentViewerDialog extends StatelessWidget {
 
   String get _status => (document['status'] ?? 'published').toString().toLowerCase();
 
+  String? _resolveDocumentUrl(dynamic raw) {
+    if (raw == null) return null;
+    final trimmed = raw.toString().trim();
+    if (trimmed.isEmpty) return null;
+    final resolved = (trimmed.startsWith('http://') || trimmed.startsWith('https://'))
+        ? trimmed
+        : ApiService.resolveAssetUrl(trimmed);
+    if (resolved.startsWith('http://') || resolved.startsWith('https://')) {
+      return resolved;
+    }
+    return null;
+  }
+
+  List<Map<String, String>> get _attachmentFiles {
+    final files = <Map<String, String>>[];
+    final rawList = _meta['mou_files'] ?? _meta['attachments'] ?? _meta['files'];
+    if (rawList is List) {
+      for (int i = 0; i < rawList.length; i++) {
+        final item = rawList[i];
+        if (item is Map) {
+          final resolved = _resolveDocumentUrl(item['url'] ?? item['file_url']);
+          if (resolved != null) {
+            final name = (item['filename'] ?? item['file_name'] ?? 'Berkas Kerjasama ${i + 1}')
+                .toString()
+                .trim();
+            final size = (item['filesize'] ?? item['file_size'] ?? '').toString().trim();
+            final ext = (item['extension'] ?? 'PDF').toString().trim().toUpperCase();
+            files.add({
+              'url': resolved,
+              'filename': name.isNotEmpty ? name : 'Berkas Kerjasama ${i + 1}',
+              'filesize': size,
+              'extension': ext.isNotEmpty ? ext : 'PDF',
+            });
+          }
+        }
+      }
+    }
+
+    if (files.isEmpty) {
+      final u = _meta['url'] ??
+          _meta['file_url'] ??
+          _meta['mou_url'] ??
+          _meta['attachment_url'] ??
+          document['url'] ??
+          document['file_url'];
+      final resolved = _resolveDocumentUrl(u);
+      if (resolved != null) {
+        final name = (_meta['file_name'] ?? _meta['mou_filename'] ?? 'Berkas Lampiran Resmi')
+            .toString()
+            .trim();
+        files.add({
+          'url': resolved,
+          'filename': name.isNotEmpty ? name : 'Berkas Lampiran Resmi',
+          'filesize': _fileSize,
+          'extension': _fileFormat,
+        });
+      }
+    }
+    return files;
+  }
+
   String? get _fileUrl {
     final u = _meta['url'] ??
         _meta['file_url'] ??
@@ -104,13 +166,10 @@ class OfficialDocumentViewerDialog extends StatelessWidget {
         _meta['attachment_url'] ??
         document['url'] ??
         document['file_url'];
-    if (u != null && u.toString().trim().isNotEmpty) {
-      final s = u.toString().trim();
-      if (s.startsWith('http://') || s.startsWith('https://')) {
-        return s;
-      }
-    }
-    return null;
+    final direct = _resolveDocumentUrl(u);
+    if (direct != null) return direct;
+    final attachments = _attachmentFiles;
+    return attachments.isNotEmpty ? attachments.first['url'] : null;
   }
 
   String get _fileFormat => (_meta['file_format'] ?? 'PDF').toString().toUpperCase();
@@ -586,7 +645,8 @@ class OfficialDocumentViewerDialog extends StatelessWidget {
 
   // ── Lampiran Berkas ───────────────────────────────────────────────────────
   Widget _buildAttachmentSection(BuildContext context) {
-    if (_fileUrl == null) {
+    final attachments = _attachmentFiles;
+    if (attachments.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -609,54 +669,76 @@ class OfficialDocumentViewerDialog extends StatelessWidget {
       );
     }
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEFF6FF),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFBFDBFE)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: const Icon(Icons.picture_as_pdf_rounded, color: Color(0xFFDC2626), size: 24),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Text(
+            'Berkas Lampiran Tersedia (${attachments.length} Berkas)',
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1E3A8A)),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+        for (int i = 0; i < attachments.length; i++) ...[
+          Container(
+            margin: EdgeInsets.only(bottom: i < attachments.length - 1 ? 8 : 0),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFBFDBFE)),
+            ),
+            child: Row(
               children: [
-                const Text(
-                  'Berkas Lampiran Tersedia',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1E3A8A)),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Icon(Icons.picture_as_pdf_rounded, color: Color(0xFFDC2626), size: 22),
                 ),
-                Text(
-                  _fileUrl!,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 10, color: Color(0xFF3B82F6)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        attachments[i]['filename'] ?? 'Berkas ${i + 1}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1E3A8A)),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        [
+                          attachments[i]['extension'] ?? 'PDF',
+                          if ((attachments[i]['filesize'] ?? '').isNotEmpty) attachments[i]['filesize']!,
+                        ].join(' • '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 10.5, color: Color(0xFF3B82F6)),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: () => _openExternalFile(context, attachments[i]['url']!),
+                  icon: const Icon(Icons.download_rounded, size: 14),
+                  label: const Text('Buka', style: TextStyle(fontSize: 11)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2563EB),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                  ),
                 ),
               ],
             ),
           ),
-          ElevatedButton.icon(
-            onPressed: () => _openExternalFile(context, _fileUrl!),
-            icon: const Icon(Icons.download_rounded, size: 14),
-            label: const Text('Buka', style: TextStyle(fontSize: 11)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2563EB),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-            ),
-          ),
         ],
-      ),
+      ],
     );
   }
 

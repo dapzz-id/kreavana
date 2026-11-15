@@ -191,9 +191,26 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
 
       final loadedCreators = <Map<String, dynamic>>[];
       for (final p in partnerData) {
-        if (p is Map<String, dynamic>) {
-          final meta = p['metadata'] as Map<String, dynamic>? ?? {};
-          final title = p['title']?.toString() ?? 'Mitra B2B';
+        if (p is Map) {
+          final partnerMap = Map<String, dynamic>.from(p);
+          final rawMeta = partnerMap['metadata'];
+          final meta = rawMeta is Map
+              ? Map<String, dynamic>.from(rawMeta)
+              : <String, dynamic>{};
+          final rawOwner = partnerMap['owner'];
+          final owner = rawOwner is Map
+              ? Map<String, dynamic>.from(rawOwner)
+              : <String, dynamic>{};
+          final institutionName =
+              (meta['institution_name'] ?? owner['name'] ?? '').toString().trim();
+          final institutionEmail =
+              (meta['institution_email'] ?? owner['email'] ?? '').toString().trim();
+          final isIncomingProposal = !_isInstitution &&
+              partnerMap['user_id']?.toString() != widget.user.id.toString() &&
+              institutionName.isNotEmpty;
+          final title = isIncomingProposal
+              ? institutionName
+              : (partnerMap['title']?.toString() ?? 'Mitra B2B');
           String phone = meta['phone']?.toString() ?? '';
           if (phone.isEmpty && meta['contact'] != null && !meta['contact'].toString().contains('@')) {
             phone = meta['contact'].toString();
@@ -215,11 +232,13 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
           }
           loadedCreators.add({
             'name': title,
-            'cat': meta['category'] ?? 'Creative Partner',
+            'cat': meta['category'] ?? (isIncomingProposal ? 'Mitra Institusi Pendidikan' : 'Creative Partner'),
             'rating': '4.9',
             'verified': true,
             'phone': phone,
-            'email': meta['email'] ?? (meta['contact']?.toString().contains('@') == true ? meta['contact'] : ''),
+            'email': isIncomingProposal
+                ? institutionEmail
+                : (meta['email'] ?? (meta['contact']?.toString().contains('@') == true ? meta['contact'] : '')),
             'website': meta['website'] ?? '',
           });
         }
