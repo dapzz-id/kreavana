@@ -226,9 +226,11 @@ class OpportunityApprovedCreatorModel {
       final dName = (doc0['student_name'] ?? doc0['name'] ?? '').toString().trim();
       if (dName.isNotEmpty) return dName;
     }
-    if (pitchMessage != null && pitchMessage!.startsWith('Siswa:')) {
+    if (pitchMessage != null &&
+        (pitchMessage!.startsWith('Peserta:') || pitchMessage!.startsWith('Siswa:'))) {
+      final prefix = pitchMessage!.startsWith('Peserta:') ? 'Peserta:' : 'Siswa:';
       final parts = pitchMessage!.split('|').map((p) => p.trim()).toList();
-      final head = parts.first.replaceFirst('Siswa:', '').trim();
+      final head = parts.first.replaceFirst(prefix, '').trim();
       final pStart = head.lastIndexOf('(');
       final pEnd = head.lastIndexOf(')');
       if (pStart > 0 && pEnd > pStart) {
@@ -248,16 +250,18 @@ class OpportunityApprovedCreatorModel {
       final dMajor = (doc0['major'] ?? doc0['jurusan'] ?? '').toString().trim();
       if (dMajor.isNotEmpty) return dMajor;
     }
-    if (pitchMessage != null && pitchMessage!.startsWith('Siswa:')) {
+    if (pitchMessage != null &&
+        (pitchMessage!.startsWith('Peserta:') || pitchMessage!.startsWith('Siswa:'))) {
+      final prefix = pitchMessage!.startsWith('Peserta:') ? 'Peserta:' : 'Siswa:';
       final parts = pitchMessage!.split('|').map((p) => p.trim()).toList();
-      final head = parts.first.replaceFirst('Siswa:', '').trim();
+      final head = parts.first.replaceFirst(prefix, '').trim();
       final pStart = head.lastIndexOf('(');
       final pEnd = head.lastIndexOf(')');
       if (pStart > 0 && pEnd > pStart) {
         return head.substring(pStart + 1, pEnd).trim();
       }
     }
-    return capability?.replaceAll('_', ' ').toUpperCase() ?? 'Siswa Magang';
+    return capability?.replaceAll('_', ' ').toUpperCase() ?? 'Peserta Magang';
   }
 
   factory OpportunityApprovedCreatorModel.fromJson(Map<String, dynamic> json) {
@@ -508,6 +512,7 @@ class OpportunityModel {
     if (sub == 'magang' || sub.contains('magang') || sub.contains('intern')) return true;
     if (t.contains('magang') || t.contains('intern') || t.contains('pkl') || t.contains('mbkm')) return true;
     if (d.contains('program magang') ||
+        d.contains('peserta magang') ||
         d.contains('siswa magang') ||
         d.contains('mahasiswa magang') ||
         d.contains('siswa vokasi') ||
@@ -545,6 +550,7 @@ class OpportunityModel {
           !notes.toLowerCase().startsWith('spesialisasi') &&
           (notes.startsWith('Memiliki') ||
            notes.startsWith('Mampu') ||
+           notes.startsWith('Peserta') ||
            notes.startsWith('Siswa') ||
            notes.startsWith('Mahasiswa') ||
            notes.startsWith('Disiplin') ||

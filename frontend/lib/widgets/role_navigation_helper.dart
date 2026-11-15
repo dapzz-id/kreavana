@@ -908,13 +908,13 @@ class RoleNavigationHelper {
             routePath: AppRoutes.karyaSiswa,
             icon: Icons.palette_outlined,
             activeIcon: Icons.palette_rounded,
-            label: 'Karya & Portofolio Siswa',
+            label: 'Karya & Portofolio Peserta',
             activeAliases: ['showcases'],
           ),
       ];
       if (schoolItems.isNotEmpty) {
         sections.add(
-          RoleMenuSection(title: 'PENGELOLAAN SEKOLAH', items: schoolItems),
+          RoleMenuSection(title: 'PENGELOLAAN INSTITUSI', items: schoolItems),
         );
       }
 

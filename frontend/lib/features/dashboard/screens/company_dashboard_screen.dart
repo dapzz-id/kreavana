@@ -303,7 +303,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
           loadedProjects.addAll([
             {
               'title': 'Program Magang Industri Animasi 3D Studio',
-              'creator': 'Studio Animasi Nusantara • 12 Mahasiswa',
+              'creator': 'Studio Animasi Nusantara • 12 Peserta',
               'progress': 0.75,
               'status': 'in_progress',
             },
@@ -315,12 +315,12 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
             },
             {
               'title': 'Penyusunan Kurikulum DKV Berbasis Standar IDUKA',
-              'creator': 'PT Kreatif Visual Nusantara • Dosen Praktisi',
+              'creator': 'PT Kreatif Visual Nusantara • Praktisi Mengajar',
               'progress': 0.90,
               'status': 'review',
             },
             {
-              'title': 'Sayembara Desain Maskot Kreatif Kota Pelajar',
+              'title': 'Sayembara Desain Maskot Kreatif Kota Pendidikan',
               'creator': 'Biro Kemahasiswaan & Alumni • 24 Peserta',
               'progress': 1.0,
               'status': 'completed',
@@ -334,7 +334,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
               'time': '10 menit lalu',
             },
             {
-              'title': '12 Mahasiswa DKV terverifikasi masuk kuota magang industri Batch 2',
+              'title': '12 Peserta DKV terverifikasi masuk kuota magang industri Batch 2',
               'time': '1 jam lalu',
             },
             {
@@ -351,7 +351,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
           loadedTenders.addAll([
             {
               'title': 'Program Magang Industri Animasi & Visual FX (Batch 2026)',
-              'desc': 'Program penempatan kerja praktik 6 bulan untuk mahasiswa DKV & Animasi di studio terakreditasi.',
+              'desc': 'Program penempatan kerja praktik 6 bulan untuk peserta DKV & Animasi di studio terakreditasi.',
               'category': 'Magang Industri IDUKA',
               'budget': 'Rp 45.000.000',
               'status': 'open',
@@ -359,7 +359,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
             },
             {
               'title': 'Riset Terapan LPPM: Rebranding & Packaging 20 UMKM Daerah',
-              'desc': 'Hibah penelitian kolaboratif terapan dosen dan mahasiswa bersama instansi dinas koperasi.',
+              'desc': 'Hibah penelitian kolaboratif terapan pendidik dan peserta bersama instansi dinas koperasi.',
               'category': 'Hibah Riset LPPM',
               'budget': 'Rp 80.000.000',
               'status': 'open',
@@ -533,7 +533,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
               isDark: isDark,
               accentColor: _brandBlue,
               placeholder: _isInstitution
-                  ? 'Cari talenta mahasiswa, prodi, mitra IDUKA, atau tender...'
+                  ? 'Cari talenta peserta, prodi/jurusan, mitra IDUKA, atau tender...'
                   : 'Cari kreator, vendor mitra, atau paket proyek korporat...',
             ),
           ),
@@ -648,7 +648,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      _isInstitution ? 'Role Sekolah / Perguruan Tinggi' : 'Role Corporate / Perusahaan',
+                      _isInstitution ? 'Role Institusi Pendidikan' : 'Role Corporate / Perusahaan',
                       style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w900,
@@ -670,7 +670,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                     const SizedBox(height: 8),
                     Text(
                       _isInstitution
-                          ? 'Kreavana membantu sekolah dan perguruan tinggi membangun jejaring, menemukan peluang kolaborasi, serta mengembangkan potensi mahasiswa, pendidik, dan institusi.'
+                          ? 'Kreavana membantu sekolah dan perguruan tinggi membangun jejaring, menemukan peluang kolaborasi, serta mengembangkan potensi peserta, pendidik, dan institusi.'
                           : 'Kreavana membantu perusahaan menemukan kreator, talenta, dan mitra terbaik untuk mendukung kebutuhan komunikasi, pemasaran, event, dan proyek kreatif lainnya.',
                       style: TextStyle(
                         fontSize: 13,
@@ -731,7 +731,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                     MaterialPageRoute(builder: (_) => ExploreScreen(user: widget.user)),
                   ),
                   icon: const Icon(Icons.search_rounded, size: 18, color: Colors.white),
-                  label: Text(_isInstitution ? 'Cari Talenta Mahasiswa & IDUKA' : 'Cari & Pilih Kreator/Mitra', style: const TextStyle(color: Colors.white)),
+                  label: Text(_isInstitution ? 'Cari Talenta Peserta & IDUKA' : 'Cari & Pilih Kreator/Mitra', style: const TextStyle(color: Colors.white)),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.white70),
                     padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
@@ -752,7 +752,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
     final tabs = [
       {'title': _isInstitution ? 'Ikhtisar & Tata Kelola' : 'Ikhtisar & Alur Kerja', 'icon': Icons.dashboard_customize_rounded},
       {'title': _isInstitution ? 'Ekosistem Kolaborasi' : 'Ekosistem 5 Pilar', 'icon': Icons.hub_rounded},
-      {'title': _isInstitution ? 'Cari Talenta & Mahasiswa' : 'Cari Talenta & Vendor', 'icon': Icons.people_alt_rounded},
+      {'title': _isInstitution ? 'Cari Talenta & Peserta' : 'Cari Talenta & Vendor', 'icon': Icons.people_alt_rounded},
       {'title': _isInstitution ? 'Tender, Magang & Riset' : 'Tender & Pengadaan (RFP)', 'icon': Icons.assignment_rounded},
     ];
 
@@ -1025,7 +1025,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
         'num': '6',
         'title': '6. Evaluasi & Pengembangan',
         'sub': 'Laporan, portofolio, reputasi',
-        'desc': 'Pelaporan berkala penyerapan magang, showcase karya siswa, evaluasi kinerja timbal balik, rating bintang, dan peningkatan akreditasi institusi.',
+        'desc': 'Pelaporan berkala penyerapan magang, showcase karya peserta, evaluasi kinerja timbal balik, rating bintang, dan peningkatan akreditasi institusi.',
         'icon': Icons.insights_rounded,
         'actionLabel': 'Buka Laporan & Evaluasi',
         'action': () => Navigator.push(
@@ -1080,7 +1080,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _isInstitution ? 'Alur Kerja Role Sekolah / Perguruan Tinggi' : 'Alur Kerja Corporate / Perusahaan',
+                            _isInstitution ? 'Alur Kerja Role Institusi Pendidikan' : 'Alur Kerja Corporate / Perusahaan',
                             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 2),
@@ -1376,13 +1376,13 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
 
     final institutionPillars = [
       {
-        'name': 'Sekolah / Perguruan Tinggi',
-        'desc': 'Hubungan Kemitraan Strategis Kampus dengan Kreavana',
+        'name': 'Institusi Pendidikan',
+        'desc': 'Hubungan Kemitraan Strategis Sekolah & Perguruan Tinggi dengan Kreavana',
         'color': _brandBlue,
         'icon': Icons.school_rounded,
         'got': [
           'Akses ke proyek riil dan kebutuhan industri',
-          'Penyaluran magang dan kerja untuk siswa/mahasiswa',
+          'Penyaluran magang dan kerja untuk peserta binaan',
           'Peluang kolaborasi riset, event, dan kompetisi',
           'Visibilitas dan reputasi institusi meningkat',
           'Kemudahan dalam mencari mitra kolaborasi',
@@ -1395,8 +1395,8 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
         ],
       },
       {
-        'name': 'Mahasiswa / Siswa',
-        'desc': 'Talenta Muda, Praktikan Magang, & Kreator Kampus',
+        'name': 'Peserta / Talenta Muda',
+        'desc': 'Praktikan Magang, Inovator, & Kreator Institusi',
         'color': const Color(0xFF0284C7),
         'icon': Icons.person_outline_rounded,
         'got': [
@@ -1412,8 +1412,8 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
         ],
       },
       {
-        'name': 'Dosen / Pendidik',
-        'desc': 'Akademisi, Peneliti Terapan, & Dosen Pembimbing',
+        'name': 'Pendidik / Pembimbing',
+        'desc': 'Akademisi, Peneliti Terapan, & Pembimbing Magang',
         'color': const Color(0xFF7C3AED),
         'icon': Icons.psychology_rounded,
         'got': [
@@ -1495,14 +1495,14 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                   children: [
                     Text(
                       _isInstitution
-                          ? 'Ekosistem Kolaborasi Sekolah & Perguruan Tinggi'
+                          ? 'Ekosistem Kolaborasi Institusi Pendidikan'
                           : 'Ekosistem & Sinergi Multi-Pilar Kreavana',
                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       _isInstitution
-                          ? 'Menghubungkan potensi & peluang antara institusi pendidikan, mahasiswa/dosen, IDUKA, vendor, dan komunitas.'
+                          ? 'Menghubungkan potensi & peluang antara institusi pendidikan, peserta/pendidik, IDUKA, vendor, dan komunitas.'
                           : 'Pusat sinergi yang mempertemukan perusahaan dengan kreator, vendor, sponsor, dan ekosistem.',
                       style: const TextStyle(fontSize: 12, color: Colors.grey),
                     ),
@@ -1770,7 +1770,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                   children: [
                     Text(
                       _isInstitution
-                          ? 'Dampak yang Dirasakan Sekolah & Perguruan Tinggi'
+                          ? 'Dampak yang Dirasakan Institusi Pendidikan'
                           : 'Kenapa Bergabung dengan Kreavana?',
                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
@@ -2113,7 +2113,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(_isInstitution ? 'Penelusuran Talenta Mahasiswa & Mitra IDUKA' : 'Rekomendasi Kreator & Vendor Terverifikasi', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  Text(_isInstitution ? 'Penelusuran Talenta Peserta & Mitra IDUKA' : 'Rekomendasi Kreator & Vendor Terverifikasi', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   ElevatedButton.icon(
                     onPressed: () => Navigator.push(
                       context,

@@ -410,6 +410,7 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
           !notes.toLowerCase().startsWith('spesialisasi') &&
           (notes.startsWith('Memiliki') ||
            notes.startsWith('Mampu') ||
+           notes.startsWith('Peserta') ||
            notes.startsWith('Siswa') ||
            notes.startsWith('Mahasiswa') ||
            notes.startsWith('Disiplin') ||
@@ -2011,7 +2012,7 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
               const SizedBox(height: 4),
               Text(
                 hasLetter
-                    ? 'Pihak Corporate telah menerbitkan surat resmi penerimaan ($letterName). Anda dapat mengunduh berkas resmi ini sebagai bukti penerimaan magang/kerja siswa institusi Anda.'
+                    ? 'Pihak Corporate telah menerbitkan surat resmi penerimaan ($letterName). Anda dapat mengunduh berkas resmi ini sebagai bukti penerimaan magang/kerja peserta institusi Anda.'
                     : 'Pihak Corporate belum mengunggah Surat Resmi Penerimaan. Tombol unduh akan aktif secara otomatis setelah berkas pernyataan resmi diunggah oleh pihak Corporate.',
                 style: TextStyle(
                   fontSize: 12.5,

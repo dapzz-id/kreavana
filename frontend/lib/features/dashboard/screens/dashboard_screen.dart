@@ -582,10 +582,10 @@ class _DashboardScreenState extends State<DashboardScreen>
       return _RoleDashboardConfig(
         badge: '✦ MODE INSTITUSI PENDIDIKAN',
         greeting: 'Halo, $name! 🎓',
-        subtitle: 'Jembatani talenta siswa dengan industri, kurasi karya kreatif kampus, dan pantau kemitraan industri.',
+        subtitle: 'Jembatani talenta peserta dengan industri, kurasi karya kreatif institusi, dan pantau kemitraan industri.',
         primaryButtonLabel: 'Program & Magang',
         primaryButtonIcon: Icons.work_outline,
-        secondaryButtonLabel: 'Review Karya Siswa',
+        secondaryButtonLabel: 'Review Karya Peserta',
         secondaryButtonIcon: Icons.collections_bookmark_outlined,
         recommendationTitle: 'Mitra Industri Rekomendasi',
         recommendationNiche: 'Industri Kreatif',
@@ -606,7 +606,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             'icon': Icons.work_outline,
             'color': const Color(0xFF10B981),
             'trend': 'Lamaran & kemitraan magang',
-            'breakdown': 'Total pengajuan dan penempatan program magang siswa ke mitra industri.',
+            'breakdown': 'Total pengajuan dan penempatan program magang peserta ke mitra industri.',
             'action': 'Proyek Berjalan',
           },
           {
@@ -619,19 +619,19 @@ class _DashboardScreenState extends State<DashboardScreen>
             'action': 'Cari Mitra Industri',
           },
           {
-            'label': 'Karya Siswa',
+            'label': 'Karya Peserta',
             'value': showcasesVal,
             'icon': Icons.verified_outlined,
             'color': const Color(0xFFF59E0B),
             'trend': 'Portofolio terkurasi',
-            'breakdown': 'Karya cipta dan portofolio siswa dari database institusi.',
+            'breakdown': 'Karya cipta dan portofolio peserta dari database institusi.',
             'action': 'Review Karya',
           },
         ],
         quickActions: const [],
         aiTips: [
-          'Verifikasi berkas karya siswa sebelum dipublikasikan ke etalase publik Kreavana',
-          'Hubungkan siswa magang dengan mentor industri bersertifikat di platform',
+          'Verifikasi berkas karya peserta sebelum dipublikasikan ke etalase publik Kreavana',
+          'Hubungkan peserta magang dengan mentor industri bersertifikat di platform',
           'Gunakan kalender agenda untuk memantau tenggat ujian kompetensi karya',
         ],
       );
@@ -2221,17 +2221,27 @@ class _DashboardScreenState extends State<DashboardScreen>
         _openCreatorService('komunitas_kolaborasi');
         break;
 
-      // ── Layanan Sekolah ──
+      // ── Layanan Institusi ──
+      case 'Workspace Institusi':
       case 'Workspace Sekolah':
+      case 'Portofolio Peserta':
       case 'Portofolio Siswa':
+      case 'Kurasi Peserta & Magang':
       case 'Kurasi Siswa & Magang':
+      case 'Kolaborasi Institusi':
       case 'Kolaborasi Sekolah':
+      case 'Pengaturan Peserta':
       case 'Pengaturan Siswa':
+      case 'Karya Peserta':
+      case 'Karya Peserta Terkurasi':
+      case 'Karya Siswa':
       case 'Karya Siswa Terkurasi':
       case 'Mitra Magang Industri':
       case 'Review Karya':
+      case 'Review Karya Peserta':
       case 'Review Karya Siswa':
       case 'Direktori Talenta':
+      case 'Karya & Portofolio Peserta':
       case 'Karya & Portofolio Siswa':
         if (widget.user.isSchool || widget.user.isInstitution) {
           context.go(AppRoutes.karyaSiswa);
@@ -4528,7 +4538,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       return 'https://images.unsplash.com/photo-1590602847861-f357a9332bbc?auto=format&fit=crop&w=200&q=80';
     } else if (combined.contains('wedding') || combined.contains('nikah') || combined.contains('pengantin') || combined.contains('mua')) {
       return 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=200&q=80';
-    } else if (combined.contains('magang') || combined.contains('sekolah') || combined.contains('siswa') || combined.contains('animasi') || combined.contains('3d')) {
+    } else if (combined.contains('magang') || combined.contains('sekolah') || combined.contains('siswa') || combined.contains('peserta') || combined.contains('institusi') || combined.contains('kampus') || combined.contains('animasi') || combined.contains('3d')) {
       return 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=200&q=80';
     } else if (combined.contains('lighting') || combined.contains('panggung') || combined.contains('stage')) {
       return 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=200&q=80';

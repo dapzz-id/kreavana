@@ -1110,5 +1110,37 @@ void main() {
         expect(find.text('Peserta Magang 01'), findsNothing);
       },
     );
+
+    test(
+      'OpportunityApprovedCreatorModel supports Peserta and legacy Siswa prefixes and defaults to Peserta Magang',
+      () {
+        final pesertaModel = OpportunityApprovedCreatorModel(
+          id: 'inst-1',
+          applicationId: 'app_1',
+          name: 'SMK Telesandi',
+          username: 'smk_telesandi',
+          pitchMessage: 'Peserta: Rian Pratama (DKV) | Kontak: 081234',
+        );
+        final legacySiswaModel = OpportunityApprovedCreatorModel(
+          id: 'inst-2',
+          applicationId: 'app_2',
+          name: 'Universitas Kreavana',
+          username: 'univ_kreavana',
+          pitchMessage: 'Siswa: Nadia Putri (Ilmu Komunikasi) | Kontak: 085678',
+        );
+        final emptyModel = OpportunityApprovedCreatorModel(
+          id: 'inst-3',
+          applicationId: 'app_3',
+          name: 'Akademi Desain',
+          username: 'akademi_desain',
+        );
+
+        expect(pesertaModel.studentDisplayName, 'Rian Pratama');
+        expect(pesertaModel.studentMajorDisplay, 'DKV');
+        expect(legacySiswaModel.studentDisplayName, 'Nadia Putri');
+        expect(legacySiswaModel.studentMajorDisplay, 'Ilmu Komunikasi');
+        expect(emptyModel.studentMajorDisplay, 'Peserta Magang');
+      },
+    );
   });
 }

@@ -559,7 +559,7 @@ class _MainNavigationState extends State<MainNavigation> {
       buttonLabel = 'Upgrade Sekarang';
     } else if (isSchool) {
       promoTitle = 'Upgrade Akun Institusi';
-      promoDesc = 'Tingkatkan peluang & fitur premium untuk institusi sekolah.';
+      promoDesc = 'Tingkatkan peluang & fitur premium untuk institusi pendidikan.';
       buttonLabel = 'Upgrade Sekarang';
     } else if (isCorporate) {
       promoTitle = 'Upgrade Akun Corporate';
@@ -1095,7 +1095,7 @@ class _MainNavigationState extends State<MainNavigation> {
             _currentUser.hasInstitutionPermission('karya_siswa')) ...[
           if (!isCollapsed) ...[
             const SizedBox(height: 18),
-            _buildSidebarSectionHeader('PENGELOLAAN SEKOLAH', isDark),
+            _buildSidebarSectionHeader('PENGELOLAAN INSTITUSI', isDark),
           ],
           if (_currentUser.hasInstitutionPermission('program_magang'))
             _buildSidebarLink(
@@ -1130,7 +1130,7 @@ class _MainNavigationState extends State<MainNavigation> {
           if (_currentUser.hasInstitutionPermission('karya_siswa'))
             _buildSidebarLink(
               icon: Icons.palette_outlined,
-              label: 'Karya & Portofolio Siswa',
+              label: 'Karya & Portofolio Peserta',
               onTap: () => _navigateToRoute(AppRoutes.karyaSiswa),
               isDark: isDark,
               isCollapsed: isCollapsed,

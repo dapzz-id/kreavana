@@ -117,6 +117,7 @@ void main() {
         expect(find.text('Kontak Person / Email'), findsNothing);
         expect(find.text('Nama PIC Penanggung Jawab'), findsNothing);
         expect(find.text('Jabatan PIC Industri'), findsNothing);
+        expect(find.text('Kuota Magang Peserta/Tahun'), findsNothing);
         expect(find.text('Kuota Magang Siswa/Tahun'), findsNothing);
         expect(find.text('Nomor Registrasi MoU / PKS'), findsNothing);
         expect(find.text('Masa Berlaku MoU'), findsNothing);
@@ -526,6 +527,52 @@ void main() {
         expect(find.text('Tolak'), findsOneWidget);
         expect(find.text('Setujui Kemitraan'), findsOneWidget);
         expect(find.text('Kelola'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'Institution showcases workspace uses general Peserta terminology across schools and campuses',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(1280, 960);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        DioClient.instance.dio.httpClientAdapter = _MockAdapter((options) async {
+          return _jsonResponse({'status': true, 'data': []});
+        });
+
+        final campusUser = UserModel(
+          id: 'inst-univ-1',
+          name: 'Institut Seni Kreatif Nusantara',
+          username: 'iskn_official',
+          email: 'campus@kreavana.id',
+          role: 'institution',
+          subRole: 'institution',
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: InstitutionWorkspaceScreen(
+              user: campusUser,
+              resourceType: 'showcases',
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Karya & Portofolio Peserta'), findsWidgets);
+        expect(find.text('Tambah Karya Peserta'), findsWidgets);
+        expect(find.text('Total Karya Peserta'), findsOneWidget);
+        expect(find.text('Karya & Portofolio Siswa'), findsNothing);
+        expect(find.text('Tambah Karya Siswa'), findsNothing);
+        expect(find.text('Total Karya Siswa'), findsNothing);
+
+        await tester.tap(find.text('Tambah Karya Peserta').first);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Nama Peserta / Tim'), findsOneWidget);
+        expect(find.text('Nama Siswa / Tim'), findsNothing);
       },
     );
   });

@@ -288,10 +288,13 @@ void main() {
       final titles = sections.map((s) => s.title).toList();
       final allRouteKeys = sections.expand((s) => s.items).map((e) => e.routeKey).toList();
 
-      expect(titles, [null, 'PENGELOLAAN SEKOLAH', 'DATA & DOKUMEN', 'PENGATURAN']);
+      expect(titles, [null, 'PENGELOLAAN INSTITUSI', 'DATA & DOKUMEN', 'PENGATURAN']);
       expect(allRouteKeys, contains('program_magang'));
       expect(allRouteKeys, contains('mitra_komunitas'));
       expect(allRouteKeys, contains('karya_siswa'));
+      final labels = sections.expand((s) => s.items).map((e) => e.label).toList();
+      expect(labels, contains('Karya & Portofolio Peserta'));
+      expect(labels, isNot(contains('Karya & Portofolio Siswa')));
       expect(allRouteKeys, contains('dokumen_instansi'));
       expect(allRouteKeys, contains('profil_instansi'));
       expect(allRouteKeys, contains('profil_akun'));
@@ -312,7 +315,7 @@ void main() {
       final titles = sections.map((s) => s.title).toList();
       final allRouteKeys = sections.expand((s) => s.items).map((e) => e.routeKey).toList();
 
-      expect(titles, [null, 'PENGELOLAAN SEKOLAH', 'PENGATURAN']);
+      expect(titles, [null, 'PENGELOLAAN INSTITUSI', 'PENGATURAN']);
       expect(allRouteKeys, contains('program_magang'));
       expect(allRouteKeys, contains('profil_akun'));
       expect(allRouteKeys, contains('pengaturan'));
@@ -400,7 +403,8 @@ void main() {
         expect(find.byType(Drawer), findsOneWidget);
         expect(find.text('Institusi Pendidikan'), findsOneWidget);
         expect(find.text('Dompet & Pembayaran'), findsOneWidget);
-        expect(find.text('PENGELOLAAN SEKOLAH'), findsOneWidget);
+        expect(find.text('PENGELOLAAN INSTITUSI'), findsOneWidget);
+        expect(find.text('Karya & Portofolio Peserta'), findsOneWidget);
         expect(find.text('Program & Magang'), findsOneWidget);
 
         await tester.drag(find.byType(ListView).first, const Offset(0, -300));

@@ -58,7 +58,7 @@ class DashboardService extends BaseService implements DashboardServiceInterface
                 ['stat_label' => 'Mitra Industri', 'stat_value' => '0', 'stat_icon' => 'handshake'],
                 ['stat_label' => 'Lamaran Magang', 'stat_value' => '0', 'stat_icon' => 'work'],
                 ['stat_label' => 'Kegiatan & Event', 'stat_value' => '0', 'stat_icon' => 'event'],
-                ['stat_label' => 'Karya Siswa', 'stat_value' => '0', 'stat_icon' => 'palette'],
+                ['stat_label' => 'Karya Peserta', 'stat_value' => '0', 'stat_icon' => 'palette'],
             ];
         }
 
@@ -79,7 +79,7 @@ class DashboardService extends BaseService implements DashboardServiceInterface
             ['stat_label' => 'Mitra Industri', 'stat_value' => (string) $partnersCount, 'stat_icon' => 'handshake'],
             ['stat_label' => 'Lamaran Magang', 'stat_value' => (string) $internshipsCount, 'stat_icon' => 'work'],
             ['stat_label' => 'Kegiatan & Event', 'stat_value' => (string) $eventsCount, 'stat_icon' => 'event'],
-            ['stat_label' => 'Karya Siswa', 'stat_value' => (string) $showcasesCount, 'stat_icon' => 'palette'],
+            ['stat_label' => 'Karya Peserta', 'stat_value' => (string) $showcasesCount, 'stat_icon' => 'palette'],
         ];
     }
 
@@ -552,13 +552,13 @@ class DashboardService extends BaseService implements DashboardServiceInterface
                     ['stat_label' => 'Mitra Industri', 'stat_value' => '0', 'stat_icon' => 'handshake'],
                     ['stat_label' => 'Lamaran Magang', 'stat_value' => '0', 'stat_icon' => 'work'],
                     ['stat_label' => 'Kegiatan & Event', 'stat_value' => '0', 'stat_icon' => 'event'],
-                    ['stat_label' => 'Karya Siswa', 'stat_value' => '0', 'stat_icon' => 'palette'],
+                    ['stat_label' => 'Karya Peserta', 'stat_value' => '0', 'stat_icon' => 'palette'],
                 ],
                 'creator' => [
                     ['stat_label' => 'Mitra Industri', 'stat_value' => '0', 'stat_icon' => 'handshake'],
                     ['stat_label' => 'Lamaran Magang', 'stat_value' => '0', 'stat_icon' => 'work'],
                     ['stat_label' => 'Kegiatan & Event', 'stat_value' => '0', 'stat_icon' => 'event'],
-                    ['stat_label' => 'Karya Siswa', 'stat_value' => '0', 'stat_icon' => 'palette'],
+                    ['stat_label' => 'Karya Peserta', 'stat_value' => '0', 'stat_icon' => 'palette'],
                 ]
             ],
             'umkm' => [

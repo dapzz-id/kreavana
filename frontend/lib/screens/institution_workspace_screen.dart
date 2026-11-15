@@ -125,9 +125,9 @@ class _InstitutionWorkspaceScreenState
     'reports': 'Laporan & Evaluasi Kinerja',
     'budgets': 'Realisasi Anggaran',
     'monitoring': 'Monitoring & Evaluasi',
-    'documents': 'Dokumen & MoU Sekolah',
+    'documents': 'Dokumen & MoU Institusi',
     'announcements': 'Pengumuman Publik',
-    'showcases': 'Karya & Portofolio Siswa',
+    'showcases': 'Karya & Portofolio Peserta',
     'study_programs': 'Program Studi & Jurusan',
     'events': 'Kegiatan, Event & Lomba',
     'talents': 'Direktori & Penelusuran Talenta',
@@ -142,7 +142,7 @@ class _InstitutionWorkspaceScreenState
     'monitoring': 'Tambah Program',
     'documents': 'Tambah Dokumen',
     'announcements': 'Buat Pengumuman',
-    'showcases': 'Tambah Karya Siswa',
+    'showcases': 'Tambah Karya Peserta',
     'study_programs': 'Tambah Program Studi',
     'events': 'Tambah Event / Lomba',
     'talents': 'Daftarkan Talenta',
@@ -186,9 +186,9 @@ class _InstitutionWorkspaceScreenState
       _WorkspaceField('phone', 'Nomor Telepon / WhatsApp PIC', hint: '+62 8... atau nomor telepon kantor'),
       _WorkspaceField(
         'internship_quota_yearly',
-        'Kuota Magang Siswa/Tahun',
+        'Kuota Magang Peserta/Tahun',
         kind: _FieldKind.number,
-        hint: 'Contoh: 15 (siswa/tahun)',
+        hint: 'Contoh: 15 (peserta/tahun)',
       ),
       _WorkspaceField('mou_number', 'Nomor Registrasi MoU / PKS', hint: 'Contoh: 012/MoU-ISRK/I/2026'),
       _WorkspaceField('mou_period', 'Masa Berlaku MoU', hint: 'Contoh: 2026 - 2029 (Aktif)'),
@@ -271,8 +271,8 @@ class _InstitutionWorkspaceScreenState
       ),
       _WorkspaceField(
         'creator_name',
-        'Nama Siswa / Tim',
-        hint: 'Contoh: Tim Studio Animasi XII-A / Rian Pratama',
+        'Nama Peserta / Tim',
+        hint: 'Contoh: Tim Studio Animasi / Rian Pratama',
       ),
       _WorkspaceField(
         'image_url',
@@ -422,11 +422,11 @@ class _InstitutionWorkspaceScreenState
     if (_isSchool) {
       switch (widget.resourceType) {
         case 'partners':
-          return 'Kelola kemitraan industri (DUDI), penyelarasan kurikulum kejuruan, dan fasilitas magang PKL siswa.';
+          return 'Kelola kemitraan industri (DUDI), penyelarasan kurikulum, dan fasilitas magang peserta.';
         case 'showcases':
-          return 'Etalase kurasi karya unggulan, tugas akhir siswa kejuruan, dan portofolio siap kerja untuk mitra industri DUDI.';
+          return 'Etalase kurasi karya unggulan, proyek tugas akhir peserta, dan portofolio siap kerja untuk mitra industri.';
         case 'documents':
-          return 'Arsip resmi perjanjian kerjasama (MoU), surat keputusan legal, dan dokumen akreditasi sekolah.';
+          return 'Arsip resmi perjanjian kerjasama (MoU), surat keputusan legal, dan dokumen akreditasi institusi.';
       }
     }
     return 'Kelola data dan arsip resmi terintegrasi dengan ekosistem Kreavana.';
@@ -1590,7 +1590,7 @@ class _InstitutionWorkspaceScreenState
         final verifiedPct =
             records.isEmpty ? 0 : ((pubCount / records.length) * 100).round();
         kpis = [
-          {'title': 'Total Karya Siswa', 'value': records.length.toString(), 'icon': Icons.palette_outlined},
+          {'title': 'Total Karya Peserta', 'value': records.length.toString(), 'icon': Icons.palette_outlined},
           {'title': 'Karya Tervalidasi', 'value': pubCount.toString(), 'icon': Icons.verified_rounded},
           {'title': 'Bidang Keahlian', 'value': '$majors Bidang', 'icon': Icons.school_outlined},
           {'title': 'Rasio Tervalidasi', 'value': '$verifiedPct%', 'icon': Icons.workspace_premium_outlined},
@@ -2354,7 +2354,7 @@ class _InstitutionWorkspaceScreenState
             meta['quota']?.toString() ??
             '')
         .trim();
-    final quotaDisplay = quota.isNotEmpty ? '$quota Siswa/Tahun' : '';
+    final quotaDisplay = quota.isNotEmpty ? '$quota Peserta/Tahun' : '';
 
     final website =
         (meta['website']?.toString() ?? meta['url']?.toString() ?? '').trim();
@@ -3817,7 +3817,7 @@ class _InstitutionWorkspaceScreenState
         _buildReportMetricPill(
           icon: Icons.groups_rounded,
           label: 'Peserta Magang',
-          value: '$val Mahasiswa',
+          value: '$val Peserta',
           isDark: isDark,
         ),
       );
@@ -4423,7 +4423,7 @@ class _InstitutionWorkspaceScreenState
       final val = (150 * (progress / 100)).round();
       metricAchieved = '$val';
       metricTarget = '150';
-      metricUnit = 'Mahasiswa Magang DUDI';
+      metricUnit = 'Peserta Magang Industri';
     } else if (combined.contains('bnsp')) {
       final val = (200 * (progress / 100)).round();
       metricAchieved = '$val';
@@ -5390,10 +5390,10 @@ class _InstitutionWorkspaceScreenState
   Widget _buildShowcaseCard(Map<String, dynamic> record, bool isDark) {
     final meta = _metadata(record);
     final status = record['status']?.toString().toLowerCase() ?? 'published';
-    final title = record['title']?.toString() ?? 'Karya & Portofolio Siswa';
+    final title = record['title']?.toString() ?? 'Karya & Portofolio Peserta';
     final desc = record['description']?.toString() ?? '';
     final creator = meta['creator_name']?.toString() ?? meta['creator']?.toString() ?? '-';
-    final category = meta['category']?.toString() ?? 'Karya Siswa';
+    final category = meta['category']?.toString() ?? 'Karya Peserta';
     final year = meta['year']?.toString() ?? '';
     final portfolioUrl = meta['portfolio_url']?.toString() ?? meta['url']?.toString() ?? '';
     final award = meta['award']?.toString() ?? '';
@@ -7040,8 +7040,8 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
     if (key.contains('quota') || key.contains('magang')) {
       return {
         'label': field.label,
-        'caption': 'Alokasi kuota penerimaan siswa PKL / magang per tahun.',
-        'hint': field.hint ?? 'Contoh: 15 (siswa/tahun)',
+        'caption': 'Alokasi kuota penerimaan peserta magang / PKL per tahun.',
+        'hint': field.hint ?? 'Contoh: 15 (peserta/tahun)',
         'chips': <String>[],
       };
     }
@@ -7400,7 +7400,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
 
     return _buildFieldWithHeader(
       label: 'Status Kemitraan & Akses *',
-      caption: 'Tentukan status keaktifan mitra untuk penempatan magang siswa.',
+      caption: 'Tentukan status keaktifan mitra untuk penempatan magang peserta.',
       minHeaderHeight: minHeaderHeight,
       child: DropdownButtonFormField<String>(
         isExpanded: true,
@@ -8197,7 +8197,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                       const SizedBox(height: 4),
                       Text(
                         isPartnerResource
-                            ? 'Lengkapi profil rekanan industri untuk program magang, guru tamu, dan sertifikasi kejuruan.'
+                            ? 'Lengkapi profil rekanan industri untuk program magang, praktisi mengajar, dan sertifikasi kompetensi.'
                             : 'Tersimpan aman di pangkalan data instansi Kreavana untuk tata kelola resmi.',
                         style: TextStyle(
                           fontSize: 12.5,
@@ -8330,7 +8330,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                         children: [
                           _buildFieldWithHeader(
                             label: 'Deskripsi Kerjasama *',
-                            caption: 'Tuliskan bentuk kerjasama seperti magang PKL siswa, guru tamu industri, penyelarasan kurikulum, atau proyek bersama.',
+                            caption: 'Tuliskan bentuk kerjasama seperti magang peserta, praktisi mengajar industri, penyelarasan kurikulum, atau proyek bersama.',
                             child: TextFormField(
                               controller: _descriptionController,
                               minLines: 3,
@@ -8340,7 +8340,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                                 color: _isDark ? Colors.white : const Color(0xFF0F172A),
                               ),
                               decoration: _inputDecoration(
-                                hint: 'Contoh: Pengajuan kerjasama penempatan magang PKL siswa jurusan DKV & Animasi 3D, program guru tamu industri, dan uji kompetensi kejuruan...',
+                                hint: 'Contoh: Pengajuan kerjasama penempatan magang peserta bidang DKV & Animasi 3D, program praktisi mengajar industri, dan uji kompetensi...',
                                 prefixIcon: Icons.notes_rounded,
                               ),
                               validator: (value) => value == null || value.trim().isEmpty

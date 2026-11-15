@@ -482,7 +482,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         'kapasitas_jadwal': 'mengatur kapasitas & jadwal kerja',
         'tender_kolaborasi': 'mengakses tender dan vendor',
         'mitra_komunitas': 'mengakses mitra komunitas',
-        'karya_siswa': 'mengakses portofolio siswa',
+        'karya_siswa': 'mengakses portofolio peserta',
         'laporan': 'mengakses laporan',
         'monitoring_evaluasi': 'mengakses monitoring evaluasi',
         'dokumen_instansi': 'mengakses dokumen instansi',
@@ -814,7 +814,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
       buttonLabel = 'Upgrade Sekarang';
     } else if (isSchool) {
       promoTitle = 'Upgrade Akun Institusi';
-      promoDesc = 'Tingkatkan peluang & fitur premium untuk institusi sekolah.';
+      promoDesc = 'Tingkatkan peluang & fitur premium untuk institusi pendidikan.';
       buttonLabel = 'Upgrade Sekarang';
     } else if (isCorporate) {
       promoTitle = 'Upgrade Akun Corporate';
@@ -1520,15 +1520,18 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                                   ),
                                 ),
                                 const SizedBox(width: 10),
-                                const Text(
-                                  'Kreavana',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: -0.5,
+                                const Expanded(
+                                  child: Text(
+                                    'Kreavana',
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: -0.5,
+                                    ),
                                   ),
                                 ),
-                                const Spacer(),
                                 IconButton(
                                   icon: Icon(
                                     Icons.chevron_left_rounded,
@@ -1673,7 +1676,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                               effectiveUser.hasInstitutionPermission('karya_siswa')) ...[
                             if (!collapsed) ...[
                               const SizedBox(height: 18),
-                              _buildSectionHeader('PENGELOLAAN SEKOLAH', isDark),
+                              _buildSectionHeader('PENGELOLAAN INSTITUSI', isDark),
                             ] else ...[
                               const SizedBox(height: 8),
                             ],
@@ -1707,7 +1710,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             if (effectiveUser.hasInstitutionPermission('karya_siswa'))
                               _buildNavRow(
                                 icon: Icons.palette_outlined,
-                                label: 'Karya & Portofolio Siswa',
+                                label: 'Karya & Portofolio Peserta',
                                 onTap: () => _pushLink('karya_siswa'),
                                 isSelected: _isRouteActive('karya_siswa'),
                                 isDark: isDark,

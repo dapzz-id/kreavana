@@ -942,7 +942,7 @@ class OpportunityService {
     }
   }
 
-  /// Mengajukan siswa magang dari akun institusi dengan metadata siswa terstruktur di database.
+  /// Mengajukan peserta magang dari akun institusi dengan metadata peserta terstruktur di database.
   static Future<Map<String, dynamic>> applyInstitutionStudent({
     required String opportunityId,
     required String subRoleSlug,
@@ -964,7 +964,7 @@ class OpportunityService {
       return {
         'status': ok,
         'message': res['message']?.toString() ??
-            (ok ? 'Pengajuan siswa berhasil disimpan.' : 'Gagal mengajukan siswa.'),
+            (ok ? 'Pengajuan peserta berhasil disimpan.' : 'Gagal mengajukan peserta.'),
         'data': res['data'],
       };
     } catch (e) {

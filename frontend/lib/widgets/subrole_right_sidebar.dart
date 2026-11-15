@@ -841,7 +841,7 @@ class SubRoleRightSidebar extends StatelessWidget {
       events = [
         {
           'date': '19 Okt',
-          'title': 'Sidang Evaluasi Magang Siswa',
+          'title': 'Sidang Evaluasi Magang Peserta',
           'meta': 'Lab Multimedia • 08:30 WIB',
         },
         {
@@ -851,8 +851,8 @@ class SubRoleRightSidebar extends StatelessWidget {
         },
         {
           'date': '02 Nov',
-          'title': 'Gelar Karya Siswa Kreatif',
-          'meta': 'Aula Sekolah • Terbuka',
+          'title': 'Gelar Karya Peserta Kreatif',
+          'meta': 'Aula Institusi • Terbuka',
         },
       ];
     } else if (_isCompany) {
@@ -1058,8 +1058,8 @@ class SubRoleRightSidebar extends StatelessWidget {
       ];
     } else if (_isSchool) {
       tips = [
-        'Tampilkan portofolio karya terbaik siswa untuk menarik mitra industri.',
-        'Lakukan evaluasi berkala siswa magang lewat instrumen Monev terpadu.',
+        'Tampilkan portofolio karya terbaik peserta untuk menarik mitra industri.',
+        'Lakukan evaluasi berkala peserta magang lewat instrumen Monev terpadu.',
         'Arsipkan MoU kemitraan industri & sanggar dalam format digital resmi.',
       ];
     } else if (_isCompany) {
@@ -1166,10 +1166,10 @@ class SubRoleRightSidebar extends StatelessWidget {
       ];
     } else if (_isSchool) {
       title = 'Legalitas Kemitraan & Karya';
-      badge = 'Perlindungan MoU & Hak Cipta Siswa';
+      badge = 'Perlindungan MoU & Hak Cipta Karya';
       points = [
         'Dokumen MoU kerja sama industri tersimpan resmi',
-        'Hak cipta karya inovasi siswa terlindungi penuh',
+        'Hak cipta karya inovasi peserta terlindungi penuh',
         'Rekam jejak program magang & sertifikasi terverifikasi',
       ];
     } else if (_isCompany) {
@@ -1297,8 +1297,8 @@ class SubRoleRightSidebar extends StatelessWidget {
       desc = 'Butuh konsultasi regulasi SPK, alur pengadaan barang/jasa, atau panduan BAST digital?';
       btnLabel = 'Konsultasi AI Kedinasan';
     } else if (_isSchool) {
-      title = 'Pusat Layanan Vokasi';
-      desc = 'Butuh panduan kurasi karya siswa, penyusunan MoU, atau penempatan magang industri?';
+      title = 'Pusat Layanan Institusi';
+      desc = 'Butuh panduan kurasi karya peserta, penyusunan MoU, atau penempatan magang industri?';
       btnLabel = 'Konsultasi AI Pendidikan';
     } else if (_isCompany) {
       title = 'Dukungan Korporat B2B';

@@ -153,8 +153,8 @@ class _AgendaScreenState extends State<AgendaScreen> {
               ? opp.location!
               : (opp.address != null && opp.address!.isNotEmpty
                   ? opp.address!
-                  : 'Kampus / Sekolah'),
-          'organizer': opp.poster?.name ?? widget.user?.name ?? 'Sekolah',
+                  : 'Institusi Pendidikan'),
+          'organizer': opp.poster?.name ?? widget.user?.name ?? 'Institusi',
         });
       }
 
@@ -244,7 +244,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
         titleSpacing: isDesktop ? 32 : 16,
         elevation: 0,
         title: Text(
-          _isSchool ? 'Kegiatan & Event Sekolah' : 'Agenda Kegiatan',
+          _isSchool ? 'Kegiatan & Event Institusi' : 'Agenda Kegiatan',
           style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
         actions: [
@@ -467,7 +467,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _isSchool ? 'Jadwal & Agenda Sekolah' : 'Jadwal & Agenda Terdekat',
+                  _isSchool ? 'Jadwal & Agenda Institusi' : 'Jadwal & Agenda Terdekat',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: isDesktop ? 18 : 16,
@@ -967,7 +967,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
               const SizedBox(height: 8),
               Text(
                 _isSchool
-                    ? 'Buat jadwal kegiatan sekolah, rapat kemitraan industri, monitoring magang siswa, atau workshop kreatif di sini.'
+                    ? 'Buat jadwal kegiatan institusi, rapat kemitraan industri, monitoring magang peserta, atau workshop kreatif di sini.'
                     : 'Tambahkan agenda meeting online, jadwal shooting, atau batas deadline proyek Anda agar terpantau rapi.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
@@ -1128,7 +1128,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                         children: [
                           Flexible(
                             child: Text(
-                              _isSchool ? 'Tambah Kegiatan & Event Sekolah' : 'Tambah Agenda Baru',
+                              _isSchool ? 'Tambah Kegiatan & Event Institusi' : 'Tambah Agenda Baru',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w800,
@@ -1155,7 +1155,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                       const SizedBox(height: 3),
                       Text(
                         _isSchool
-                            ? 'Jadwalkan kegiatan akademik, meeting DUDI, pameran seni, atau workshop kejuruan.'
+                            ? 'Jadwalkan kegiatan akademik, meeting DUDI, pameran karya, atau workshop talenta.'
                             : 'Kelola jadwal meeting klien, pra-produksi, dan batas penyerahan karya.',
                         style: TextStyle(fontSize: 12, color: isDark ? AppTheme.textMuted : Colors.grey.shade600),
                       ),
@@ -1215,8 +1215,8 @@ class _AgendaScreenState extends State<AgendaScreen> {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          '• Kegiatan yang disimpan otomatis tersinkronisasi ke kalender instansi, guru pembimbing, dan mitra industri.\n'
-                          '• Tentukan rentang tanggal dan format acara (luring di lokasi kampus atau daring via link virtual).\n'
+                          '• Kegiatan yang disimpan otomatis tersinkronisasi ke kalender instansi, pembimbing akademik, dan mitra industri.\n'
+                          '• Tentukan rentang tanggal dan format acara (luring di lokasi institusi atau daring via link virtual).\n'
                           '• Sistem secara otomatis mengaktifkan alarm pengingat H-1 dan H-3 jam bagi seluruh partisipan.',
                           style: TextStyle(
                             fontSize: 11.5,
@@ -1590,7 +1590,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                   controller: notesCtrl,
                   decoration: InputDecoration(
                     labelText: 'Target Peserta & Catatan Tambahan (Opsional)',
-                    hintText: 'Contoh: Seluruh siswa kejuruan DKV & guru pembimbing magang PKL.',
+                    hintText: 'Contoh: Seluruh peserta bidang DKV & pembimbing magang industri.',
                     prefixIcon: const Icon(Icons.groups_rounded, size: 18, color: Color(0xFF64748B)),
                     filled: true,
                     fillColor: isDark ? AppTheme.cardBg : Colors.white,
@@ -1687,8 +1687,8 @@ class _AgendaScreenState extends State<AgendaScreen> {
                             'icon': getTypeIcon(typeSel),
                             'location': locCtrl.text.trim().isNotEmpty
                                 ? locCtrl.text.trim()
-                                : (isOnlineMode ? 'Google Meet / Virtual' : 'Kampus / Sekolah'),
-                            'organizer': widget.user?.name ?? 'Sekolah',
+                                : (isOnlineMode ? 'Google Meet / Virtual' : 'Institusi Pendidikan'),
+                            'organizer': widget.user?.name ?? 'Institusi',
                           });
                         });
 
@@ -1698,13 +1698,13 @@ class _AgendaScreenState extends State<AgendaScreen> {
                             'title': titleCtrl.text.trim(),
                             'description': notesCtrl.text.trim().isNotEmpty
                                 ? notesCtrl.text.trim()
-                                : 'Kegiatan resmi kampus & industri.',
+                                : 'Kegiatan resmi institusi & industri.',
                             'status': 'open',
                             'metadata': {
                               'category': typeSel,
                               'event_date': '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}',
                               'event_end_date': '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}',
-                              'location': locCtrl.text.trim().isNotEmpty ? locCtrl.text.trim() : (widget.user?.location ?? 'Kampus Institusi'),
+                              'location': locCtrl.text.trim().isNotEmpty ? locCtrl.text.trim() : (widget.user?.location ?? 'Lingkungan Institusi'),
                               'registered_participants': 0,
                               'is_competition': typeSel.toLowerCase().contains('lomba') || titleCtrl.text.toLowerCase().contains('lomba'),
                             },
@@ -1715,7 +1715,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                         AppSweetAlert.success(
                           context,
                           _isSchool
-                              ? 'Kegiatan sekolah berhasil ditambahkan ke kalender agenda!'
+                              ? 'Kegiatan institusi berhasil ditambahkan ke kalender agenda!'
                               : 'Agenda kegiatan berhasil dijadwalkan!',
                           title: 'Jadwal Tersimpan',
                         );

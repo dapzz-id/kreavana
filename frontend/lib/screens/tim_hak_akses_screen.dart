@@ -56,7 +56,7 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
       'email': _ownerEmail,
       'role': 'Admin',
       'permissions': List<String>.from(UserModel.defaultInstitutionPermissions),
-      'department': 'Pimpinan Lembaga / Kepala Sekolah',
+      'department': 'Pimpinan Institusi',
       'isOnline': true,
       'isOwner': true,
       'joinedAt': 'Pemilik Akun',
@@ -67,13 +67,13 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
     {
       'slug': 'program_magang',
       'name': 'Program & Magang',
-      'desc': 'Kelola tawaran program, kuota magang siswa, & pendaftar.',
+      'desc': 'Kelola tawaran program, kuota magang peserta, & pendaftar.',
       'icon': Icons.work_outline,
     },
     {
       'slug': 'kegiatan_event',
       'name': 'Kegiatan & Event',
-      'desc': 'Publikasikan workshop, webinar, kompetisi, & agenda sekolah.',
+      'desc': 'Publikasikan workshop, webinar, kompetisi, & agenda institusi.',
       'icon': Icons.event_outlined,
     },
     {
@@ -84,8 +84,8 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
     },
     {
       'slug': 'karya_siswa',
-      'name': 'Karya & Portofolio Siswa',
-      'desc': 'Kurasi karya unggulan siswa, galeri talenta vokasi, & pameran.',
+      'name': 'Karya & Portofolio Peserta',
+      'desc': 'Kurasi karya unggulan peserta, galeri talenta, & pameran.',
       'icon': Icons.palette_outlined,
     },
     {
@@ -301,7 +301,7 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
                   controller: emailCtrl,
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
-                    hintText: 'nama@sekolah.sch.id',
+                    hintText: 'nama@institusi.id',
                     prefixIcon: const Icon(Icons.email_outlined, size: 20),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -351,7 +351,7 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
                 TextField(
                   controller: deptCtrl,
                   decoration: InputDecoration(
-                    hintText: 'Contoh: Waka Kurikulum / Guru Pembimbing PKL',
+                    hintText: 'Contoh: Koordinator Akademik / Pembimbing Magang',
                     prefixIcon: const Icon(Icons.badge_outlined, size: 20),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -589,7 +589,7 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
                                   'title': name,
                                   'description': dept.isNotEmpty
                                       ? dept
-                                      : 'Staf Lembaga / Sekolah',
+                                      : 'Staf Institusi Pendidikan',
                                   'status': 'published',
                                   'metadata': {
                                     'email': email,
@@ -600,7 +600,7 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
                                         : selectedPermissions.toList(),
                                     'department': dept.isNotEmpty
                                         ? dept
-                                        : 'Staf Lembaga / Sekolah',
+                                        : 'Staf Institusi Pendidikan',
                                     'is_online': false,
                                     'joined_at': 'Baru saja diundang',
                                   },
@@ -692,7 +692,7 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
     if (member['isOwner'] == true) {
       AppSweetAlert.warning(
         context,
-        'Wewenang pemilik akun utama sekolah tidak dapat diubah.',
+        'Wewenang pemilik akun utama institusi tidak dapat diubah.',
         title: 'Aksi Dibatasi',
       );
       return;
@@ -828,7 +828,7 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
                 TextField(
                   controller: deptCtrl,
                   decoration: InputDecoration(
-                    hintText: 'Contoh: Waka Kurikulum / Guru Pembimbing PKL',
+                    hintText: 'Contoh: Koordinator Akademik / Pembimbing Magang',
                     prefixIcon: const Icon(Icons.badge_outlined, size: 20),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -1028,7 +1028,7 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
                                   'title': member['name'],
                                   'description': dept.isNotEmpty
                                       ? dept
-                                      : 'Staf Lembaga / Sekolah',
+                                      : 'Staf Institusi Pendidikan',
                                   'status': 'published',
                                   'metadata': {
                                     'email': member['email'],
@@ -1038,7 +1038,7 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
                                         : selectedPermissions.toList(),
                                     'department': dept.isNotEmpty
                                         ? dept
-                                        : 'Staf Lembaga / Sekolah',
+                                        : 'Staf Institusi Pendidikan',
                                     'is_online': member['isOnline'] == true,
                                     'joined_at': member['joinedAt'],
                                     if (password.isNotEmpty) 'password': password,
@@ -1277,7 +1277,7 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
     if (member['isOwner'] == true) {
       AppSweetAlert.warning(
         context,
-        'Pemilik akun utama sekolah tidak dapat dihapus.',
+        'Pemilik akun utama institusi tidak dapat dihapus.',
         title: 'Aksi Dibatasi',
       );
       return;
@@ -1385,7 +1385,7 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
             ),
             const SizedBox(height: 2),
             Text(
-              'Kelola wewenang dan staf pengelola instansi sekolah (Tersinkronisasi Database)',
+              'Kelola wewenang dan staf pengelola institusi pendidikan (Tersinkronisasi Database)',
               style: TextStyle(
                 fontSize: 12,
                 color: isDark ? AppTheme.textMuted : Colors.grey.shade600,

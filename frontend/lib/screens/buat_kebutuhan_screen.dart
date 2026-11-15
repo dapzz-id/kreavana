@@ -437,14 +437,14 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
       'Charity',
     ],
     'institution': [
-      'Magang PKL Siswa',
+      'Magang & PKL Peserta',
       'Animasi 2D & 3D',
       'Multimedia & DKV',
       'Broadcasting & TV',
       'Desain Grafis UMKM',
       'Editing & Motion',
       'Teaching Factory',
-      'Proyek Riset Sekolah',
+      'Proyek Riset Institusi',
     ],
     'government': [
       'Publikasi Program',
@@ -808,7 +808,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
             ),
             Text(
               _isMagangProgram
-                  ? 'Publikasikan lowongan magang, PKL, atau kemitraan industri untuk talenta dan siswa binaan'
+                  ? 'Publikasikan lowongan magang, PKL, atau kemitraan industri untuk peserta dan talenta binaan'
                   : 'Dapatkan tawaran & proposal dari berbagai kreator terbaik',
               style: TextStyle(
                 fontSize: 12,
@@ -960,9 +960,9 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                                         const SizedBox(height: 20),
                                         AnimatedInputField(
                                           controller: _judulController,
-                                          label: _isMagangProgram ? 'Nama Program / Magang Siswa *' : 'Judul Kebutuhan Proyek *',
+                                          label: _isMagangProgram ? 'Nama Program / Magang Peserta *' : 'Judul Kebutuhan Proyek *',
                                           hint: _isMagangProgram
-                                              ? 'Contoh: Magang Siswa & Mahasiswa Jurusan Animasi 3D & Rigging'
+                                              ? 'Contoh: Program Magang Peserta Bidang Animasi 3D & Rigging'
                                               : 'Contoh: Foto Marathon 10Km & Video Highlight Dokumentasi',
                                           icon: _isMagangProgram ? Icons.school_outlined : Icons.title_rounded,
                                           textInputAction: TextInputAction.next,
@@ -1094,9 +1094,9 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                                   const SizedBox(height: 20),
                                   AnimatedInputField(
                                     controller: _judulController,
-                                    label: _isMagangProgram ? 'Nama Program / Magang Siswa *' : 'Judul Kebutuhan Proyek *',
+                                    label: _isMagangProgram ? 'Nama Program / Magang Peserta *' : 'Judul Kebutuhan Proyek *',
                                     hint: _isMagangProgram
-                                        ? 'Contoh: Magang Siswa & Mahasiswa Jurusan Animasi 3D & Rigging'
+                                        ? 'Contoh: Program Magang Peserta Bidang Animasi 3D & Rigging'
                                         : 'Contoh: Foto Marathon 10Km & Video Highlight Dokumentasi',
                                     icon: _isMagangProgram ? Icons.school_outlined : Icons.title_rounded,
                                     textInputAction: TextInputAction.next,
@@ -1545,7 +1545,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                 children: [
                   Text.rich(
                     TextSpan(
-                      text: _isMagangProgram ? 'Kuota Siswa / Talenta' : 'Jumlah Orang',
+                      text: _isMagangProgram ? 'Kuota Peserta / Talenta' : 'Jumlah Orang',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -2623,7 +2623,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
           children: [
             Text.rich(
               TextSpan(
-                text: _isMagangProgram ? 'Periode Magang / PKL Siswa' : 'Durasi Acara / Proyek',
+                text: _isMagangProgram ? 'Periode Magang / PKL Peserta' : 'Durasi Acara / Proyek',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -3019,7 +3019,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Program magang korporat ini terhubung langsung dengan sistem monitoring institusi pendidikan. Siswa/mahasiswa mendapatkan perlindungan perjanjian magang, lembar evaluasi berkala, dan sertifikat resmi.',
+                    'Program magang korporat ini terhubung langsung dengan sistem monitoring institusi pendidikan. Peserta mendapatkan perlindungan perjanjian magang, lembar evaluasi berkala, dan sertifikat resmi.',
                     style: TextStyle(
                       fontSize: 11.5,
                       height: 1.35,
@@ -3143,7 +3143,7 @@ class _InfoBanner extends StatelessWidget {
           Expanded(
             child: Text(
               isMagang
-                  ? 'Tentukan bidang magang, kompetensi yang dicari, tunjangan, dan kuota siswa agar talenta kreatif dari sekolah & kampus mitra dapat melamar program magang perusahaan Anda.'
+                  ? 'Tentukan bidang magang, kompetensi yang dicari, tunjangan, dan kuota peserta agar talenta kreatif dari sekolah & kampus mitra dapat melamar program magang perusahaan Anda.'
                   : 'Tentukan peran, tag spesialisasi, dan wilayah pelaksanaan agar kreator yang sesuai dapat langsung menemukan & melamar proyek Anda.',
               style: TextStyle(
                 fontSize: 13,

@@ -594,25 +594,25 @@ Kembalikan HANYA format JSON valid tanpa tanda petik pembuka markdown atau backt
             case 'school':
                 return [
                     [
-                        'title' => 'Program Kemitraan Magang Industri Vokasi (DUDI)',
+                        'title' => 'Program Kemitraan Magang Industri Vokasi & Profesi',
                         'category' => 'Kemitraan Strategis',
-                        'reason' => "Menghubungkan program magang siswa dengan mitra industri kreatif terverifikasi di area {$location} untuk meningkatkan relevansi kurikulum.",
-                        'impact' => 'Penyaluran talenta siswa mencapai target IKU & akreditasi institusi.',
+                        'reason' => "Menghubungkan program magang peserta dengan mitra industri kreatif terverifikasi di area {$location} untuk meningkatkan relevansi kurikulum.",
+                        'impact' => 'Penyaluran talenta peserta mencapai target IKU & akreditasi institusi.',
                         'match_score' => '98% Cocok',
                         'action_label' => 'Ajukan Kerjasama Industri',
                     ],
                     [
-                        'title' => 'Pameran Karya Siswa & Showcase Kurasi Talenta',
+                        'title' => 'Pameran Karya Peserta & Showcase Kurasi Talenta',
                         'category' => 'Peluang Proyek',
-                        'reason' => "Mempublikasikan karya unggulan siswa SMK/Mahasiswa pada Galeri Karya Kreavana agar dilirik oleh studio kreatif dan agensi perekrut.",
+                        'reason' => "Mempublikasikan karya unggulan peserta institusi pendidikan pada Galeri Karya Kreavana agar dilirik oleh studio kreatif dan agensi perekrut.",
                         'impact' => 'Tingkat serapan kerja lulusan meningkat pesat pasca kelulusan.',
                         'match_score' => '95% Cocok',
-                        'action_label' => 'Kurasi Karya Siswa',
+                        'action_label' => 'Kurasi Karya Peserta',
                     ],
                     [
                         'title' => 'Workshop Praktisi Mengajar & Sertifikasi Industri',
                         'category' => 'Inovasi Layanan',
-                        'reason' => "Mengundang mentor industri terkemuka di Kreavana untuk mengisi kuliah tamu dan pendampingan proyek nyata di kampus/sekolah.",
+                        'reason' => "Mengundang mentor industri terkemuka di Kreavana untuk mengisi kuliah tamu dan pendampingan proyek nyata di institusi pendidikan.",
                         'impact' => 'Kualitas kompetensi lulusan terstandarisasi kebutuhan pasar kerja.',
                         'match_score' => '93% Cocok',
                         'action_label' => 'Undang Praktisi Mengajar',
