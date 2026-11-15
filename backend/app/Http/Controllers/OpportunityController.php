@@ -642,4 +642,57 @@ class OpportunityController extends Controller
             return $this->errorResponse($e->getMessage(), 400);
         }
     }
+
+    public function uploadOfficialAcceptanceLetter(Request $request, string $id)
+    {
+        $user = Auth::guard('api')->user();
+        if (!$user) {
+            return $this->errorResponse('Unauthenticated', 401);
+        }
+
+        $validated = $request->validate([
+            'file' => 'nullable|file|max:20480',
+            'letter_url' => 'nullable|string|max:500',
+            'letter_name' => 'nullable|string|max:255',
+        ]);
+
+        try {
+            $file = $request->file('file');
+            $letterUrl = $validated['letter_url'] ?? null;
+            $letterName = $validated['letter_name'] ?? null;
+
+            if (!$file && empty($letterUrl)) {
+                return $this->errorResponse('Berkas surat resmi atau URL surat wajib dilampirkan.', 422);
+            }
+
+            $opp = \App\Models\Opportunity::findOrFail($id);
+
+            if ($opp->posted_by !== $user->id && $user->role !== 'admin') {
+                return $this->errorResponse('Anda tidak memiliki wewenang untuk mengunggah surat resmi pada program ini.', 403);
+            }
+
+            if ($file) {
+                /** @var \App\Services\StorageService $storageService */
+                $storageService = app(\App\Services\StorageService::class);
+                $storageFile = $storageService->store($user, $file, 'official_letters', 'public');
+                $letterUrl = $storageFile->url;
+                $letterName = $file->getClientOriginalName();
+            }
+
+            $opp->official_acceptance_letter_url = $letterUrl;
+            $opp->official_acceptance_letter_name = $letterName ?: 'Surat_Resmi_Penerimaan.pdf';
+            $opp->official_acceptance_letter_uploaded_at = now();
+            $opp->save();
+
+            return $this->successResponse('Surat resmi penerimaan berhasil diunggah.', [
+                'official_acceptance_letter_url' => $opp->official_acceptance_letter_url,
+                'official_acceptance_letter_name' => $opp->official_acceptance_letter_name,
+                'official_acceptance_letter_uploaded_at' => $opp->official_acceptance_letter_uploaded_at?->toIso8601String(),
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return $this->errorResponse('Program magang/kerja tidak ditemukan.', 404);
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
 }

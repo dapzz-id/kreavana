@@ -613,6 +613,9 @@ void main() {
     });
 
     testWidgets('ProgramMagangDetailScreen hides Tambah Peserta button when institution status is Approved even if program is still open', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1280, 1800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
       final oppOpenApproved = OpportunityModel(
         id: 'test_opp_open_approved_1',
         title: 'Program Magang 3D Modeler',
@@ -816,6 +819,80 @@ void main() {
 
       expect(find.text('Daftar Peserta yang Diajukan (1 Peserta)'), findsOneWidget);
       expect(find.text('Peserta #2'), findsNothing);
+    });
+
+    testWidgets('Approved institution sees Official Acceptance Letter banner with disabled download button when not uploaded, and active when uploaded', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1280, 1800));
+
+      final institutionUser = UserModel(
+        id: 'inst-1',
+        name: 'Kreavana Demo Institution',
+        username: 'inst_demo',
+        email: 'inst@demo.id',
+        role: 'institution',
+        subRole: 'institution',
+      );
+
+      final oppWithoutLetter = OpportunityModel(
+        id: 'test_opp_no_letter_1',
+        title: 'Program Magang Desain Grafis',
+        subRoleSlug: 'magang',
+        status: 'closed',
+      );
+
+      // 1. Initial approved state without letter
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ProgramMagangDetailScreen(
+            opportunity: oppWithoutLetter,
+            user: institutionUser,
+            initialPartnershipStatus: 'approved',
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.byKey(const Key('official_acceptance_letter_banner')), findsWidgets);
+      expect(find.text('Surat Resmi Penerimaan Peserta Magang'), findsWidgets);
+      expect(find.text('Belum Diunggah'), findsWidgets);
+
+      // Verify download button is disabled / greyed out
+      final disabledBtnFinder = find.byKey(const Key('btn_download_official_letter_disabled')).first;
+      expect(disabledBtnFinder, findsOneWidget);
+      final disabledBtn = tester.widget<ElevatedButton>(disabledBtnFinder);
+      expect(disabledBtn.onPressed, isNull);
+
+      // 2. State with official letter uploaded
+      final oppWithLetter = OpportunityModel(
+        id: 'test_opp_with_letter_1',
+        title: 'Program Magang Desain Grafis',
+        subRoleSlug: 'magang',
+        status: 'closed',
+        officialAcceptanceLetterUrl: 'https://storage.kreavana.com/letters/surat_penerimaan.pdf',
+        officialAcceptanceLetterName: 'Surat_Penerimaan_Resmi_2026.pdf',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ProgramMagangDetailScreen(
+            opportunity: oppWithLetter,
+            user: institutionUser,
+            initialPartnershipStatus: 'approved',
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Surat Tersedia'), findsWidgets);
+      expect(find.textContaining('Surat_Penerimaan_Resmi_2026.pdf'), findsWidgets);
+
+      // Verify download button is active / enabled
+      final activeBtnFinder = find.byKey(const Key('btn_download_official_letter')).first;
+      expect(activeBtnFinder, findsOneWidget);
+      final activeBtn = tester.widget<ElevatedButton>(activeBtnFinder);
+      expect(activeBtn.onPressed, isNotNull);
     });
   });
 }

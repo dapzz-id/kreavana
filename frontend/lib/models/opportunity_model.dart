@@ -370,6 +370,9 @@ class OpportunityModel {
   final String? clientSignedAt;
   final String? wetSignatureDocumentUrl;
   final String? wetSignatureVerifiedAt;
+  final String? officialAcceptanceLetterUrl;
+  final String? officialAcceptanceLetterName;
+  final String? officialAcceptanceLetterUploadedAt;
   final double? escrowAmount;
   final List<String> dynamicTerms;
   final String? adminName;
@@ -436,6 +439,9 @@ class OpportunityModel {
     this.clientSignedAt,
     this.wetSignatureDocumentUrl,
     this.wetSignatureVerifiedAt,
+    this.officialAcceptanceLetterUrl,
+    this.officialAcceptanceLetterName,
+    this.officialAcceptanceLetterUploadedAt,
     this.escrowAmount,
     this.dynamicTerms = const [],
     this.adminName,
@@ -459,6 +465,8 @@ class OpportunityModel {
       status.toLowerCase() == 'completed' ||
       (totalQuota > 0 && remainingQuota <= 0);
   bool get hasExternalRating => externalRating != null && externalRating! > 0;
+  bool get hasOfficialAcceptanceLetter =>
+      officialAcceptanceLetterUrl != null && officialAcceptanceLetterUrl!.trim().isNotEmpty;
   bool get isMeetingPending => meetingStatus.toLowerCase() == 'pending' || meetingStatus.toLowerCase() == 'pending_marketing_review';
   bool get isMeetingInProcess => meetingStatus.toLowerCase() == 'diproses' || meetingStatus.toLowerCase() == 'approved';
   bool get isMeetingVerified => meetingStatus.toLowerCase() == 'verified_completed' || meetingStatus.toLowerCase() == 'verified_paid' || (wetSignatureVerifiedAt != null && wetSignatureVerifiedAt!.isNotEmpty);
@@ -694,6 +702,9 @@ class OpportunityModel {
     String? clientSignedAt,
     String? wetSignatureDocumentUrl,
     String? wetSignatureVerifiedAt,
+    String? officialAcceptanceLetterUrl,
+    String? officialAcceptanceLetterName,
+    String? officialAcceptanceLetterUploadedAt,
     double? escrowAmount,
     List<String>? dynamicTerms,
     String? adminName,
@@ -760,6 +771,9 @@ class OpportunityModel {
       clientSignedAt: clientSignedAt ?? this.clientSignedAt,
       wetSignatureDocumentUrl: wetSignatureDocumentUrl ?? this.wetSignatureDocumentUrl,
       wetSignatureVerifiedAt: wetSignatureVerifiedAt ?? this.wetSignatureVerifiedAt,
+      officialAcceptanceLetterUrl: officialAcceptanceLetterUrl ?? this.officialAcceptanceLetterUrl,
+      officialAcceptanceLetterName: officialAcceptanceLetterName ?? this.officialAcceptanceLetterName,
+      officialAcceptanceLetterUploadedAt: officialAcceptanceLetterUploadedAt ?? this.officialAcceptanceLetterUploadedAt,
       escrowAmount: escrowAmount ?? this.escrowAmount,
       dynamicTerms: dynamicTerms ?? this.dynamicTerms,
       adminName: adminName ?? this.adminName,
@@ -879,6 +893,9 @@ class OpportunityModel {
       clientSignedAt: json['client_signed_at']?.toString(),
       wetSignatureDocumentUrl: json['wet_signature_document_url']?.toString(),
       wetSignatureVerifiedAt: json['wet_signature_verified_at']?.toString(),
+      officialAcceptanceLetterUrl: json['official_acceptance_letter_url']?.toString(),
+      officialAcceptanceLetterName: json['official_acceptance_letter_name']?.toString(),
+      officialAcceptanceLetterUploadedAt: json['official_acceptance_letter_uploaded_at']?.toString(),
       escrowAmount: json['escrow_amount'] != null
           ? (json['escrow_amount'] is num
               ? (json['escrow_amount'] as num).toDouble()
@@ -956,6 +973,9 @@ class OpportunityModel {
       'client_signed_at': clientSignedAt,
       'wet_signature_document_url': wetSignatureDocumentUrl,
       'wet_signature_verified_at': wetSignatureVerifiedAt,
+      'official_acceptance_letter_url': officialAcceptanceLetterUrl,
+      'official_acceptance_letter_name': officialAcceptanceLetterName,
+      'official_acceptance_letter_uploaded_at': officialAcceptanceLetterUploadedAt,
       'escrow_amount': escrowAmount,
       'dynamic_terms': dynamicTerms,
       'admin_name': adminName,

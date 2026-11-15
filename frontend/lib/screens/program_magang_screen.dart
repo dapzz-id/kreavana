@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../models/opportunity_model.dart';
@@ -636,7 +637,7 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: accentColor.withOpacity(0.25),
+                    color: accentColor.withValues(alpha: 0.25),
                     blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
@@ -661,7 +662,7 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? Colors.white.withOpacity(0.25)
+                    ? Colors.white.withValues(alpha: 0.25)
                     : (isDark ? const Color(0xFF334155) : const Color(0xFFE0E7FF)),
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -796,7 +797,7 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.03),
+              color: Colors.black.withValues(alpha: 0.03),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -812,7 +813,7 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.12),
+                    color: color.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(icon, color: color, size: 16),
@@ -1249,6 +1250,97 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
                     ),
                   );
                 }),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: opp.hasOfficialAcceptanceLetter
+                        ? (isDark ? const Color(0xFF0F172A) : const Color(0xFFF0FDF4))
+                        : (isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC)),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: opp.hasOfficialAcceptanceLetter
+                          ? (isDark ? const Color(0xFF059669).withValues(alpha: 0.3) : const Color(0xFFA7F3D0))
+                          : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        opp.hasOfficialAcceptanceLetter
+                            ? Icons.verified_user_rounded
+                            : Icons.pending_actions_rounded,
+                        size: 18,
+                        color: opp.hasOfficialAcceptanceLetter
+                            ? const Color(0xFF059669)
+                            : const Color(0xFF94A3B8),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              opp.hasOfficialAcceptanceLetter
+                                  ? 'Surat Resmi Penerimaan Tersedia'
+                                  : 'Surat Resmi Penerimaan Belum Diunggah',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              ),
+                            ),
+                            Text(
+                              opp.hasOfficialAcceptanceLetter
+                                  ? (opp.officialAcceptanceLetterName ?? 'Surat_Resmi_Penerimaan.pdf')
+                                  : 'Tombol unduh akan aktif setelah Corporate mengunggah surat resmi.',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      ElevatedButton.icon(
+                        key: Key('recap_download_letter_${opp.id ?? opp.title}'),
+                        onPressed: opp.hasOfficialAcceptanceLetter
+                            ? () {
+                                final url = opp.officialAcceptanceLetterUrl;
+                                if (url != null && url.isNotEmpty) {
+                                  launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                                }
+                              }
+                            : null,
+                        icon: Icon(
+                          opp.hasOfficialAcceptanceLetter ? Icons.download_rounded : Icons.file_download_off_rounded,
+                          size: 14,
+                          color: opp.hasOfficialAcceptanceLetter ? Colors.white : const Color(0xFF94A3B8),
+                        ),
+                        label: Text(
+                          'Unduh Surat Resmi',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: opp.hasOfficialAcceptanceLetter ? Colors.white : const Color(0xFF94A3B8),
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF059669),
+                          disabledBackgroundColor: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                          foregroundColor: Colors.white,
+                          disabledForegroundColor: const Color(0xFF94A3B8),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          visualDensity: VisualDensity.compact,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -1404,7 +1496,7 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF6366F1).withOpacity(0.1),
+              color: const Color(0xFF6366F1).withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(

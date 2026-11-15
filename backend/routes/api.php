@@ -214,6 +214,7 @@ Route::middleware(['auth:api', 'user.not_suspended'])->group(function () {
         Route::post('applications/{id}/deliverables', [OpportunityController::class, 'uploadDeliverable']);
         Route::post('applications/{id}/pay', [OpportunityController::class, 'payWorker']);
         Route::post('applications/{id}/submit-documents', [OpportunityController::class, 'submitDocuments']);
+        Route::post('{id}/official-acceptance-letter', [OpportunityController::class, 'uploadOfficialAcceptanceLetter']);
     });
 
     // Marketing (High-Value Deals & Reviews)

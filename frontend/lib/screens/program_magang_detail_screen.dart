@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../app/theme.dart';
 import '../models/opportunity_application_model.dart';
 import '../models/opportunity_model.dart';
@@ -182,6 +183,8 @@ class ProgramMagangDetailScreen extends StatefulWidget {
 class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  late OpportunityModel _opportunity;
+  OpportunityModel get effectiveOpportunity => _opportunity;
   bool _isLoading = false;
   String _selectedStudentFilter = 'Semua';
   final TextEditingController _searchController = TextEditingController();
@@ -208,6 +211,16 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
   }
 
   @override
+  void didUpdateWidget(ProgramMagangDetailScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.opportunity != oldWidget.opportunity ||
+        widget.initialPartnershipStatus != oldWidget.initialPartnershipStatus) {
+      _initDefaultState();
+      _loadServerData();
+    }
+  }
+
+  @override
   void dispose() {
     _tabController.dispose();
     _searchController.dispose();
@@ -215,6 +228,7 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
   }
 
   void _initDefaultState() {
+    _opportunity = widget.opportunity;
     final myId = _currentUser?.id ?? '';
     final myName = (_currentUser?.name ?? '').toLowerCase();
     final isThisSchoolInApproved = widget.opportunity.approvedCreators.any(
@@ -326,6 +340,9 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
           .toList();
 
       setState(() {
+        if (freshOpp != null) {
+          _opportunity = freshOpp;
+        }
         if (isSchoolApproved) {
           _schoolPartnershipStatus = 'approved';
         } else if (isSchoolRejected) {
@@ -1397,6 +1414,10 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
               _buildSchoolStatusBanner(isDark, isDesktop, accentColor),
               const SizedBox(height: 14),
 
+              // Official Acceptance Letter Banner (for approved institutions)
+              _buildOfficialAcceptanceLetterBanner(isDark, isDesktop, accentColor),
+              if (_schoolPartnershipStatus == 'approved') const SizedBox(height: 14),
+
               // 4. Corporate Additional Student Request Banner
               _buildCorporateRequestBanner(isDark, isDesktop),
               const SizedBox(height: 20),
@@ -1899,10 +1920,173 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
               ),
             ),
           ],
+          if (_schoolPartnershipStatus == 'approved') ...[
+            const SizedBox(height: 24),
+            _buildOfficialAcceptanceLetterBanner(isDark, isDesktop, accentColor),
+          ],
         ],
       ),
     );
   }
+
+  Widget _buildOfficialAcceptanceLetterBanner(bool isDark, bool isDesktop, Color accentColor) {
+    if (_schoolPartnershipStatus != 'approved') {
+      return const SizedBox.shrink();
+    }
+
+    final opp = effectiveOpportunity;
+    final bool hasLetter = opp.hasOfficialAcceptanceLetter;
+    final String letterName = opp.officialAcceptanceLetterName?.isNotEmpty == true
+        ? opp.officialAcceptanceLetterName!
+        : 'Surat_Resmi_Penerimaan.pdf';
+
+    final Color bg = hasLetter
+        ? (isDark ? const Color(0xFF1E293B) : const Color(0xFFF0FDF4))
+        : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC));
+    final Color border = hasLetter
+        ? (isDark ? const Color(0xFF059669).withValues(alpha: 0.4) : const Color(0xFFA7F3D0))
+        : (isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1));
+    final Color iconColor = hasLetter ? const Color(0xFF059669) : const Color(0xFF94A3B8);
+
+    return Container(
+      key: const Key('official_acceptance_letter_banner'),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: border),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 680;
+          final iconBox = Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              hasLetter ? Icons.verified_user_rounded : Icons.pending_actions_rounded,
+              color: iconColor,
+              size: 22,
+            ),
+          );
+
+          final textContent = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      opp.isMagang
+                          ? 'Surat Resmi Penerimaan Peserta Magang'
+                          : 'Surat Resmi Penerimaan Pelamar Kerja',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: hasLetter
+                          ? const Color(0xFFDCFCE7)
+                          : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      hasLetter ? 'Surat Tersedia' : 'Belum Diunggah',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: hasLetter ? const Color(0xFF15803D) : const Color(0xFF64748B),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                hasLetter
+                    ? 'Pihak Corporate telah menerbitkan surat resmi penerimaan ($letterName). Anda dapat mengunduh berkas resmi ini sebagai bukti penerimaan magang/kerja siswa institusi Anda.'
+                    : 'Pihak Corporate belum mengunggah Surat Resmi Penerimaan. Tombol unduh akan aktif secara otomatis setelah berkas pernyataan resmi diunggah oleh pihak Corporate.',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: isDark ? Colors.white70 : const Color(0xFF475569),
+                  height: 1.4,
+                ),
+              ),
+            ],
+          );
+
+          final Widget downloadButton = ElevatedButton.icon(
+            key: Key(hasLetter ? 'btn_download_official_letter' : 'btn_download_official_letter_disabled'),
+            onPressed: hasLetter
+                ? () {
+                    final url = opp.officialAcceptanceLetterUrl;
+                    if (url != null && url.isNotEmpty) {
+                      launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                    }
+                  }
+                : null,
+            icon: Icon(
+              hasLetter ? Icons.download_rounded : Icons.file_download_off_rounded,
+              size: 16,
+              color: hasLetter ? Colors.white : const Color(0xFF94A3B8),
+            ),
+            label: Text(
+              'Unduh Surat Resmi Penerimaan',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: hasLetter ? Colors.white : const Color(0xFF94A3B8),
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: hasLetter ? const Color(0xFF059669) : const Color(0xFFE2E8F0),
+              disabledBackgroundColor: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+              foregroundColor: Colors.white,
+              disabledForegroundColor: const Color(0xFF94A3B8),
+              elevation: hasLetter ? 1 : 0,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          );
+
+          if (isNarrow) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                   crossAxisAlignment: CrossAxisAlignment.start,
+                   children: [
+                     iconBox,
+                     const SizedBox(width: 12),
+                     Expanded(child: textContent),
+                   ],
+                 ),
+                 const SizedBox(height: 12),
+                 SizedBox(width: double.infinity, child: downloadButton),
+               ],
+             );
+           }
+
+           return Row(
+             children: [
+               iconBox,
+               const SizedBox(width: 14),
+               Expanded(child: textContent),
+               const SizedBox(width: 16),
+               downloadButton,
+             ],
+           );
+         },
+       ),
+     );
+   }
 
   Widget _buildInfoTile({
     required IconData icon,

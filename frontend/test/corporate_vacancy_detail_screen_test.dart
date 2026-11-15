@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kreavana/models/user_model.dart';
+import 'package:kreavana/models/opportunity_model.dart';
 import 'package:kreavana/screens/corporate_lowongan_screen.dart';
 import 'package:kreavana/screens/corporate_vacancy_detail_screen.dart';
 
@@ -506,6 +507,92 @@ void main() {
       expect(find.byKey(const ValueKey('popup_status_Kadavi Raditya')), findsNothing);
       expect(find.byKey(const ValueKey('btn_propose_replacement_Kadavi Raditya')), findsNothing);
       expect(find.text('Ajukan Siswa Pengganti'), findsNothing);
+    });
+
+    testWidgets('Monitoring & Logbook Vokasi is removed and replaced by Official Acceptance Letter tile', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1280, 1800));
+
+      // Vacancy closed without official letter uploaded
+      final closedVacancyWithoutLetter = CorporateVacancyItem(
+        id: 'test_vac_closed_no_letter',
+        title: 'Program Magang 3D Modeler Batch Closed',
+        description: 'Kerja sama vokasi 3D',
+        category: 'magang',
+        categoryLabel: 'Magang',
+        status: 'closed',
+        statusLabel: 'Ditutup',
+        statusBadgeColor: const Color(0xFF64748B),
+        statusBadgeBg: const Color(0xFFF1F5F9),
+        registrationPeriod: '28 Nov 2026',
+        quotaText: '0 dari 10 posisi',
+        allowance: 'Rp 2.000.000 / bulan',
+        requirements: const ['Siswa SMK'],
+        applicantsCount: 2,
+        opportunity: OpportunityModel(
+          id: 'test_opp_closed_no_letter',
+          title: 'Program Magang 3D Modeler Batch Closed',
+          subRoleSlug: 'magang',
+          status: 'closed',
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CorporateVacancyDetailScreen(
+            item: closedVacancyWithoutLetter,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 1. Verify "Monitoring & Logbook Vokasi" is removed
+      expect(find.text('Monitoring & Logbook Vokasi'), findsNothing);
+
+      // 2. Verify "Surat Resmi Penerimaan" tile is present
+      expect(find.text('Surat Resmi Penerimaan'), findsOneWidget);
+      expect(find.text('Belum Diunggah'), findsOneWidget);
+      expect(find.text('Unggah Surat Resmi Penerimaan'), findsOneWidget);
+
+      // Now test with official letter already uploaded
+      final closedVacancyWithLetter = CorporateVacancyItem(
+        id: 'test_vac_closed_with_letter',
+        title: 'Program Magang 3D Modeler Batch Closed',
+        description: 'Kerja sama vokasi 3D',
+        category: 'magang',
+        categoryLabel: 'Magang',
+        status: 'closed',
+        statusLabel: 'Ditutup',
+        statusBadgeColor: const Color(0xFF64748B),
+        statusBadgeBg: const Color(0xFFF1F5F9),
+        registrationPeriod: '28 Nov 2026',
+        quotaText: '0 dari 10 posisi',
+        allowance: 'Rp 2.000.000 / bulan',
+        requirements: const ['Siswa SMK'],
+        applicantsCount: 2,
+        opportunity: OpportunityModel(
+          id: 'test_opp_closed_with_letter',
+          title: 'Program Magang 3D Modeler Batch Closed',
+          subRoleSlug: 'magang',
+          status: 'closed',
+          officialAcceptanceLetterUrl: 'https://storage.kreavana.com/letters/surat_penerimaan_resmi.pdf',
+          officialAcceptanceLetterName: 'Surat_Penerimaan_Resmi_Batch1.pdf',
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CorporateVacancyDetailScreen(
+            item: closedVacancyWithLetter,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 3. Verify uploaded official letter state
+      expect(find.text('Surat Resmi Diunggah'), findsOneWidget);
+      expect(find.text('Surat_Penerimaan_Resmi_Batch1.pdf'), findsOneWidget);
+      expect(find.text('Lihat / Unduh'), findsOneWidget);
+      expect(find.text('Ganti Surat'), findsOneWidget);
     });
   });
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:url_launcher/url_launcher_string.dart';
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import '../models/user_model.dart';
@@ -43,6 +42,7 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
   late List<CorporateApplicant> _applicants;
   final Map<String, String> _institutionStatuses = {}; // 'approved', 'rejected', 'pending'
   final Set<String> _collapsedInstitutions = {};
+  bool _isUploadingOfficialLetter = false;
 
   @override
   void initState() {
@@ -50,6 +50,15 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
     _tabController = TabController(length: 2, vsync: this);
     _initVacancy();
     _fetchRealApplications();
+  }
+
+  @override
+  void didUpdateWidget(CorporateVacancyDetailScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.item != oldWidget.item || widget.vacancyId != oldWidget.vacancyId) {
+      _initVacancy();
+      _fetchRealApplications();
+    }
   }
 
   Future<void> _fetchRealApplications() async {
@@ -62,7 +71,12 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
     }
 
     try {
-      final apps = await OpportunityService.getOpportunityApplications(oppId);
+      final results = await Future.wait([
+        OpportunityService.getOpportunityApplications(oppId).catchError((_) => <OpportunityApplicationModel>[]),
+        OpportunityService.getDetail(oppId).catchError((_) => null),
+      ]);
+      final apps = results[0] as List<OpportunityApplicationModel>;
+      final freshOpp = results[1] as OpportunityModel?;
 
       // Fetch showcases from institution resources to cross-reference student portfolios
       List<Map<String, dynamic>> showcases = [];
@@ -74,6 +88,9 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
       } catch (_) {}
 
       if (mounted) {
+        if (freshOpp != null) {
+          _currentVacancy = CorporateVacancyItem.fromOpportunity(freshOpp);
+        }
         if (apps.isNotEmpty) {
           final mapped = apps.map((a) {
             final statusLower = a.status.toLowerCase();
@@ -205,6 +222,78 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
         }
       }
     } catch (_) {}
+  }
+
+  Future<void> _pickAndUploadOfficialLetter() async {
+    final oppId = _currentVacancy.opportunity?.id ?? _currentVacancy.id;
+    if (oppId.isEmpty) return;
+
+    try {
+      final result = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'jpg', 'png'],
+      );
+
+      if (result == null || result.files.isEmpty) return;
+      final file = result.files.first;
+
+      setState(() => _isUploadingOfficialLetter = true);
+
+      final fileBytes = await file.readAsBytes();
+      if (fileBytes.isEmpty) {
+        if (!mounted) return;
+        setState(() => _isUploadingOfficialLetter = false);
+        AppSweetAlert.error(context, 'Berkas kosong atau tidak dapat dibaca.');
+        return;
+      }
+
+      final formData = FormData();
+      formData.files.add(
+        MapEntry(
+          'file',
+          MultipartFile.fromBytes(fileBytes, filename: file.name),
+        ),
+      );
+
+      final res = await ApiService.postFormData(
+        'opportunities/$oppId/official-acceptance-letter',
+        formData,
+      );
+
+      if (!mounted) return;
+      setState(() => _isUploadingOfficialLetter = false);
+
+      if (res['status'] == true && res['data'] != null) {
+        final data = res['data'];
+        final updatedOpp = _currentVacancy.opportunity?.copyWith(
+          officialAcceptanceLetterUrl: data['official_acceptance_letter_url']?.toString(),
+          officialAcceptanceLetterName: data['official_acceptance_letter_name']?.toString() ?? file.name,
+          officialAcceptanceLetterUploadedAt: data['official_acceptance_letter_uploaded_at']?.toString(),
+        );
+
+        setState(() {
+          if (updatedOpp != null) {
+            _currentVacancy = CorporateVacancyItem.fromOpportunity(updatedOpp);
+          }
+        });
+
+        AppSweetAlert.success(
+          context,
+          'Surat resmi penerimaan "${file.name}" berhasil diunggah. Dokumen ini kini dapat diunduh oleh institusi mitra yang telah diapprove.',
+          title: 'Surat Resmi Diunggah',
+        );
+      } else {
+        AppSweetAlert.error(
+          context,
+          res['message']?.toString() ?? 'Gagal mengunggah surat resmi penerimaan.',
+          title: 'Gagal Unggah',
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isUploadingOfficialLetter = false);
+      AppSweetAlert.error(context, 'Terjadi kesalahan saat mengunggah surat: $e', title: 'Gagal');
+    }
   }
 
   void _initVacancy() {
@@ -1141,30 +1230,272 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
               const SizedBox(height: 16),
               const Divider(height: 1, color: Color(0xFFE2E8F0)),
               const SizedBox(height: 16),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: _buildGovernanceItem(
-                      icon: Icons.description_outlined,
-                      title: 'MoU & Perjanjian Penempatan',
-                      desc: 'Terintegrasi otomatis dengan pangkalan data institusi mitra Kreavana.',
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildGovernanceItem(
-                      icon: Icons.fact_check_outlined,
-                      title: 'Monitoring & Logbook Vokasi',
-                      desc: 'Penilaian capaian kinerja magang dapat dipantau langsung oleh pembimbing institusi.',
-                    ),
-                  ),
-                ],
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final isNarrow = constraints.maxWidth < 680;
+                  final mouItem = _buildGovernanceItem(
+                    icon: Icons.description_outlined,
+                    title: 'MoU & Perjanjian Penempatan',
+                    desc: 'Terintegrasi otomatis dengan pangkalan data institusi mitra Kreavana.',
+                  );
+                  final letterTile = _buildOfficialAcceptanceLetterTile();
+
+                  if (isNarrow) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        mouItem,
+                        const SizedBox(height: 14),
+                        letterTile,
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: mouItem),
+                      const SizedBox(width: 16),
+                      Expanded(child: letterTile),
+                    ],
+                  );
+                },
               ),
             ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildOfficialAcceptanceLetterTile() {
+    final opp = _currentVacancy.opportunity;
+    final bool isClosed = (opp?.isClosed ?? false) ||
+        _currentVacancy.status == 'closed' ||
+        _currentVacancy.statusLabel.toLowerCase().contains('ditutup');
+
+    final bool hasLetter = opp?.hasOfficialAcceptanceLetter ?? false;
+    final String letterName = opp?.officialAcceptanceLetterName?.isNotEmpty == true
+        ? opp!.officialAcceptanceLetterName!
+        : 'Surat_Resmi_Penerimaan.pdf';
+
+    Color cardBorder;
+    Color cardBg;
+    Color iconColor;
+    Color iconBg;
+    IconData icon;
+    String badgeText;
+    Color badgeColor;
+    Color badgeBg;
+    String description;
+
+    if (isClosed) {
+      if (hasLetter) {
+        cardBorder = const Color(0xFFA7F3D0);
+        cardBg = const Color(0xFFF0FDF4);
+        iconColor = const Color(0xFF059669);
+        iconBg = const Color(0xFFDCFCE7);
+        icon = Icons.verified_user_rounded;
+        badgeText = 'Surat Resmi Diunggah';
+        badgeColor = const Color(0xFF15803D);
+        badgeBg = const Color(0xFFDCFCE7);
+        description = 'Surat resmi pernyataan penerimaan seluruh peserta magang/kerja telah diunggah dan dapat diunduh oleh institusi mitra.';
+      } else {
+        cardBorder = const Color(0xFFFDE68A);
+        cardBg = const Color(0xFFFFFBEB);
+        iconColor = const Color(0xFFD97706);
+        iconBg = const Color(0xFFFEF3C7);
+        icon = Icons.upload_file_rounded;
+        badgeText = 'Belum Diunggah';
+        badgeColor = const Color(0xFFB45309);
+        badgeBg = const Color(0xFFFEF3C7);
+        description = 'Pendaftaran ditutup. Silakan unggah surat resmi penerimaan yang mencakup semua data peserta yang diterima sebagai pernyataan resmi.';
+      }
+    } else {
+      cardBorder = const Color(0xFFE2E8F0);
+      cardBg = const Color(0xFFF8FAFC);
+      iconColor = const Color(0xFF64748B);
+      iconBg = const Color(0xFFF1F5F9);
+      icon = Icons.description_outlined;
+      badgeText = 'Menunggu Pendaftaran Ditutup';
+      badgeColor = const Color(0xFF475569);
+      badgeBg = const Color(0xFFE2E8F0);
+      description = 'Input upload surat resmi penerimaan peserta akan aktif setelah pendaftaran ditutup atau kuota posisi terpenuhi.';
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: iconBg,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, size: 18, color: iconColor),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Surat Resmi Penerimaan',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: badgeBg,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            badgeText,
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.bold,
+                              color: badgeColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      description,
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        color: Color(0xFF475569),
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (isClosed) ...[
+            const SizedBox(height: 12),
+            if (hasLetter) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFCBD5E1)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.picture_as_pdf_rounded, size: 16, color: Color(0xFFEF4444)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        letterName,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1E293B),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        final url = opp?.officialAcceptanceLetterUrl;
+                        if (url != null && url.isNotEmpty) {
+                          launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                        }
+                      },
+                      icon: const Icon(Icons.visibility_outlined, size: 14),
+                      label: const Text('Lihat / Unduh', style: TextStyle(fontSize: 11.5)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF059669),
+                        side: const BorderSide(color: Color(0xFF10B981)),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _isUploadingOfficialLetter ? null : _pickAndUploadOfficialLetter,
+                      icon: _isUploadingOfficialLetter
+                          ? const SizedBox(
+                              width: 12,
+                              height: 12,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Icon(Icons.file_upload_outlined, size: 14),
+                      label: Text(
+                        _isUploadingOfficialLetter ? 'Mengunggah...' : 'Ganti Surat',
+                        style: const TextStyle(fontSize: 11.5),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2563EB),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ] else ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _isUploadingOfficialLetter ? null : _pickAndUploadOfficialLetter,
+                  icon: _isUploadingOfficialLetter
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.upload_file_rounded, size: 16),
+                  label: Text(
+                    _isUploadingOfficialLetter ? 'Mengunggah...' : 'Unggah Surat Resmi Penerimaan',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2563EB),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ],
+      ),
     );
   }
 
