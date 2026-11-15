@@ -372,14 +372,32 @@ class _PeluangProyekScreenState extends State<PeluangProyekScreen> {
                           icon: Icon(
                             Icons.keyboard_arrow_down_rounded,
                             color: isDark ? Colors.white70 : Colors.black54,
-                            size: 22,
+                            size: 20,
                           ),
                           dropdownColor: isDark
                               ? const Color(0xFF1E1E2D)
                               : Colors.white,
                           borderRadius: BorderRadius.circular(16),
-                          elevation: 4,
+                          elevation: 6,
                           menuMaxHeight: 380,
+                          selectedItemBuilder: (BuildContext context) {
+                            return _roleFilters.map((rf) {
+                              final label = rf['label']!;
+                              return Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  label,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? Colors.white : Colors.black87,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              );
+                            }).toList();
+                          },
                           onChanged: (newRole) {
                             if (newRole != null) {
                               setState(() => _selectedRole = newRole);
@@ -448,14 +466,33 @@ class _PeluangProyekScreenState extends State<PeluangProyekScreen> {
                           icon: Icon(
                             Icons.keyboard_arrow_down_rounded,
                             color: isDark ? Colors.white70 : Colors.black54,
-                            size: 22,
+                            size: 20,
                           ),
                           dropdownColor: isDark
                               ? const Color(0xFF1E1E2D)
                               : Colors.white,
                           borderRadius: BorderRadius.circular(16),
-                          elevation: 4,
+                          elevation: 6,
                           menuMaxHeight: 380,
+                          selectedItemBuilder: (BuildContext context) {
+                            return _cityFilters.map((city) {
+                              final label =
+                                  city == 'all' ? 'Semua Wilayah' : city;
+                              return Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  label,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? Colors.white : Colors.black87,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              );
+                            }).toList();
+                          },
                           onChanged: (newCity) {
                             if (newCity != null) {
                               setState(() => _selectedCity = newCity);
@@ -659,7 +696,7 @@ class _PeluangProyekScreenState extends State<PeluangProyekScreen> {
                             crossAxisCount: 2,
                             crossAxisSpacing: 16,
                             mainAxisSpacing: 16,
-                            childAspectRatio: 2.2,
+                            childAspectRatio: 1.65,
                           ),
                           itemCount: 6,
                           itemBuilder: (context, index) => const FeatureCardSkeleton(),
@@ -726,7 +763,7 @@ class _PeluangProyekScreenState extends State<PeluangProyekScreen> {
                                 crossAxisCount: 2,
                                 crossAxisSpacing: 16,
                                 mainAxisSpacing: 16,
-                                childAspectRatio: 2.1,
+                                childAspectRatio: 1.65,
                               ),
                               itemCount: _filtered.length,
                               itemBuilder: (context, index) {
