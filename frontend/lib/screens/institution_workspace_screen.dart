@@ -4962,8 +4962,15 @@ class _InstitutionWorkspaceScreenState
                     const SizedBox(width: 12),
                     // Action Popup Menu
                     PopupMenuButton<String>(
-                      icon: Icon(Icons.more_vert_rounded, color: Colors.grey.shade500),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      icon: Icon(Icons.more_vert_rounded, color: isDark ? const Color(0xFF94A3B8) : Colors.grey.shade500),
+                      color: isDark ? const Color(0xFF1E1B2E) : Colors.white,
+                      elevation: 6,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        side: BorderSide(
+                          color: isDark ? const Color(0xFF2D2A42) : const Color(0xFFE2E8F0),
+                        ),
+                      ),
                       onSelected: (value) {
                         if (value == 'edit') {
                           _openEditor(record);
@@ -4974,36 +4981,30 @@ class _InstitutionWorkspaceScreenState
                         }
                       },
                       itemBuilder: (_) => [
-                        if (portfolioUrl.isNotEmpty)
-                          const PopupMenuItem(
+                        if (portfolioUrl.isNotEmpty) ...[
+                          _buildPopupActionItem(
                             value: 'open',
-                            child: Row(
-                              children: [
-                                Icon(Icons.open_in_new_rounded, size: 16, color: Color(0xFF2563EB)),
-                                SizedBox(width: 8),
-                                Text('Buka Portofolio'),
-                              ],
-                            ),
+                            icon: Icons.open_in_new_rounded,
+                            label: 'Buka Portofolio',
+                            isDark: isDark,
+                            color: const Color(0xFF2563EB),
                           ),
-                        const PopupMenuItem(
+                          _buildPopupDivider(),
+                        ],
+                        _buildPopupActionItem(
                           value: 'edit',
-                          child: Row(
-                            children: [
-                              Icon(Icons.edit_outlined, size: 16, color: Color(0xFF2563EB)),
-                              SizedBox(width: 8),
-                              Text('Edit Karya'),
-                            ],
-                          ),
+                          icon: Icons.edit_outlined,
+                          label: 'Edit Karya',
+                          isDark: isDark,
+                          color: const Color(0xFF0284C7),
                         ),
-                        const PopupMenuItem(
+                        _buildPopupDivider(),
+                        _buildPopupActionItem(
                           value: 'delete',
-                          child: Row(
-                            children: [
-                              Icon(Icons.delete_outline_rounded, size: 16, color: Colors.red),
-                              SizedBox(width: 8),
-                              Text('Hapus Karya', style: TextStyle(color: Colors.red)),
-                            ],
-                          ),
+                          icon: Icons.delete_outline_rounded,
+                          label: 'Hapus Karya',
+                          isDark: isDark,
+                          isDestructive: true,
                         ),
                       ],
                     ),
@@ -5261,29 +5262,31 @@ class _InstitutionWorkspaceScreenState
                 ),
               ),
               PopupMenuButton<String>(
-                icon: Icon(Icons.more_vert_rounded, color: Colors.grey.shade500),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                onSelected: (value) => value == 'edit' ? _openEditor(record) : _deleteRecord(record),
-                itemBuilder: (_) => const [
-                  PopupMenuItem(
-                    value: 'edit',
-                    child: Row(
-                      children: [
-                        Icon(Icons.edit_outlined, size: 16, color: Color(0xFF2563EB)),
-                        SizedBox(width: 8),
-                        Text('Edit'),
-                      ],
-                    ),
+                icon: Icon(Icons.more_vert_rounded, color: isDark ? const Color(0xFF94A3B8) : Colors.grey.shade500),
+                color: isDark ? const Color(0xFF1E1B2E) : Colors.white,
+                elevation: 6,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: BorderSide(
+                    color: isDark ? const Color(0xFF2D2A42) : const Color(0xFFE2E8F0),
                   ),
-                  PopupMenuItem(
+                ),
+                onSelected: (value) => value == 'edit' ? _openEditor(record) : _deleteRecord(record),
+                itemBuilder: (_) => [
+                  _buildPopupActionItem(
+                    value: 'edit',
+                    icon: Icons.edit_outlined,
+                    label: 'Edit',
+                    isDark: isDark,
+                    color: const Color(0xFF2563EB),
+                  ),
+                  _buildPopupDivider(),
+                  _buildPopupActionItem(
                     value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(Icons.delete_outline_rounded, size: 16, color: Colors.red),
-                        SizedBox(width: 8),
-                        Text('Hapus', style: TextStyle(color: Colors.red)),
-                      ],
-                    ),
+                    icon: Icons.delete_outline_rounded,
+                    label: 'Hapus',
+                    isDark: isDark,
+                    isDestructive: true,
                   ),
                 ],
               ),
