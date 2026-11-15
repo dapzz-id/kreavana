@@ -9,6 +9,7 @@ import '../../../services/user_store.dart';
 import '../../../services/app_router.dart';
 import '../../../utils/app_errors.dart';
 import '../../../widgets/social_button.dart';
+import '../../../widgets/app_sweet_alert.dart';
 import 'package:go_router/go_router.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -88,25 +89,10 @@ class _RegisterScreenState extends State<RegisterScreen>
       if (mounted) {
         setState(() => _isLoading = false);
         if (result['status'] == true) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Row(
-                children: [
-                  Icon(Icons.check_circle, color: Colors.white, size: 18),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Pendaftaran berhasil! Silakan verifikasi email Anda.',
-                    ),
-                  ),
-                ],
-              ),
-              backgroundColor: AppTheme.success,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
+          AppSweetAlert.success(
+            context,
+            'Pendaftaran berhasil! Silakan verifikasi email Anda.',
+            title: 'Pendaftaran Berhasil',
           );
           context.go(
             AppRoutes.verifyEmail,
@@ -138,13 +124,10 @@ class _RegisterScreenState extends State<RegisterScreen>
       if (result['success'] == true) {
         if (result['is_new_user'] == true) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Akun berhasil dibuat. Password sementara telah dikirim ke email Anda.',
-                ),
-                backgroundColor: AppTheme.success,
-              ),
+            AppSweetAlert.success(
+              context,
+              'Akun berhasil dibuat. Password sementara telah dikirim ke email Anda.',
+              title: 'Akun Dibuat',
             );
           }
           _completeGoogleSignIn(result['user']);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/chat_service.dart';
 import '../widgets/skeleton_box.dart';
+import '../widgets/app_sweet_alert.dart';
 
 class GroupInvitationsScreen extends StatefulWidget {
   const GroupInvitationsScreen({super.key});
@@ -37,16 +38,26 @@ class _GroupInvitationsScreenState extends State<GroupInvitationsScreen> {
       await ChatService.respondInvitation(chatId, accept);
       _loadInvitations();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(accept ? 'Undangan diterima' : 'Undangan ditolak'),
-          ),
-        );
+        if (accept) {
+          AppSweetAlert.success(
+            context,
+            'Undangan grup berhasil diterima.',
+            title: 'Undangan Diterima',
+          );
+        } else {
+          AppSweetAlert.info(
+            context,
+            'Undangan grup telah ditolak.',
+            title: 'Undangan Ditolak',
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gagal merespon undangan')),
+        AppSweetAlert.error(
+          context,
+          'Gagal merespons undangan grup: $e',
+          title: 'Gagal',
         );
       }
     }

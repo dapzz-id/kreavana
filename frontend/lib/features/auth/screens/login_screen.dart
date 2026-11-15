@@ -8,6 +8,7 @@ import '../../../services/push_notification_service.dart';
 import '../../../services/user_store.dart';
 import '../../../services/app_router.dart';
 import '../../../widgets/social_button.dart';
+import '../../../widgets/app_sweet_alert.dart';
 import '../../../utils/app_errors.dart';
 import 'package:go_router/go_router.dart';
 
@@ -115,13 +116,10 @@ class _LoginScreenState extends State<LoginScreen>
       if (result['success'] == true) {
         if (result['is_new_user'] == true) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Akun berhasil dibuat. Password sementara telah dikirim ke email Anda.',
-                ),
-                backgroundColor: AppTheme.success,
-              ),
+            AppSweetAlert.success(
+              context,
+              'Akun berhasil dibuat. Password sementara telah dikirim ke email Anda.',
+              title: 'Akun Dibuat',
             );
           }
           _completeGoogleSignIn(result['user']);
@@ -188,10 +186,10 @@ class _LoginScreenState extends State<LoginScreen>
               if (email.isNotEmpty) {
                 AuthService.forgotPassword(email: email);
                 Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Link reset telah dikirim ke $email'),
-                  ),
+                AppSweetAlert.success(
+                  context,
+                  'Link reset kata sandi telah dikirim ke $email',
+                  title: 'Email Terkirim',
                 );
               }
             },

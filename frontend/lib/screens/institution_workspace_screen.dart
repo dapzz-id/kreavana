@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
@@ -10,6 +11,7 @@ import '../services/api_service.dart';
 import '../widgets/desktop_sidebar_layout.dart';
 import '../widgets/app_sweet_alert.dart';
 import '../widgets/official_document_viewer_dialog.dart';
+import '../widgets/app_pagination_bar.dart';
 
 enum _FieldKind { text, number, date, url }
 
@@ -54,6 +56,35 @@ class _InstitutionWorkspaceScreenState
   String? _loadError;
   String _search = '';
   String _statusFilter = 'Semua';
+  int _currentPage = 1;
+  static const int _pageSize = 5;
+
+  String get _itemUnitName {
+    switch (widget.resourceType) {
+      case 'events':
+        return 'kegiatan';
+      case 'partners':
+        return 'mitra';
+      case 'showcases':
+        return 'karya';
+      case 'documents':
+        return 'dokumen';
+      case 'reports':
+        return 'laporan';
+      case 'monitoring':
+        return 'agenda monev';
+      case 'tenders':
+        return 'tender';
+      case 'facilities':
+        return 'fasilitas';
+      case 'announcements':
+        return 'pengumuman';
+      case 'study_programs':
+        return 'program studi';
+      default:
+        return 'data';
+    }
+  }
 
   bool get _isCorporate {
     final sub = widget.user.subRole?.toLowerCase() ?? '';
@@ -434,6 +465,20 @@ class _InstitutionWorkspaceScreenState
   }
 
   @override
+  void didUpdateWidget(covariant InstitutionWorkspaceScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.resourceType != widget.resourceType) {
+      setState(() {
+        _currentPage = 1;
+        _search = '';
+        _statusFilter = 'Semua';
+      });
+      _searchController.clear();
+      _loadRecords();
+    }
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
@@ -735,335 +780,179 @@ class _InstitutionWorkspaceScreenState
     }
   }
 
-  static String _getWorkspaceHeroImage(String resourceType, bool isGovernment) {
-    const Map<String, String> map = {
-      'rfp': 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1600&q=80',
-      'procurement': 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1600&q=80',
-      'vendors': 'https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=1600&q=80',
-      'mitra': 'https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=1600&q=80',
-      'po': 'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&w=1600&q=80',
-      'contracts': 'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&w=1600&q=80',
-      'budgets': 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=1600&q=80',
-      'anggaran': 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=1600&q=80',
-      'audits': 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1600&q=80',
-      'laporan': 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1600&q=80',
-      'showcases': 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=1600&q=80',
-      'karya': 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=1600&q=80',
-    };
-    if (map.containsKey(resourceType)) {
-      return map[resourceType]!;
-    }
-    return isGovernment
-        ? 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1600&q=80'
-        : 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=1600&q=80';
+  Color get _resolvedAccentColor {
+    if (_isGovernment) return const Color(0xFF1E3A8A); // Deep Executive Navy
+    if (_isSchool) return const Color(0xFF4338CA); // Deep Academic Indigo
+    return const Color(0xFF2563EB); // Corporate Sapphire Blue
   }
 
-  // ── HEADER HERO EXECUTIVE ──────────────────────────────────────────────────
+  // ── HEADER HERO EXECUTIVE (Clean, Executive Workspace Card) ────────────────
   Widget _buildExecutiveHero(bool isDark) {
-    final bgImageUrl = _getWorkspaceHeroImage(widget.resourceType, _isGovernment);
-    final accentColor = _isGovernment ? const Color(0xFF0D9488) : (_isSchool ? const Color(0xFF7C3AED) : const Color(0xFF4338CA));
-    final baseDark = const Color(0xFF07050E);
+    final accentColor = _resolvedAccentColor;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       decoration: BoxDecoration(
-        color: baseDark,
-        borderRadius: BorderRadius.circular(18),
+        color: isDark ? AppTheme.cardBg : Colors.white,
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: Colors.white.withValues(alpha: isDark ? 0.12 : 0.22),
-          width: 1.2,
+          color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.20),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-          ),
-          BoxShadow(
-            color: accentColor.withValues(alpha: isDark ? 0.28 : 0.20),
-            blurRadius: 36,
-            offset: const Offset(0, 4),
+            color: const Color(0xFF0F172A).withValues(alpha: isDark ? 0.15 : 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      clipBehavior: Clip.antiAlias,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final isCompact = constraints.maxWidth < 650;
-          final imageWidth = isCompact ? constraints.maxWidth * 0.72 : (constraints.maxWidth * 0.58).clamp(380.0, 750.0);
 
-          return Stack(
+          final headerInfo = Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Layer 1: Contextual High-Resolution Background Photo (Anchored Right) ──
-              Positioned(
-                top: 0,
-                bottom: 0,
-                right: 0,
-                width: imageWidth,
-                child: Image.network(
-                  bgImageUrl,
-                  fit: BoxFit.cover,
-                  alignment: const Alignment(0.15, -0.22),
-                  errorBuilder: (_, _, _) => Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [accentColor, const Color(0xFF1E1B38)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
-                  ),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? accentColor.withValues(alpha: 0.2)
+                      : accentColor.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  _icons[widget.resourceType] ?? Icons.business_outlined,
+                  color: accentColor,
+                  size: 22,
                 ),
               ),
-
-              // ── Layer 2: Seamless Horizontal Dark Gradient (Solid Dark Left, Clear Right) ──
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                      colors: [
-                        baseDark,
-                        baseDark,
-                        baseDark.withValues(alpha: 0.94),
-                        baseDark.withValues(alpha: 0.55),
-                        baseDark.withValues(alpha: 0.12),
-                        Colors.transparent,
-                        Colors.transparent,
-                      ],
-                      stops: const [0.0, 0.35, 0.48, 0.62, 0.74, 0.84, 1.0],
-                    ),
-                  ),
-                ),
-              ),
-
-              // ── Layer 3: Vibrant Accent Color Glow on Left ──
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      center: const Alignment(-0.85, -0.5),
-                      radius: 1.15,
-                      colors: [
-                        accentColor.withValues(alpha: isDark ? 0.35 : 0.45),
-                        accentColor.withValues(alpha: 0.10),
-                        Colors.transparent,
-                      ],
-                      stops: const [0.0, 0.55, 1.0],
-                    ),
-                  ),
-                ),
-              ),
-
-              // ── Layer 4: Foreground Content ──
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final isCompact = constraints.maxWidth < 650;
-                final isShowcase = widget.resourceType == 'showcases';
-                return Column(
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: isShowcase
-                                          ? const Color(0xFFF59E0B).withValues(alpha: 0.28)
-                                          : Colors.white.withValues(alpha: 0.22),
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(
-                                        color: isShowcase
-                                            ? const Color(0xFFFDE68A).withValues(alpha: 0.5)
-                                            : Colors.white.withValues(alpha: 0.35),
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(alpha: 0.15),
-                                          blurRadius: 6,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          isShowcase ? Icons.auto_awesome_rounded : Icons.verified_user_rounded,
-                                          color: isShowcase ? const Color(0xFFFDE047) : Colors.amberAccent,
-                                          size: 14,
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          isShowcase
-                                              ? 'Galeri Talenta & Kurasi Karya Vokasi'
-                                              : (_isGovernment
-                                                  ? 'Tata Kelola Kedinasan & LPSE'
-                                                  : 'Enterprise B2B Governance'),
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
-                                            letterSpacing: 0.4,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.14),
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(color: Colors.white.withValues(alpha: 0.20)),
-                                    ),
-                                    child: Text(
-                                      isShowcase
-                                          ? '${_records.length} Portofolio Terkurasi'
-                                          : '${_records.length} Arsip Terverifikasi',
-                                      style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  if (isShowcase) ...[
-                                    Container(
-                                      padding: const EdgeInsets.all(7),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withValues(alpha: 0.2),
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withValues(alpha: 0.2),
-                                            blurRadius: 8,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      child: const Icon(Icons.collections_bookmark_rounded, color: Colors.white, size: 22),
-                                    ),
-                                    const SizedBox(width: 12),
-                                  ],
-                                  Flexible(
-                                    child: Text(
-                                      _title,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: -0.5,
-                                        shadows: [
-                                          Shadow(
-                                            color: Colors.black87,
-                                            offset: Offset(0, 2),
-                                            blurRadius: 8,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                _subtitle,
-                                style: const TextStyle(
-                                  color: Color(0xFFF1F5F9),
-                                  fontSize: 13.5,
-                                  height: 1.45,
-                                  shadows: [
-                                    Shadow(
-                                      color: Colors.black54,
-                                      offset: Offset(0, 1),
-                                      blurRadius: 4,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
+                        Flexible(
+                          child: Text(
+                            _title,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              letterSpacing: -0.3,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        if (!isCompact && _canCreateResource) ...[
-                          const SizedBox(width: 20),
-                          ElevatedButton.icon(
-                            onPressed: _openEditor,
-                            icon: Icon(Icons.add_circle_outline, size: 18, color: accentColor),
-                            label: Text(
-                              _action,
-                              style: TextStyle(
-                                color: accentColor,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: accentColor,
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                              elevation: 6,
-                              shadowColor: Colors.black.withValues(alpha: 0.35),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
                             ),
                           ),
-                        ],
+                          child: Text(
+                            '${_records.length} Terdata',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
-                    if (isCompact && _canCreateResource) ...[
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: _openEditor,
-                          icon: Icon(Icons.add_circle_outline, size: 18, color: accentColor),
-                          label: Text(
-                            _action,
-                            style: TextStyle(
-                              color: accentColor,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: accentColor,
-                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            elevation: 4,
-                          ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _subtitle,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: isDark ? AppTheme.textMuted : const Color(0xFF64748B),
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+
+          if (isCompact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                headerInfo,
+                if (_canCreateResource) ...[
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _openEditor,
+                      icon: const Icon(Icons.add, size: 16, color: Colors.white),
+                      label: Text(
+                        _action,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
                         ),
                       ),
-                    ],
-                  ],
-                );
-              },
-            ),
-          ),
-        ],
-      );
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: accentColor,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        elevation: 0,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            );
+          }
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(child: headerInfo),
+              if (_canCreateResource) ...[
+                const SizedBox(width: 16),
+                ElevatedButton.icon(
+                  onPressed: _openEditor,
+                  icon: const Icon(Icons.add, size: 16, color: Colors.white),
+                  label: Text(
+                    _action,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accentColor,
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    elevation: 0,
+                  ),
+                ),
+              ],
+            ],
+          );
         },
       ),
     );
   }
 
-  // ── KPI METRICS CARDS ROW ──────────────────────────────────────────────────
+  // ── KPI METRICS CARDS ROW (Unified Executive Theme) ────────────────────────
   Widget _buildKpiRow(bool isDark) {
     final records = _records;
+    final accentColor = _resolvedAccentColor;
 
     List<Map<String, dynamic>> kpis = [];
 
@@ -1077,30 +966,30 @@ class _InstitutionWorkspaceScreenState
           sumBudget += double.tryParse(m['budget']?.toString() ?? '') ?? 0;
         }
         kpis = [
-          {'title': 'Total Tender RFP', 'value': records.length.toString(), 'icon': Icons.assignment_outlined, 'color': _isSchool ? const Color(0xFF7C3AED) : const Color(0xFF2563EB)},
-          {'title': 'Tender Terbuka', 'value': openCount.toString(), 'icon': Icons.lock_open_rounded, 'color': const Color(0xFF10B981)},
-          {'title': 'Dalam Evaluasi', 'value': inProgCount.toString(), 'icon': Icons.hourglass_top_rounded, 'color': const Color(0xFFF59E0B)},
-          {'title': 'Total Pagu Pengadaan', 'value': _formatCurrency(sumBudget), 'icon': Icons.payments_outlined, 'color': const Color(0xFF8B5CF6)},
+          {'title': 'Total Pengadaan', 'value': records.length.toString(), 'icon': Icons.assignment_outlined},
+          {'title': 'Tender Terbuka', 'value': openCount.toString(), 'icon': Icons.lock_open_rounded},
+          {'title': 'Dalam Evaluasi', 'value': inProgCount.toString(), 'icon': Icons.hourglass_top_rounded},
+          {'title': 'Total Pagu', 'value': _formatCurrency(sumBudget), 'icon': Icons.payments_outlined},
         ];
         break;
       case 'partners':
         final activeCount = records.where((r) => r['status'] == 'active').length;
-        final categories = records.map((r) => _metadata(r)['category']?.toString() ?? '').toSet().length;
+        final categories = records.map((r) => _metadata(r)['category']?.toString() ?? '').where((c) => c.isNotEmpty).toSet().length;
         kpis = [
-          {'title': 'Total Rekanan Vendor', 'value': records.length.toString(), 'icon': Icons.business_center_outlined, 'color': _isSchool ? const Color(0xFF7C3AED) : const Color(0xFF2563EB)},
-          {'title': 'Vendor Aktif', 'value': activeCount.toString(), 'icon': Icons.check_circle_outline, 'color': const Color(0xFF10B981)},
-          {'title': 'Kategori Spesialis', 'value': '$categories Bidang', 'icon': Icons.category_outlined, 'color': const Color(0xFFF59E0B)},
-          {'title': 'Skor Kepuasan SLA', 'value': '4.9 / 5.0', 'icon': Icons.star_rounded, 'color': const Color(0xFF8B5CF6)},
+          {'title': 'Total Rekanan', 'value': records.length.toString(), 'icon': Icons.business_center_outlined},
+          {'title': 'Mitra Aktif', 'value': activeCount.toString(), 'icon': Icons.check_circle_outline},
+          {'title': 'Sektor Bidang', 'value': '${categories > 0 ? categories : 1} Bidang', 'icon': Icons.category_outlined},
+          {'title': 'Standar SLA', 'value': 'Terverifikasi', 'icon': Icons.verified_user_outlined},
         ];
         break;
       case 'documents':
         final publishedCount = records.where((r) => r['status'] == 'published').length;
         final draftCount = records.where((r) => r['status'] == 'draft').length;
         kpis = [
-          {'title': 'Total Dokumen Legal', 'value': records.length.toString(), 'icon': Icons.folder_copy_outlined, 'color': _isSchool ? const Color(0xFF7C3AED) : const Color(0xFF2563EB)},
-          {'title': 'Tervalidasi Digital', 'value': publishedCount.toString(), 'icon': Icons.verified_outlined, 'color': const Color(0xFF10B981)},
-          {'title': 'Menunggu Otorisasi', 'value': draftCount.toString(), 'icon': Icons.pending_actions_outlined, 'color': const Color(0xFFF59E0B)},
-          {'title': 'Kepatuhan Hukum', 'value': '100% Aman', 'icon': Icons.shield_outlined, 'color': const Color(0xFF8B5CF6)},
+          {'title': 'Total Dokumen', 'value': records.length.toString(), 'icon': Icons.folder_copy_outlined},
+          {'title': 'Tervalidasi Digital', 'value': publishedCount.toString(), 'icon': Icons.verified_outlined},
+          {'title': 'Menunggu Otorisasi', 'value': draftCount.toString(), 'icon': Icons.pending_actions_outlined},
+          {'title': 'Status Legalitas', 'value': 'Tervalidasi Legal', 'icon': Icons.shield_outlined},
         ];
         break;
       case 'budgets':
@@ -1114,19 +1003,19 @@ class _InstitutionWorkspaceScreenState
         final double remaining = allocated - realized;
         final double ratio = allocated > 0 ? (realized / allocated * 100).clamp(0, 100) : 0;
         kpis = [
-          {'title': 'Pagu Anggaran', 'value': _formatCurrency(allocated), 'icon': Icons.account_balance_outlined, 'color': _isSchool ? const Color(0xFF7C3AED) : const Color(0xFF2563EB)},
-          {'title': 'Realisasi Belanja', 'value': _formatCurrency(realized), 'icon': Icons.trending_up_rounded, 'color': const Color(0xFF10B981)},
-          {'title': 'Sisa Anggaran', 'value': _formatCurrency(remaining), 'icon': Icons.savings_outlined, 'color': const Color(0xFFF59E0B)},
-          {'title': 'Rasio Serapan', 'value': '${ratio.toStringAsFixed(1)}%', 'icon': Icons.pie_chart_outline_rounded, 'color': const Color(0xFF8B5CF6)},
+          {'title': 'Pagu Anggaran', 'value': _formatCurrency(allocated), 'icon': Icons.account_balance_outlined},
+          {'title': 'Realisasi Belanja', 'value': _formatCurrency(realized), 'icon': Icons.trending_up_rounded},
+          {'title': 'Sisa Pagu', 'value': _formatCurrency(remaining), 'icon': Icons.savings_outlined},
+          {'title': 'Rasio Serapan', 'value': '${ratio.toStringAsFixed(1)}%', 'icon': Icons.pie_chart_outline_rounded},
         ];
         break;
       case 'reports':
         final pubCount = records.where((r) => r['status'] == 'published' || r['status'] == 'active').length;
         kpis = [
-          {'title': 'Total Laporan Kinerja', 'value': records.length.toString(), 'icon': Icons.summarize_outlined, 'color': _isSchool ? const Color(0xFF7C3AED) : const Color(0xFF2563EB)},
-          {'title': 'Laporan Terbit & Sah', 'value': pubCount.toString(), 'icon': Icons.task_alt_rounded, 'color': const Color(0xFF10B981)},
-          {'title': 'Draf Evaluasi', 'value': (records.length - pubCount).toString(), 'icon': Icons.edit_note_rounded, 'color': const Color(0xFFF59E0B)},
-          {'title': 'Capaian Mutu & IKU', 'value': '98.2% Optimal', 'icon': Icons.insights_rounded, 'color': const Color(0xFF8B5CF6)},
+          {'title': 'Total Laporan', 'value': records.length.toString(), 'icon': Icons.summarize_outlined},
+          {'title': 'Laporan Terbit', 'value': pubCount.toString(), 'icon': Icons.task_alt_rounded},
+          {'title': 'Draf Evaluasi', 'value': (records.length - pubCount).toString(), 'icon': Icons.edit_note_rounded},
+          {'title': 'Evaluasi Akuntabilitas', 'value': 'Tercapai', 'icon': Icons.insights_rounded},
         ];
         break;
       case 'monitoring':
@@ -1144,10 +1033,10 @@ class _InstitutionWorkspaceScreenState
         }
         final avgProgress = countWithProgress > 0 ? (sumProgress / countWithProgress) : 0;
         kpis = [
-          {'title': 'Total Agenda Monev', 'value': records.length.toString(), 'icon': Icons.track_changes_rounded, 'color': _isSchool ? const Color(0xFF7C3AED) : const Color(0xFF2563EB)},
-          {'title': 'Rata-rata Capaian', 'value': '${avgProgress.toStringAsFixed(0)}%', 'icon': Icons.trending_up_rounded, 'color': const Color(0xFF10B981)},
-          {'title': 'Sedang Berjalan', 'value': inProgCount.toString(), 'icon': Icons.speed_rounded, 'color': const Color(0xFF2563EB)},
-          {'title': 'Target Tuntas (100%)', 'value': '$compCount Program', 'icon': Icons.task_alt_rounded, 'color': const Color(0xFF8B5CF6)},
+          {'title': 'Total Agenda Monev', 'value': records.length.toString(), 'icon': Icons.track_changes_rounded},
+          {'title': 'Rata-rata Capaian', 'value': '${avgProgress.toStringAsFixed(0)}%', 'icon': Icons.trending_up_rounded},
+          {'title': 'Sedang Berjalan', 'value': inProgCount.toString(), 'icon': Icons.speed_rounded},
+          {'title': 'Target Tuntas', 'value': '$compCount Agenda', 'icon': Icons.task_alt_rounded},
         ];
         break;
       case 'showcases':
@@ -1158,38 +1047,18 @@ class _InstitutionWorkspaceScreenState
             .toSet()
             .length;
         kpis = [
-          {
-            'title': 'Total Portofolio Siswa',
-            'value': records.length.toString(),
-            'icon': Icons.palette_outlined,
-            'color': const Color(0xFF6366F1),
-          },
-          {
-            'title': 'Karya Tervalidasi',
-            'value': pubCount.toString(),
-            'icon': Icons.verified_rounded,
-            'color': const Color(0xFF10B981),
-          },
-          {
-            'title': 'Jurusan Kejuruan',
-            'value': '${majors > 0 ? majors : 3} Bidang',
-            'icon': Icons.school_outlined,
-            'color': const Color(0xFFF59E0B),
-          },
-          {
-            'title': 'Kesiapan Industri DUDI',
-            'value': '100% Siap Kerja',
-            'icon': Icons.workspace_premium_outlined,
-            'color': const Color(0xFF8B5CF6),
-          },
+          {'title': 'Total Karya Siswa', 'value': records.length.toString(), 'icon': Icons.palette_outlined},
+          {'title': 'Karya Tervalidasi', 'value': pubCount.toString(), 'icon': Icons.verified_rounded},
+          {'title': 'Bidang Keahlian', 'value': '${majors > 0 ? majors : 3} Bidang', 'icon': Icons.school_outlined},
+          {'title': 'Kesiapan Industri', 'value': 'Terkurasi', 'icon': Icons.workspace_premium_outlined},
         ];
         break;
       default:
         kpis = [
-          {'title': 'Total Data', 'value': records.length.toString(), 'icon': Icons.layers_outlined, 'color': _isSchool ? const Color(0xFF7C3AED) : const Color(0xFF2563EB)},
-          {'title': 'Status Aktif', 'value': records.where((r) => r['status'] == 'published' || r['status'] == 'open').length.toString(), 'icon': Icons.check_circle_outline, 'color': const Color(0xFF10B981)},
-          {'title': 'Menunggu Review', 'value': records.where((r) => r['status'] == 'draft' || r['status'] == 'in_progress').length.toString(), 'icon': Icons.hourglass_top_outlined, 'color': const Color(0xFFF59E0B)},
-          {'title': 'Database Status', 'value': 'Tersinkron', 'icon': Icons.cloud_done_outlined, 'color': const Color(0xFF8B5CF6)},
+          {'title': 'Total Data', 'value': records.length.toString(), 'icon': Icons.layers_outlined},
+          {'title': 'Status Aktif', 'value': records.where((r) => r['status'] == 'published' || r['status'] == 'open').length.toString(), 'icon': Icons.check_circle_outline},
+          {'title': 'Menunggu Review', 'value': records.where((r) => r['status'] == 'draft' || r['status'] == 'in_progress').length.toString(), 'icon': Icons.hourglass_top_outlined},
+          {'title': 'Sinkronisasi', 'value': 'Tersinkron', 'icon': Icons.cloud_done_outlined},
         ];
     }
 
@@ -1210,19 +1079,18 @@ class _InstitutionWorkspaceScreenState
             ),
             itemBuilder: (context, i) {
               final k = kpis[i];
-              final col = k['color'] as Color;
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
                   color: isDark ? AppTheme.cardBg : Colors.white,
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+                    color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.02),
-                      blurRadius: 8,
+                      color: const Color(0xFF0F172A).withValues(alpha: isDark ? 0.1 : 0.02),
+                      blurRadius: 6,
                       offset: const Offset(0, 2),
                     ),
                   ],
@@ -1232,10 +1100,10 @@ class _InstitutionWorkspaceScreenState
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: col.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(10),
+                        color: accentColor.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(k['icon'] as IconData, size: 20, color: col),
+                      child: Icon(k['icon'] as IconData, size: 18, color: accentColor),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -1247,7 +1115,7 @@ class _InstitutionWorkspaceScreenState
                             k['title'] as String,
                             style: TextStyle(
                               fontSize: 11,
-                              color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                              color: isDark ? AppTheme.textMuted : const Color(0xFF64748B),
                               fontWeight: FontWeight.w500,
                             ),
                             maxLines: 1,
@@ -1256,9 +1124,11 @@ class _InstitutionWorkspaceScreenState
                           const SizedBox(height: 2),
                           Text(
                             k['value'] as String,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w700,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              letterSpacing: -0.2,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -1288,194 +1158,195 @@ class _InstitutionWorkspaceScreenState
       final bVal = double.tryParse(rawBudget.toString()) ?? 0;
       budgetStr = _formatCurrency(bVal);
     }
+    final accentColor = _resolvedAccentColor;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+          color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            color: const Color(0xFF0F172A).withValues(alpha: isDark ? 0.15 : 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            height: 4,
-            decoration: BoxDecoration(
-              color: col,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
                         children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF1E3A8A).withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  meta['category'] ?? 'Pengadaan B2B',
-                                  style: const TextStyle(
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                              ),
+                            ),
+                            child: Text(
+                              meta['category'] ?? 'Pengadaan B2B',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: col.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                CircleAvatar(radius: 3, backgroundColor: col),
+                                const SizedBox(width: 5),
+                                Text(
+                                  _statusLabel(status),
+                                  style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF1E3A8A),
+                                    color: col,
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: col.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    CircleAvatar(radius: 3, backgroundColor: col),
-                                    const SizedBox(width: 5),
-                                    Text(
-                                      _statusLabel(status),
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: col,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            record['title']?.toString() ?? '',
-                            style: const TextStyle(
-                              fontSize: 15.5,
-                              fontWeight: FontWeight.bold,
+                              ],
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    PopupMenuButton<String>(
-                      onSelected: (value) => value == 'edit'
-                          ? _openEditor(record)
-                          : _deleteRecord(record),
-                      itemBuilder: (_) => const [
-                        PopupMenuItem(value: 'edit', child: Text('Edit Tender')),
-                        PopupMenuItem(value: 'delete', child: Text('Hapus Permanen')),
-                      ],
-                    ),
-                  ],
-                ),
-                if ((record['description']?.toString() ?? '').isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    record['description'].toString(),
-                    style: TextStyle(
-                      fontSize: 13,
-                      height: 1.45,
-                      color: isDark ? AppTheme.textMuted : Colors.grey.shade700,
-                    ),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-                const SizedBox(height: 14),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: isDark ? AppTheme.cardDark2 : Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Row(
-                          children: [
-                            const Icon(Icons.payments_outlined, size: 18, color: Color(0xFF10B981)),
-                            const SizedBox(width: 8),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Pagu Anggaran', style: TextStyle(fontSize: 10, color: Colors.grey.shade600)),
-                                Text(budgetStr, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold)),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(height: 24, width: 1, color: Colors.grey.shade300),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Row(
-                          children: [
-                            const Icon(Icons.event_outlined, size: 18, color: Color(0xFF2563EB)),
-                            const SizedBox(width: 8),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Batas Pengajuan', style: TextStyle(fontSize: 10, color: Colors.grey.shade600)),
-                                Text(meta['deadline'] ?? '-', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                              ],
-                            ),
-                          ],
+                      const SizedBox(height: 8),
+                      Text(
+                        record['title']?.toString() ?? '',
+                        style: const TextStyle(
+                          fontSize: 15.5,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
                   ),
                 ),
+                PopupMenuButton<String>(
+                  onSelected: (value) => value == 'edit'
+                      ? _openEditor(record)
+                      : _deleteRecord(record),
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'edit', child: Text('Edit Tender')),
+                    PopupMenuItem(value: 'delete', child: Text('Hapus Permanen')),
+                  ],
+                ),
               ],
             ),
-          ),
-        ],
+            if ((record['description']?.toString() ?? '').isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                record['description'].toString(),
+                style: TextStyle(
+                  fontSize: 13,
+                  height: 1.45,
+                  color: isDark ? AppTheme.textMuted : const Color(0xFF64748B),
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: isDark ? AppTheme.cardDark2 : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Icon(Icons.payments_outlined, size: 18, color: accentColor),
+                        const SizedBox(width: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Pagu Anggaran',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                              ),
+                            ),
+                            Text(
+                              budgetStr,
+                              style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(height: 24, width: 1, color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Icon(Icons.event_outlined, size: 18, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                        const SizedBox(width: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Batas Pengajuan',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                              ),
+                            ),
+                            Text(
+                              meta['deadline'] ?? '-',
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   void _copyOrLaunchContact(String contact) {
-    if (contact.trim().isEmpty) return;
-    Clipboard.setData(ClipboardData(text: contact.trim()));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
-            const SizedBox(width: 8),
-            Text('Kontak "$contact" berhasil disalin ke clipboard.'),
-          ],
-        ),
-        backgroundColor: const Color(0xFF1E293B),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        duration: const Duration(seconds: 2),
-      ),
+    final clean = contact.trim();
+    if (clean.isEmpty) return;
+    Clipboard.setData(ClipboardData(text: clean));
+    AppSweetAlert.success(
+      context,
+      'Kontak "$clean" berhasil disalin ke clipboard.',
+      title: 'Kontak Disalin',
     );
   }
 
@@ -5403,6 +5274,14 @@ class _InstitutionWorkspaceScreenState
   // ── BODY BUILDER ───────────────────────────────────────────────────────────
   Widget _buildBody(bool isDark) {
     final records = _filteredRecords;
+    final totalItems = records.length;
+    final totalPages = totalItems > 0 ? (totalItems / _pageSize).ceil() : 1;
+    final safePage = _currentPage.clamp(1, totalPages);
+    final startIndex = (safePage - 1) * _pageSize;
+    final endIndex = math.min(startIndex + _pageSize, totalItems);
+    final pagedRecords = totalItems > 0 && startIndex < totalItems
+        ? records.sublist(startIndex, endIndex)
+        : <Map<String, dynamic>>[];
 
     return RefreshIndicator(
       onRefresh: _loadRecords,
@@ -5418,7 +5297,10 @@ class _InstitutionWorkspaceScreenState
               builder: (context, constraints) {
                 final search = TextField(
                   controller: _searchController,
-                  onChanged: (value) => setState(() => _search = value),
+                  onChanged: (value) => setState(() {
+                    _search = value;
+                    _currentPage = 1;
+                  }),
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.search, size: 20),
                     hintText: 'Cari ${_title.toLowerCase()}...',
@@ -5427,7 +5309,10 @@ class _InstitutionWorkspaceScreenState
                             icon: const Icon(Icons.clear, size: 18),
                             onPressed: () {
                               _searchController.clear();
-                              setState(() => _search = '');
+                              setState(() {
+                                _search = '';
+                                _currentPage = 1;
+                              });
                             },
                           )
                         : null,
@@ -5455,7 +5340,10 @@ class _InstitutionWorkspaceScreenState
                         child: Text('${_statusLabel(value)} (${_records.where((r) => r['status'] == value).length})'),
                       ),
                   ],
-                  onChanged: (value) => setState(() => _statusFilter = value ?? 'Semua'),
+                  onChanged: (value) => setState(() {
+                    _statusFilter = value ?? 'Semua';
+                    _currentPage = 1;
+                  }),
                 );
 
                 final refresh = IconButton(
@@ -5580,8 +5468,17 @@ class _InstitutionWorkspaceScreenState
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
                 children: [
-                  for (final rec in records)
+                  for (final rec in pagedRecords)
                     _buildRecordCard(rec, isDark),
+                  AppPaginationBar(
+                    currentPage: safePage,
+                    totalItems: totalItems,
+                    pageSize: _pageSize,
+                    itemLabel: _itemUnitName,
+                    onPageChanged: (newPage) {
+                      setState(() => _currentPage = newPage);
+                    },
+                  ),
                 ],
               ),
             ),

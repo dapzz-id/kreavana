@@ -4270,13 +4270,10 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                 onTap: () async {
                   Navigator.pop(context);
                   if (widget.chat['isGroup'] == true) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Kirim saldo hanya didukung untuk obrolan personal.',
-                        ),
-                        behavior: SnackBarBehavior.floating,
-                      ),
+                    AppSweetAlert.warning(
+                      context,
+                      'Kirim saldo hanya didukung untuk obrolan personal.',
+                      title: 'Fitur Tidak Tersedia',
                     );
                     return;
                   }
@@ -4287,11 +4284,10 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                   final partnerUsername = widget.chat['username'];
                   if (partnerUsername == null) {
                     if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Gagal menemukan username lawan bicara.'),
-                        behavior: SnackBarBehavior.floating,
-                      ),
+                    AppSweetAlert.error(
+                      context,
+                      'Gagal menemukan username lawan bicara.',
+                      title: 'Username Tidak Ditemukan',
                     );
                     return;
                   }
@@ -4418,23 +4414,18 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
               widget.chat['avatarUrl'] = res['data']['avatar_url'];
             });
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Foto profil grup berhasil diperbarui!'),
-                  behavior: SnackBarBehavior.floating,
-                ),
+              AppSweetAlert.success(
+                context,
+                'Foto profil grup berhasil diperbarui!',
+                title: 'Foto Grup Diperbarui',
               );
             }
           } else {
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    res['message'] ?? 'Gagal memperbarui foto profil grup.',
-                  ),
-                  behavior: SnackBarBehavior.floating,
-                  backgroundColor: Colors.red,
-                ),
+              AppSweetAlert.error(
+                context,
+                res['message'] ?? 'Gagal memperbarui foto profil grup.',
+                title: 'Gagal Memperbarui',
               );
             }
           }
@@ -4442,12 +4433,10 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal mengunggah foto: ${e.toString()}'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: Colors.red,
-          ),
+        AppSweetAlert.error(
+          context,
+          'Gagal mengunggah foto: ${e.toString()}',
+          title: 'Error Unggah',
         );
       }
     }
@@ -4589,18 +4578,18 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                                 .trim();
                           });
                           if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Info grup berhasil diperbarui!'),
-                              ),
+                            AppSweetAlert.success(
+                              context,
+                              'Info grup berhasil diperbarui!',
+                              title: 'Info Diperbarui',
                             );
                           }
                         } catch (e) {
                           if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Gagal memperbarui info grup.'),
-                              ),
+                            AppSweetAlert.error(
+                              context,
+                              'Gagal memperbarui info grup.',
+                              title: 'Gagal',
                             );
                           }
                         }
@@ -5124,14 +5113,10 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                                   if (context.mounted) {
                                     final count = selectedUsers.length;
                                     Navigator.pop(context);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'Undangan dikirim ke $count pengguna. Menunggu persetujuan di akun mereka.',
-                                        ),
-                                        behavior: SnackBarBehavior.floating,
-                                        backgroundColor: AppTheme.primaryPurple,
-                                      ),
+                                    AppSweetAlert.success(
+                                      context,
+                                      'Undangan dikirim ke $count pengguna. Menunggu persetujuan di akun mereka.',
+                                      title: 'Undangan Terkirim',
                                     );
                                   }
                                 },
@@ -5510,12 +5495,10 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
               ElevatedButton.icon(
                 onPressed: () {
                   if (onlyAdminCanAdd && !isMeAdmin) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Hanya Admin yang dapat menambahkan anggota!',
-                        ),
-                      ),
+                    AppSweetAlert.warning(
+                      context,
+                      'Hanya Admin yang dapat menambahkan anggota!',
+                      title: 'Akses Terbatas',
                     );
                     return;
                   }

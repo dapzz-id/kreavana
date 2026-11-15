@@ -2219,19 +2219,10 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
-                const SizedBox(width: 8),
-                Text('Banner berhasil diupload (${(fileSize / 1024).toStringAsFixed(0)} KB)'),
-              ],
-            ),
-            backgroundColor: const Color(0xFF10B981),
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
-          ),
+        AppSweetAlert.success(
+          context,
+          'Banner berhasil diunggah (${(fileSize / 1024).toStringAsFixed(0)} KB)',
+          title: 'Banner Diunggah',
         );
       }
     } catch (e) {

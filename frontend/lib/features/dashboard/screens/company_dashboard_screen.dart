@@ -13,13 +13,13 @@ import '../../../widgets/subrole_right_sidebar.dart';
 import '../../../models/user_model.dart';
 import '../../../screens/buat_kebutuhan_screen.dart';
 import '../../../screens/proyek_saya_screen.dart';
-import '../../../screens/notifications_screen.dart';
 import '../../../screens/direct_message_screen.dart';
 import '../../../screens/profile_screen.dart';
 import '../../../screens/explore_screen.dart';
 import '../../../screens/ulasan_reputasi_screen.dart';
 import '../../../screens/institution_workspace_screen.dart';
 import '../../../widgets/app_bar_badge.dart';
+import '../../../widgets/app_sweet_alert.dart';
 
 class CompanyDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -2293,8 +2293,10 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
     final phone = (c['phone'] ?? '').toString().trim();
     if (phone.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Nomor kontak tidak tersedia.')),
+        AppSweetAlert.warning(
+          context,
+          'Nomor kontak tidak tersedia.',
+          title: 'Kontak Tidak Tersedia',
         );
       }
       return;
@@ -2406,11 +2408,10 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                       onPressed: () {
                         Clipboard.setData(ClipboardData(text: cleanPhone));
                         Navigator.pop(dialogCtx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Nomor $cleanPhone berhasil disalin ke clipboard'),
-                            backgroundColor: Colors.green.shade700,
-                          ),
+                        AppSweetAlert.success(
+                          context,
+                          'Nomor $cleanPhone berhasil disalin ke clipboard',
+                          title: 'Nomor Disalin',
                         );
                       },
                     ),
@@ -2423,16 +2424,19 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: () async {
-                        final messenger = ScaffoldMessenger.of(context);
                         Navigator.pop(dialogCtx);
                         final uri = Uri.parse('tel:$cleanPhone');
                         try {
                           await launchUrl(uri, mode: LaunchMode.externalApplication);
                         } catch (_) {
                           Clipboard.setData(ClipboardData(text: cleanPhone));
-                          messenger.showSnackBar(
-                            SnackBar(content: Text('Nomor $cleanPhone telah disalin')),
-                          );
+                          if (mounted) {
+                            AppSweetAlert.info(
+                              context,
+                              'Nomor $cleanPhone telah disalin ke clipboard.',
+                              title: 'Nomor Disalin',
+                            );
+                          }
                         }
                       },
                       icon: const Icon(Icons.call_rounded, size: 16),
@@ -2449,16 +2453,19 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: () async {
-                        final messenger = ScaffoldMessenger.of(context);
                         Navigator.pop(dialogCtx);
                         final waUri = Uri.parse('https://wa.me/$waNumber');
                         try {
                           await launchUrl(waUri, mode: LaunchMode.externalApplication);
                         } catch (_) {
                           Clipboard.setData(ClipboardData(text: cleanPhone));
-                          messenger.showSnackBar(
-                            SnackBar(content: Text('Membuka WhatsApp gagal. Nomor $cleanPhone disalin.')),
-                          );
+                          if (mounted) {
+                            AppSweetAlert.warning(
+                              context,
+                              'Membuka WhatsApp gagal. Nomor $cleanPhone disalin ke clipboard.',
+                              title: 'Gagal Buka WhatsApp',
+                            );
+                          }
                         }
                       },
                       icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16),

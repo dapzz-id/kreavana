@@ -12,6 +12,7 @@ import '../widgets/app_breadcrumbs.dart';
 import '../widgets/ktp_camera_view.dart';
 import '../widgets/desktop_sidebar_layout.dart';
 import '../widgets/auth_guard_dialog.dart';
+import '../widgets/app_sweet_alert.dart';
 import '../features/auth/services/auth_service.dart';
 import '../services/user_store.dart';
 import 'main_navigation.dart';
@@ -72,14 +73,10 @@ class _ClientVerificationPageState extends State<ClientVerificationPage> {
     if (isCorp) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Akun Corporate tidak memerlukan verifikasi KTP perorangan.',
-            ),
-            backgroundColor: Colors.blue,
-            behavior: SnackBarBehavior.floating,
-          ),
+        AppSweetAlert.info(
+          context,
+          'Akun Institusi / Corporate tidak memerlukan verifikasi KTP perorangan.',
+          title: 'Verifikasi Tidak Diperlukan',
         );
         if (Navigator.canPop(context)) {
           Navigator.pop(context, true);

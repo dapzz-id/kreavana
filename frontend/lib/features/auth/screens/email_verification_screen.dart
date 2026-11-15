@@ -7,6 +7,7 @@ import '../../../app/app_animations.dart';
 import '../../../services/theme_transition_service.dart';
 import '../services/auth_service.dart';
 import '../../../services/app_router.dart';
+import '../../../widgets/app_sweet_alert.dart';
 import 'package:go_router/go_router.dart';
 
 class EmailVerificationScreen extends StatefulWidget {
@@ -170,21 +171,10 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
       setState(() => _isSuccess = true);
       await Future.delayed(const Duration(milliseconds: 1200));
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white, size: 18),
-                SizedBox(width: 8),
-                Text('Email berhasil diverifikasi! Silakan masuk.'),
-              ],
-            ),
-            backgroundColor: AppTheme.success,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
+        AppSweetAlert.success(
+          context,
+          'Email berhasil diverifikasi! Silakan masuk.',
+          title: 'Verifikasi Berhasil',
         );
         context.go(AppRoutes.login);
       }
@@ -232,15 +222,10 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
       _startCountdown();
       _clearOtp();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Kode verifikasi baru telah dikirim.'),
-            backgroundColor: AppTheme.success,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
+        AppSweetAlert.success(
+          context,
+          'Kode verifikasi baru telah dikirim ke email Anda.',
+          title: 'Kode Terkirim',
         );
       }
     } else {

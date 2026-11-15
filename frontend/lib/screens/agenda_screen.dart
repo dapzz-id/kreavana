@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../app/theme.dart';
 import '../app/subrole_theme_engine.dart';
@@ -11,6 +12,7 @@ import '../widgets/skeleton/skeleton_list.dart';
 import '../widgets/app_breadcrumbs.dart';
 import '../widgets/app_sweet_alert.dart';
 import '../widgets/desktop_sidebar_layout.dart';
+import '../widgets/app_pagination_bar.dart';
 import '../services/user_store.dart';
 import '../services/api_service.dart';
 import 'main_navigation.dart';
@@ -30,6 +32,8 @@ class _AgendaScreenState extends State<AgendaScreen> {
   final Set<String> _remindedAgendas = {};
   String _selectedFilter = 'Semua';
   String _searchQuery = '';
+  int _currentPage = 1;
+  static const int _pageSize = 5;
 
   bool get _isSchool {
     final sub = (widget.user?.subRole ?? '').toLowerCase();
@@ -221,6 +225,15 @@ class _AgendaScreenState extends State<AgendaScreen> {
       return true;
     }).toList();
 
+    final totalItems = filtered.length;
+    final totalPages = totalItems > 0 ? (totalItems / _pageSize).ceil() : 1;
+    final safePage = _currentPage.clamp(1, totalPages);
+    final startIndex = (safePage - 1) * _pageSize;
+    final endIndex = math.min(startIndex + _pageSize, totalItems);
+    final pagedAgendas = totalItems > 0 && startIndex < totalItems
+        ? filtered.sublist(startIndex, endIndex)
+        : <Map<String, dynamic>>[];
+
     final isDesktop = MediaQuery.of(context).size.width > 900;
 
     final scaffold = Scaffold(
@@ -304,7 +317,10 @@ class _AgendaScreenState extends State<AgendaScreen> {
 
               // ── Search & Filter Row ──
               TextField(
-                onChanged: (v) => setState(() => _searchQuery = v),
+                onChanged: (v) => setState(() {
+                  _searchQuery = v;
+                  _currentPage = 1;
+                }),
                 decoration: InputDecoration(
                   hintText: _isSchool
                       ? 'Cari event, workshop, ujian magang, atau rapat mitra...'
@@ -348,7 +364,12 @@ class _AgendaScreenState extends State<AgendaScreen> {
                           fontSize: 12,
                         ),
                         onSelected: (val) {
-                          if (val) setState(() => _selectedFilter = f);
+                          if (val) {
+                            setState(() {
+                              _selectedFilter = f;
+                              _currentPage = 1;
+                            });
+                          }
                         },
                       ),
                     );
@@ -362,10 +383,21 @@ class _AgendaScreenState extends State<AgendaScreen> {
                 const SkeletonList()
               else if (filtered.isEmpty)
                 _buildEmptyState(accentColor, isDark)
-              else
-                ...filtered.map(
+              else ...[
+                ...pagedAgendas.map(
                   (item) => _buildAgendaCard(item, accentColor, isDark),
                 ),
+                AppPaginationBar(
+                  currentPage: safePage,
+                  totalItems: totalItems,
+                  pageSize: _pageSize,
+                  itemLabel: _isSchool ? 'kegiatan' : 'agenda',
+                  primaryColor: accentColor,
+                  onPageChanged: (newPage) {
+                    setState(() => _currentPage = newPage);
+                  },
+                ),
+              ],
             ],
           ),
         ),

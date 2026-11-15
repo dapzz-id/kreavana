@@ -340,21 +340,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               setState(() => _currentUser = response.user!);
               widget.onUserUpdated(response.user!);
             }
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Foto profil berhasil diperbarui.'),
-                behavior: SnackBarBehavior.floating,
-              ),
+            AppSweetAlert.success(
+              context,
+              'Foto profil berhasil diperbarui.',
+              title: 'Foto Diperbarui',
             );
           } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  response.message ?? 'Gagal mengupload foto profil.',
-                ),
-                behavior: SnackBarBehavior.floating,
-                backgroundColor: Colors.red.shade700,
-              ),
+            AppSweetAlert.error(
+              context,
+              response.message ?? 'Gagal mengupload foto profil.',
+              title: 'Upload Gagal',
             );
           }
         }
@@ -362,12 +357,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: Colors.red.shade700,
-          ),
+        AppSweetAlert.error(
+          context,
+          'Terjadi kesalahan: $e',
+          title: 'Error',
         );
       }
     }
@@ -394,19 +387,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
           setState(() => _currentUser = result.user!);
           widget.onUserUpdated(result.user!);
         }
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profil berhasil diperbarui.'),
-            behavior: SnackBarBehavior.floating,
-          ),
+        AppSweetAlert.success(
+          context,
+          'Profil pengelola berhasil diperbarui.',
+          title: 'Perubahan Disimpan',
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result.message ?? 'Gagal memperbarui profil.'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: Colors.red.shade700,
-          ),
+        AppSweetAlert.error(
+          context,
+          result.message ?? 'Gagal memperbarui profil.',
+          title: 'Gagal Menyimpan',
         );
       }
     }

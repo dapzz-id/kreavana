@@ -306,12 +306,10 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   void _showDummyActionMessage(String action) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Fitur "$action" segera hadir!'),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
+    AppSweetAlert.info(
+      context,
+      'Fitur "$action" segera hadir!',
+      title: 'Segera Hadir',
     );
   }
 

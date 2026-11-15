@@ -10,6 +10,7 @@ import '../services/theme_transition_service.dart';
 import '../widgets/kreavana_image.dart';
 import '../widgets/app_breadcrumbs.dart';
 import '../widgets/auth_guard_dialog.dart';
+import '../widgets/app_sweet_alert.dart';
 
 class PengaturanScreen extends StatefulWidget {
   final UserModel? user;
@@ -1104,20 +1105,18 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                       final confirm = confirmCtrl.text;
 
                       if (newPass.length < 6) {
-                        ScaffoldMessenger.of(ctx).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Kata sandi baru minimal 6 karakter.',
-                            ),
-                          ),
+                        AppSweetAlert.warning(
+                          ctx,
+                          'Kata sandi baru minimal 6 karakter.',
+                          title: 'Kata Sandi Kurang Panjang',
                         );
                         return;
                       }
                       if (newPass != confirm) {
-                        ScaffoldMessenger.of(ctx).showSnackBar(
-                          const SnackBar(
-                            content: Text('Konfirmasi kata sandi tidak cocok.'),
-                          ),
+                        AppSweetAlert.warning(
+                          ctx,
+                          'Konfirmasi kata sandi tidak cocok dengan kata sandi baru.',
+                          title: 'Konfirmasi Tidak Cocok',
                         );
                         return;
                       }
@@ -1128,50 +1127,35 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                           currentPassword: current,
                           newPassword: newPass,
                         );
-                        if (!ctx.mounted) return;
-                        Navigator.pop(ctx);
+                        if (ctx.mounted) {
+                          Navigator.pop(ctx);
+                        }
+                        if (!mounted) return;
                         if (result['status'] == true) {
-                          ScaffoldMessenger.of(ctx).showSnackBar(
-                            SnackBar(
-                              content: const Text(
-                                'Kata sandi berhasil diperbarui!',
-                              ),
-                              backgroundColor: AppTheme.success,
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
+                          AppSweetAlert.success(
+                            context,
+                            'Kata sandi berhasil diperbarui!',
+                            title: 'Sandi Diperbarui',
                           );
                         } else {
-                          ScaffoldMessenger.of(ctx).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                AppErrors.messageFromResult(
-                                  result,
-                                  fallback: 'Gagal memperbarui kata sandi.',
-                                ),
-                              ),
-                              backgroundColor: AppTheme.error,
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
+                          AppSweetAlert.error(
+                            context,
+                            AppErrors.messageFromResult(
+                              result,
+                              fallback: 'Gagal memperbarui kata sandi.',
                             ),
+                            title: 'Gagal Mengubah Sandi',
                           );
                         }
                       } catch (e) {
-                        if (!ctx.mounted) return;
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(ctx).showSnackBar(
-                          SnackBar(
-                            content: Text(AppErrors.friendly(e)),
-                            backgroundColor: AppTheme.error,
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
+                        if (ctx.mounted) {
+                          Navigator.pop(ctx);
+                        }
+                        if (!mounted) return;
+                        AppSweetAlert.error(
+                          context,
+                          AppErrors.friendly(e),
+                          title: 'Terjadi Kesalahan',
                         );
                       }
                     },

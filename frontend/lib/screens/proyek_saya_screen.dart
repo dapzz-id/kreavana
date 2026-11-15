@@ -22,6 +22,8 @@ import '../widgets/user_profile_modal.dart';
 import '../widgets/opportunity_review_dialog.dart';
 import '../widgets/repeat_order_dialog.dart';
 import '../widgets/program_magang_card.dart';
+import '../widgets/app_pagination_bar.dart';
+import '../widgets/app_sweet_alert.dart';
 
 enum ProjectItemType {
   opportunity,
@@ -243,12 +245,12 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
   String? _errorMessage;
   String _selectedStatus = 'Semua';
   String _searchQuery = '';
+  int _currentPage = 1;
+  static const int _pageSize = 6;
   bool _handledInitialTarget = false;
   final _debouncer = Debouncer(milliseconds: 300);
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  int _currentPage = 1;
-  static const int _pageSize = 6;
 
   List<UnifiedProjectItem> _allItems = [];
 
@@ -636,14 +638,10 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
         if (shouldVerify == true && mounted) {
           final res = await context.push<bool>(AppRoutes.verifikasiKlien);
           if (res == true && mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Verifikasi KTP berhasil dikirim! Menunggu persetujuan admin.',
-                ),
-                backgroundColor: Colors.green,
-                behavior: SnackBarBehavior.floating,
-              ),
+            AppSweetAlert.success(
+              context,
+              'Verifikasi KTP berhasil dikirim! Menunggu persetujuan admin.',
+              title: 'Verifikasi Terkirim',
             );
           }
         }
@@ -818,21 +816,19 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
   Future<void> _openChatWithPartner(String targetUserId, String? targetUserName) async {
     final cleanId = targetUserId.trim();
     if (cleanId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('ID partner tidak ditemukan pada kontrak ini.'),
-          backgroundColor: Colors.redAccent,
-        ),
+      AppSweetAlert.error(
+        context,
+        'ID partner tidak ditemukan pada kontrak ini.',
+        title: 'Kontak Tidak Ditemukan',
       );
       return;
     }
 
     if (widget.user?.id != null && widget.user!.id == cleanId) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Tidak dapat mengirim pesan ke akun sendiri.'),
-          backgroundColor: Colors.orangeAccent,
-        ),
+      AppSweetAlert.warning(
+        context,
+        'Tidak dapat mengirim pesan ke akun sendiri.',
+        title: 'Peringatan',
       );
       return;
     }
@@ -1061,13 +1057,14 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                       Builder(
                         builder: (context) {
                           final totalItems = filtered.length;
-                          final totalPages = (totalItems / _pageSize).ceil();
+                          final totalPages = totalItems > 0 ? (totalItems / _pageSize).ceil() : 1;
                           final safePage = _currentPage.clamp(1, totalPages);
                           final startIdx = (safePage - 1) * _pageSize;
                           final endIdx =
                               (startIdx + _pageSize).clamp(0, totalItems);
-                          final pagedItems =
-                              filtered.sublist(startIdx, endIdx);
+                          final pagedItems = totalItems > 0 && startIdx < totalItems
+                              ? filtered.sublist(startIdx, endIdx)
+                              : <UnifiedProjectItem>[];
 
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1079,15 +1076,13 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                                 screenWidth,
                                 accentColor,
                               ),
-                              const SizedBox(height: 20),
-                              _buildPaginationBar(
-                                isDark: isDark,
-                                accentColor: accentColor,
+                              AppPaginationBar(
                                 currentPage: safePage,
-                                totalPages: totalPages,
-                                startItem: startIdx + 1,
-                                endItem: endIdx,
                                 totalItems: totalItems,
+                                pageSize: _pageSize,
+                                itemLabel: _isSchool ? 'program' : 'proyek',
+                                primaryColor: accentColor,
+                                onPageChanged: _goToPage,
                               ),
                             ],
                           );
@@ -1606,104 +1601,6 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
         curve: Curves.easeOutCubic,
       );
     }
-  }
-
-  Widget _buildPaginationBar({
-    required bool isDark,
-    required Color accentColor,
-    required int currentPage,
-    required int totalPages,
-    required int startItem,
-    required int endItem,
-    required int totalItems,
-  }) {
-    final textSecondary = isDark ? AppTheme.textMuted : Colors.grey.shade600;
-    final cardBorder = isDark ? AppTheme.inputBorder : Colors.grey.shade200;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.cardBg : Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: cardBorder),
-      ),
-      child: Wrap(
-        spacing: 12,
-        runSpacing: 12,
-        alignment: WrapAlignment.spaceBetween,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          Text(
-            'Menampilkan $startItem–$endItem dari $totalItems proyek',
-            style: TextStyle(fontSize: 13, color: textSecondary),
-          ),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              OutlinedButton.icon(
-                onPressed: currentPage > 1
-                    ? () => _goToPage(currentPage - 1)
-                    : null,
-                icon: const Icon(Icons.chevron_left_rounded, size: 18),
-                label: const Text('Sebelumnya', style: TextStyle(fontSize: 12)),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  side: BorderSide(color: cardBorder),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ),
-              ...List.generate(totalPages, (idx) {
-                final page = idx + 1;
-                final isActive = page == currentPage;
-                return InkWell(
-                  onTap: () => _goToPage(page),
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: isActive ? accentColor : Colors.transparent,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: isActive ? accentColor : cardBorder,
-                      ),
-                    ),
-                    child: Text(
-                      '$page',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.bold,
-                        color: isActive
-                            ? Colors.white
-                            : (isDark ? Colors.white70 : Colors.black87),
-                      ),
-                    ),
-                  ),
-                );
-              }),
-              OutlinedButton.icon(
-                onPressed: currentPage < totalPages
-                    ? () => _goToPage(currentPage + 1)
-                    : null,
-                icon: const Icon(Icons.chevron_right_rounded, size: 18),
-                label: const Text('Berikutnya', style: TextStyle(fontSize: 12)),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  side: BorderSide(color: cardBorder),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
   }
 
   // ── Unified Project Card ───────────────────────────────────────────────────
