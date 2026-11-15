@@ -3699,7 +3699,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 icon: const Icon(Icons.chat_bubble_outline_rounded, size: 12),
                                 style: ElevatedButton.styleFrom(
                                   padding: EdgeInsets.zero,
-                                  backgroundColor: const Color(0xFF25D366),
+                                  backgroundColor: AppTheme.primaryPurple,
                                   foregroundColor: Colors.white,
                                   elevation: 0,
                                   shape: RoundedRectangleBorder(
@@ -8115,10 +8115,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF25D366).withValues(alpha: 0.12),
+                        color: AppTheme.primaryPurple.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: const Color(0xFF25D366).withValues(alpha: 0.3),
+                          color: AppTheme.primaryPurple.withValues(alpha: 0.3),
                         ),
                       ),
                       child: const Row(
@@ -8127,7 +8127,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                           Icon(
                             Icons.chat_bubble_outline_rounded,
                             size: 12,
-                            color: Color(0xFF16A34A),
+                            color: AppTheme.primaryPurple,
                           ),
                           SizedBox(width: 4),
                           Text(
@@ -8135,7 +8135,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF16A34A),
+                              color: AppTheme.primaryPurple,
                             ),
                           ),
                         ],
