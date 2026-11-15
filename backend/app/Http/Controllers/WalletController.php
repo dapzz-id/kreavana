@@ -71,6 +71,22 @@ class WalletController extends Controller
     }
 
     /**
+     * POST /wallet/reset-pin
+     * Resets or updates the wallet PIN for the authenticated user.
+     */
+    public function resetPin(Request $request)
+    {
+        $request->validate(['pin' => 'required|string|min:4|max:8']);
+
+        $user = Auth::guard('api')->user();
+
+        $user->wallet_pin = Hash::make($request->pin);
+        $user->save();
+
+        return $this->successResponse('PIN wallet berhasil diatur ulang.');
+    }
+
+    /**
      * POST /wallet/verify-pin
      * Validates the user's wallet PIN without executing any transaction.
      * Returns {valid: true/false}.

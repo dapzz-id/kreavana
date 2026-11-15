@@ -1574,6 +1574,15 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                               isDark: isDark,
                               isCollapsed: collapsed,
                             ),
+                          if (SystemSettingsService.isWalletEnabled || widget.user.isAdmin)
+                            _buildNavRow(
+                              icon: Icons.payment_outlined,
+                              label: 'Pembayaran & Dompet',
+                              onTap: () => _pushLink('pembayaran'),
+                              isSelected: _isRouteActive('pembayaran'),
+                              isDark: isDark,
+                              isCollapsed: collapsed,
+                            ),
                           if (!collapsed) _buildUpgradePromoCard(isDark),
                         ] else if (_isGovernment) ...[
                           if (!collapsed) ...[

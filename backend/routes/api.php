@@ -175,6 +175,7 @@ Route::middleware(['auth:api', 'user.not_suspended'])->group(function () {
         Route::get('info', [WalletController::class, 'info']);
         Route::get('has-pin', [WalletController::class, 'hasPin']);
         Route::post('set-pin', [WalletController::class, 'setPin']);
+        Route::post('reset-pin', [WalletController::class, 'resetPin']);
         Route::post('verify-pin', [WalletController::class, 'verifyPin']);
         Route::get('fees', [WalletController::class, 'getFees']);
         Route::post('topup', [WalletController::class, 'topup']);

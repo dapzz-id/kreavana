@@ -18,18 +18,20 @@ import '../widgets/auth_guard_dialog.dart';
 class WalletPinDialog extends StatefulWidget {
   final String title;
   final String subtitle;
+  final bool showForgotPin;
 
   const WalletPinDialog({
     super.key,
     this.title = 'Konfirmasi PIN Wallet',
     this.subtitle = 'Masukkan PIN wallet kamu untuk melanjutkan.',
+    this.showForgotPin = true,
   });
 
   /// Shows the dialog. Returns the entered PIN string if the user confirms,
   /// or null if cancelled / wallet not activated.
   ///
   /// Pass [checkPinFirst] = true (default) to hit GET /wallet/has-pin before
-  /// showing the keypad — shows an activation prompt if not set.
+  /// showing the input — shows an activation prompt if not set.
   static Future<String?> show(
     BuildContext context, {
     String title = 'Konfirmasi PIN Wallet',
@@ -62,7 +64,11 @@ class WalletPinDialog extends StatefulWidget {
     return showDialog<String>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => WalletPinDialog(title: title, subtitle: subtitle),
+      builder: (_) => WalletPinDialog(
+        title: title,
+        subtitle: subtitle,
+        showForgotPin: checkPinFirst,
+      ),
     );
   }
 
@@ -72,28 +78,197 @@ class WalletPinDialog extends StatefulWidget {
 
 class _WalletPinDialogState extends State<WalletPinDialog> {
   static const int _pinLength = 6;
-  final List<String> _digits = [];
+  final TextEditingController _controller = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
   bool _obscure = true;
 
-  void _onDigit(String d) {
-    if (_digits.length >= _pinLength) return;
-    setState(() => _digits.add(d));
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(() {
+      if (mounted) setState(() {});
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focusNode.requestFocus();
+    });
   }
 
-  void _onDelete() {
-    if (_digits.isEmpty) return;
-    setState(() => _digits.removeLast());
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
   }
 
   void _onConfirm() {
-    if (_digits.length < _pinLength) return;
-    Navigator.pop(context, _digits.join());
+    final pin = _controller.text.trim();
+    if (pin.length < _pinLength) return;
+    Navigator.pop(context, pin);
+  }
+
+  Future<void> _handleForgotPin() async {
+    final newPinController = TextEditingController();
+    final confirmPinController = TextEditingController();
+    bool resetObscure = true;
+    String? resetError;
+    bool isSubmitting = false;
+
+    final result = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          final isDark = Theme.of(ctx).brightness == Brightness.dark;
+          return AlertDialog(
+            backgroundColor: isDark ? const Color(0xFF1E1A33) : Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Row(
+              children: [
+                Icon(Icons.lock_reset_rounded, color: Color(0xFF4F46E5), size: 22),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Atur Ulang PIN Dompet',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            content: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 360),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Masukkan 6 digit angka baru untuk mereset PIN dompet Anda.',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: newPinController,
+                      autofocus: true,
+                      obscureText: resetObscure,
+                      keyboardType: TextInputType.number,
+                      maxLength: _pinLength,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(_pinLength),
+                      ],
+                      decoration: InputDecoration(
+                        labelText: 'PIN Baru (6 Digit)',
+                        counterText: '',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            resetObscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                            size: 18,
+                          ),
+                          onPressed: () => setDialogState(() => resetObscure = !resetObscure),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: confirmPinController,
+                      obscureText: resetObscure,
+                      keyboardType: TextInputType.number,
+                      maxLength: _pinLength,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(_pinLength),
+                      ],
+                      decoration: InputDecoration(
+                        labelText: 'Konfirmasi PIN Baru',
+                        counterText: '',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                    if (resetError != null) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        resetError!,
+                        style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: isSubmitting ? null : () => Navigator.pop(ctx, null),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton(
+                onPressed: isSubmitting
+                    ? null
+                    : () async {
+                        final p1 = newPinController.text.trim();
+                        final p2 = confirmPinController.text.trim();
+                        if (p1.length != _pinLength) {
+                          setDialogState(() => resetError = 'PIN wajib 6 digit angka.');
+                          return;
+                        }
+                        if (p1 != p2) {
+                          setDialogState(() => resetError = 'Konfirmasi PIN tidak cocok.');
+                          return;
+                        }
+                        setDialogState(() {
+                          isSubmitting = true;
+                          resetError = null;
+                        });
+                        try {
+                          await WalletService.resetPin(p1);
+                          if (ctx.mounted) Navigator.pop(ctx, p1);
+                        } catch (e) {
+                          setDialogState(() {
+                            isSubmitting = false;
+                            resetError = e.toString().replaceAll('Exception: ', '');
+                          });
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4F46E5),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: Text(isSubmitting ? 'Menyimpan...' : 'Simpan PIN Baru'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    newPinController.dispose();
+    confirmPinController.dispose();
+
+    if (result != null && mounted) {
+      _controller.text = result;
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('PIN dompet berhasil diatur ulang.'),
+          backgroundColor: Color(0xFF10B981),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      _onConfirm();
+    } else if (mounted) {
+      _focusNode.requestFocus();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark ? AppTheme.cardBg : Colors.white;
+    final text = _controller.text;
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -165,70 +340,201 @@ class _WalletPinDialogState extends State<WalletPinDialog> {
               ),
 
               Padding(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 22),
                 child: Column(
                   children: [
-                    // ── PIN dots ──────────────────────────────────────────────
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(_pinLength, (i) {
-                        final filled = i < _digits.length;
-                        return Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 6),
-                          width: 14,
-                          height: 14,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: filled
-                                ? AppTheme.primaryPurple
-                                : (isDark
-                                      ? Colors.grey.shade700
-                                      : Colors.grey.shade300),
-                            border: Border.all(
-                              color: filled
-                                  ? AppTheme.primaryPurple
-                                  : (isDark
-                                        ? Colors.grey.shade600
-                                        : Colors.grey.shade400),
-                              width: 1.5,
+                    // ── Native Keyboard Input + Interactive PIN Cells ──────────
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => _focusNode.requestFocus(),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: List.generate(_pinLength, (i) {
+                              final filled = i < text.length;
+                              final isCurrent = i == text.length && _focusNode.hasFocus;
+                              return Container(
+                                margin: const EdgeInsets.symmetric(horizontal: 5),
+                                width: 42,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF1E1A33) : const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isCurrent
+                                        ? AppTheme.primaryPurple
+                                        : (filled
+                                            ? AppTheme.primaryPurple.withValues(alpha: 0.6)
+                                            : (isDark ? Colors.grey.shade600 : Colors.grey.shade300)),
+                                    width: isCurrent ? 2.0 : 1.5,
+                                  ),
+                                ),
+                                child: Center(
+                                  child: filled
+                                      ? (_obscure
+                                          ? Container(
+                                              width: 11,
+                                              height: 11,
+                                              decoration: const BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                color: AppTheme.primaryPurple,
+                                              ),
+                                            )
+                                          : Text(
+                                              text[i],
+                                              style: TextStyle(
+                                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ))
+                                      : (isCurrent
+                                          ? Container(
+                                              width: 2,
+                                              height: 18,
+                                              color: AppTheme.primaryPurple,
+                                            )
+                                          : null),
+                                ),
+                              );
+                            }),
+                          ),
+                        ),
+                        Opacity(
+                          opacity: 0.0,
+                          child: SizedBox(
+                            width: 300,
+                            height: 48,
+                            child: TextField(
+                              controller: _controller,
+                              focusNode: _focusNode,
+                              autofocus: true,
+                              keyboardType: TextInputType.number,
+                              showCursor: false,
+                              enableInteractiveSelection: false,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                LengthLimitingTextInputFormatter(_pinLength),
+                              ],
+                              onChanged: (val) {
+                                setState(() {});
+                                if (val.length == _pinLength) {
+                                  _onConfirm();
+                                }
+                              },
+                              onSubmitted: (val) {
+                                if (val.length == _pinLength) {
+                                  _onConfirm();
+                                }
+                              },
                             ),
                           ),
-                          child: filled && !_obscure
-                              ? Center(
-                                  child: Text(
-                                    _digits[i],
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 8,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                )
-                              : null,
-                        );
-                      }),
+                        ),
+                      ],
                     ),
 
-                    const SizedBox(height: 8),
-                    GestureDetector(
-                      onTap: () => setState(() => _obscure = !_obscure),
-                      child: Text(
-                        _obscure ? 'Tampilkan PIN' : 'Sembunyikan PIN',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppTheme.primaryPurple.withValues(alpha: 0.8),
+                    const SizedBox(height: 14),
+
+                    // ── Tampilkan PIN & Lupa PIN ──────────────────────────────
+                    Row(
+                      mainAxisAlignment: widget.showForgotPin
+                          ? MainAxisAlignment.spaceBetween
+                          : MainAxisAlignment.center,
+                      children: [
+                        TextButton.icon(
+                          onPressed: () => setState(() => _obscure = !_obscure),
+                          icon: Icon(
+                            _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                            size: 15,
+                            color: AppTheme.primaryPurple.withValues(alpha: 0.85),
+                          ),
+                          label: Text(
+                            _obscure ? 'Tampilkan PIN' : 'Sembunyikan PIN',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.primaryPurple.withValues(alpha: 0.85),
+                            ),
+                          ),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
                         ),
-                      ),
+                        if (widget.showForgotPin)
+                          TextButton(
+                            onPressed: _handleForgotPin,
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: const Text(
+                              'Lupa PIN?',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF4F46E5),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
+
                     const SizedBox(height: 20),
 
-                    // ── Numpad ────────────────────────────────────────────────
-                    _Numpad(
-                      onDigit: _onDigit,
-                      onDelete: _onDelete,
-                      onConfirm: _digits.length == _pinLength
-                          ? _onConfirm
-                          : null,
+                    // ── Action Buttons ────────────────────────────────────────
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(context, null),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              side: BorderSide(
+                                color: isDark ? AppTheme.inputBorder : Colors.grey.shade300,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Text(
+                              'Batal',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? Colors.white70 : Colors.black87,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: text.length == _pinLength ? _onConfirm : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryPurple,
+                              foregroundColor: Colors.white,
+                              disabledBackgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.3),
+                              disabledForegroundColor: Colors.white54,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              'Konfirmasi',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -237,98 +543,6 @@ class _WalletPinDialogState extends State<WalletPinDialog> {
           ),
         ),
       ),
-    );
-  }
-}
-
-// ─── Custom numpad ────────────────────────────────────────────────────────────
-class _Numpad extends StatelessWidget {
-  final void Function(String) onDigit;
-  final VoidCallback onDelete;
-  final VoidCallback? onConfirm;
-
-  const _Numpad({
-    required this.onDigit,
-    required this.onDelete,
-    required this.onConfirm,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    Widget key(String label, {VoidCallback? onTap, bool isAction = false}) {
-      return Expanded(
-        child: GestureDetector(
-          onTap: () {
-            HapticFeedback.lightImpact();
-            onTap?.call();
-          },
-          child: Container(
-            margin: const EdgeInsets.all(4),
-            height: 56,
-            decoration: BoxDecoration(
-              color: isAction
-                  ? (onTap != null
-                        ? AppTheme.primaryPurple
-                        : AppTheme.primaryPurple.withValues(alpha: 0.3))
-                  : (isDark ? Colors.grey.shade800 : Colors.grey.shade100),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Center(
-              child: label == '⌫'
-                  ? Icon(
-                      Icons.backspace_rounded,
-                      size: 20,
-                      color: isDark ? Colors.white70 : Colors.black54,
-                    )
-                  : Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: isAction ? 14 : 20,
-                        fontWeight: FontWeight.w600,
-                        color: isAction
-                            ? Colors.white
-                            : (isDark ? Colors.white : Colors.black87),
-                      ),
-                    ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Column(
-      children: [
-        Row(
-          children: [
-            key('1', onTap: () => onDigit('1')),
-            key('2', onTap: () => onDigit('2')),
-            key('3', onTap: () => onDigit('3')),
-          ],
-        ),
-        Row(
-          children: [
-            key('4', onTap: () => onDigit('4')),
-            key('5', onTap: () => onDigit('5')),
-            key('6', onTap: () => onDigit('6')),
-          ],
-        ),
-        Row(
-          children: [
-            key('7', onTap: () => onDigit('7')),
-            key('8', onTap: () => onDigit('8')),
-            key('9', onTap: () => onDigit('9')),
-          ],
-        ),
-        Row(
-          children: [
-            key('⌫', onTap: onDelete),
-            key('0', onTap: () => onDigit('0')),
-            key('OK', onTap: onConfirm, isAction: true),
-          ],
-        ),
-      ],
     );
   }
 }
