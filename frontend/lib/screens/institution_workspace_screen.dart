@@ -2355,33 +2355,24 @@ class _InstitutionWorkspaceScreenState
     final title = record['title']?.toString() ?? 'Dokumen Resmi Legalitas';
     final desc = record['description']?.toString() ?? '';
     final titleLower = title.toLowerCase();
+    final accentColor = _resolvedAccentColor;
 
-    // 1. Resolve Document Category & Theme Accent
+    // 1. Resolve Document Category & Icon
     final String category;
-    final Color catColor;
-    final List<Color> catGradient;
     final IconData catIcon;
 
     if (titleLower.contains('akreditasi') || titleLower.contains('ban-pt')) {
       category = 'Akreditasi Institusi (BAN-PT)';
-      catColor = const Color(0xFF059669); // Emerald
-      catGradient = const [Color(0xFF059669), Color(0xFF10B981)];
-      catIcon = Icons.verified_rounded;
+      catIcon = Icons.verified_outlined;
     } else if (titleLower.contains('mou') || titleLower.contains('perjanjian') || titleLower.contains('kemitraan')) {
       category = 'MoU Kerjasama Kemitraan DUDI';
-      catColor = const Color(0xFF2563EB); // Royal Blue
-      catGradient = const [Color(0xFF2563EB), Color(0xFF3B82F6)];
-      catIcon = Icons.handshake_rounded;
+      catIcon = Icons.handshake_outlined;
     } else if (titleLower.contains('pedoman') || titleLower.contains('panduan') || titleLower.contains('mbkm') || titleLower.contains('pkl')) {
       category = 'Pedoman Teknis PKL & MBKM';
-      catColor = const Color(0xFFD97706); // Amber
-      catGradient = const [Color(0xFFD97706), Color(0xFFF59E0B)];
-      catIcon = Icons.menu_book_rounded;
+      catIcon = Icons.menu_book_outlined;
     } else {
       category = meta['category']?.toString() ?? 'Dokumen Resmi Legalitas';
-      catColor = const Color(0xFF7C3AED); // Purple
-      catGradient = const [Color(0xFF7C3AED), Color(0xFF8B5CF6)];
-      catIcon = Icons.gavel_rounded;
+      catIcon = Icons.gavel_outlined;
     }
 
     // 2. Resolve Official Authority Name
@@ -2436,24 +2427,18 @@ class _InstitutionWorkspaceScreenState
     final assetPath = _resolveDocumentAsset(title, meta);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
-          width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: isDark ? 0.25 : 0.04),
-            blurRadius: 18,
-            offset: const Offset(0, 4),
-          ),
-          BoxShadow(
-            color: catColor.withValues(alpha: isDark ? 0.08 : 0.03),
-            blurRadius: 28,
-            offset: const Offset(0, 8),
+            color: const Color(0xFF0F172A).withValues(alpha: isDark ? 0.15 : 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -2467,34 +2452,21 @@ class _InstitutionWorkspaceScreenState
             children: [
               // ── Header & Core Information ──
               Padding(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(18),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Official Authority Logo / Asset Badge
                     Container(
-                      width: 58,
-                      height: 58,
-                      padding: const EdgeInsets.all(8),
+                      width: 48,
+                      height: 48,
+                      padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
+                        color: isDark ? AppTheme.cardDark2 : Colors.white,
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: const Color(0xFFE2E8F0),
-                          width: 1.2,
+                          color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF0F172A).withValues(alpha: 0.06),
-                            blurRadius: 10,
-                            offset: const Offset(0, 3),
-                          ),
-                          BoxShadow(
-                            color: catColor.withValues(alpha: 0.16),
-                            blurRadius: 16,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
                       ),
                       child: assetPath != null
                           ? ClipRRect(
@@ -2503,25 +2475,21 @@ class _InstitutionWorkspaceScreenState
                                 assetPath,
                                 fit: BoxFit.contain,
                                 errorBuilder: (_, _, _) => Center(
-                                  child: Icon(catIcon, color: catColor, size: 28),
+                                  child: Icon(catIcon, color: accentColor, size: 22),
                                 ),
                               ),
                             )
                           : Container(
                               decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: catGradient,
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(10),
+                                color: accentColor.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(8),
                               ),
                               child: Center(
-                                child: Icon(catIcon, color: Colors.white, size: 26),
+                                child: Icon(catIcon, color: accentColor, size: 22),
                               ),
                             ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 14),
                     // Core Details
                     Expanded(
                       child: Column(
@@ -2535,24 +2503,25 @@ class _InstitutionWorkspaceScreenState
                             children: [
                               // Category Pill
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
-                                  color: catColor.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: catColor.withValues(alpha: 0.25)),
+                                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                                  ),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(catIcon, size: 13, color: catColor),
+                                    Icon(catIcon, size: 12, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
                                     const SizedBox(width: 5),
                                     Text(
                                       category,
                                       style: TextStyle(
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w700,
-                                        color: catColor,
-                                        letterSpacing: 0.2,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
                                       ),
                                     ),
                                   ],
@@ -2560,12 +2529,12 @@ class _InstitutionWorkspaceScreenState
                               ),
                               // Validity Pill
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
-                                  color: isDark ? AppTheme.cardDark2 : const Color(0xFFF1F5F9),
-                                  borderRadius: BorderRadius.circular(8),
+                                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(6),
                                   border: Border.all(
-                                    color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
+                                    color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
                                   ),
                                 ),
                                 child: Row(
@@ -2573,16 +2542,16 @@ class _InstitutionWorkspaceScreenState
                                   children: [
                                     Icon(
                                       Icons.event_available_rounded,
-                                      size: 13,
-                                      color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                                      size: 12,
+                                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                                     ),
                                     const SizedBox(width: 5),
                                     Text(
                                       validUntil,
                                       style: TextStyle(
-                                        fontSize: 11.5,
+                                        fontSize: 11,
                                         fontWeight: FontWeight.w600,
-                                        color: isDark ? Colors.white70 : const Color(0xFF475569),
+                                        color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
                                       ),
                                     ),
                                   ],
@@ -2590,10 +2559,10 @@ class _InstitutionWorkspaceScreenState
                               ),
                               // Status Badge
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
                                   color: statusBg,
-                                  borderRadius: BorderRadius.circular(20),
+                                  borderRadius: BorderRadius.circular(6),
                                   border: Border.all(color: statusBorder),
                                 ),
                                 child: Row(
@@ -2611,8 +2580,8 @@ class _InstitutionWorkspaceScreenState
                                     Text(
                                       statusLabel,
                                       style: TextStyle(
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w700,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
                                         color: statusTextCol,
                                       ),
                                     ),
@@ -2621,19 +2590,19 @@ class _InstitutionWorkspaceScreenState
                               ),
                             ],
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 8),
                           // Title
                           Text(
                             title,
                             style: TextStyle(
-                              fontSize: 16.5,
-                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
                               color: isDark ? Colors.white : const Color(0xFF0F172A),
-                              letterSpacing: -0.3,
+                              letterSpacing: -0.2,
                               height: 1.3,
                             ),
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 5),
                           // Authority & Doc Number Row
                           Wrap(
                             spacing: 12,
@@ -2645,7 +2614,7 @@ class _InstitutionWorkspaceScreenState
                                 children: [
                                   Icon(
                                     Icons.account_balance_outlined,
-                                    size: 14,
+                                    size: 13,
                                     color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                                   ),
                                   const SizedBox(width: 5),
@@ -2653,28 +2622,28 @@ class _InstitutionWorkspaceScreenState
                                     authority,
                                     style: TextStyle(
                                       fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                                      fontWeight: FontWeight.w500,
+                                      color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF64748B),
                                     ),
                                   ),
                                 ],
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                                 decoration: BoxDecoration(
-                                  color: isDark ? AppTheme.cardDark2 : const Color(0xFFF1F5F9),
-                                  borderRadius: BorderRadius.circular(6),
+                                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(4),
                                   border: Border.all(
-                                    color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
+                                    color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
                                   ),
                                 ),
                                 child: Text(
                                   'No: $docNumber',
                                   style: TextStyle(
-                                    fontSize: 11,
+                                    fontSize: 10.5,
                                     fontFamily: 'monospace',
                                     fontWeight: FontWeight.w600,
-                                    color: isDark ? Colors.white70 : const Color(0xFF334155),
+                                    color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
                                   ),
                                 ),
                               ),
@@ -2688,8 +2657,8 @@ class _InstitutionWorkspaceScreenState
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 13,
-                                height: 1.5,
-                                color: isDark ? AppTheme.textMuted : const Color(0xFF475569),
+                                height: 1.45,
+                                color: isDark ? AppTheme.textMuted : const Color(0xFF64748B),
                               ),
                             ),
                           ],
@@ -2723,7 +2692,7 @@ class _InstitutionWorkspaceScreenState
                           icon: Icons.open_in_new_rounded,
                           label: 'Buka Dokumen Resmi',
                           isDark: isDark,
-                          color: const Color(0xFF2563EB),
+                          color: accentColor,
                         ),
                         _buildPopupDivider(),
                         _buildPopupActionItem(
@@ -2731,7 +2700,7 @@ class _InstitutionWorkspaceScreenState
                           icon: Icons.edit_outlined,
                           label: 'Edit Berkas',
                           isDark: isDark,
-                          color: const Color(0xFF0284C7),
+                          color: accentColor,
                         ),
                         _buildPopupDivider(),
                         _buildPopupActionItem(
@@ -2750,23 +2719,23 @@ class _InstitutionWorkspaceScreenState
               // ── Legal Security / Accreditation Banner ──
               if (grade.isNotEmpty) ...[
                 Container(
-                  margin: const EdgeInsets.fromLTRB(20, 0, 20, 14),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  margin: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                   decoration: BoxDecoration(
                     color: const Color(0xFFECFDF5),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: const Color(0xFFA7F3D0)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.verified_rounded, size: 16, color: Color(0xFF059669)),
+                      const Icon(Icons.verified_outlined, size: 15, color: Color(0xFF059669)),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Sertifikasi Resmi Akreditasi Nasional: $grade • Terdaftar Resmi BAN-PT',
+                          'Sertifikasi Akreditasi: $grade • Terdaftar Resmi BAN-PT',
                           style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
                             color: Color(0xFF065F46),
                           ),
                         ),
@@ -2780,10 +2749,10 @@ class _InstitutionWorkspaceScreenState
                         child: const Text(
                           'TERAKREDITASI',
                           style: TextStyle(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w900,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
                             color: Colors.white,
-                            letterSpacing: 0.5,
+                            letterSpacing: 0.3,
                           ),
                         ),
                       ),
@@ -2792,34 +2761,34 @@ class _InstitutionWorkspaceScreenState
                 ),
               ] else if (titleLower.contains('mou') || titleLower.contains('kemitraan')) ...[
                 Container(
-                  margin: const EdgeInsets.fromLTRB(20, 0, 20, 14),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  margin: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEFF6FF),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFBFDBFE)),
+                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
                   ),
-                  child: const Row(
+                  child: Row(
                     children: [
-                      Icon(Icons.security_rounded, size: 16, color: Color(0xFF2563EB)),
-                      SizedBox(width: 8),
+                      Icon(Icons.shield_outlined, size: 15, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569)),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Perjanjian Kerjasama Sah Terintegrasi Ekosistem DUDI Vokasi & Kampus Merdeka',
+                          'Perjanjian Kerjasama Sah Terintegrasi Ekosistem DUDI Vokasi & MBKM',
                           style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF1E40AF),
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155),
                           ),
                         ),
                       ),
                       Text(
                         'LEGAL & SAH',
                         style: TextStyle(
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFF2563EB),
-                          letterSpacing: 0.5,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
+                          letterSpacing: 0.3,
                         ),
                       ),
                     ],
@@ -2830,15 +2799,15 @@ class _InstitutionWorkspaceScreenState
               // ── Divider ──
               Divider(
                 height: 1,
-                color: isDark ? AppTheme.inputBorder : const Color(0xFFF1F5F9),
+                color: isDark ? const Color(0xFF292543) : const Color(0xFFF1F5F9),
               ),
 
               // ── Action Footer ──
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                 decoration: BoxDecoration(
                   color: isDark ? AppTheme.cardDark2.withValues(alpha: 0.4) : const Color(0xFFF8FAFC),
-                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(18)),
+                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(14)),
                 ),
                 child: Row(
                   children: [
@@ -2850,14 +2819,14 @@ class _InstitutionWorkspaceScreenState
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.picture_as_pdf_rounded, size: 15, color: Color(0xFFEF4444)),
+                            Icon(Icons.description_outlined, size: 14, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
                             const SizedBox(width: 5),
                             Text(
                               '$fileFormat • $fileSize',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF475569),
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w500,
+                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                               ),
                             ),
                           ],
@@ -2865,13 +2834,13 @@ class _InstitutionWorkspaceScreenState
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.verified_user_outlined, size: 14, color: Color(0xFF10B981)),
+                            const Icon(Icons.verified_outlined, size: 13, color: Color(0xFF059669)),
                             const SizedBox(width: 4),
                             const Text(
-                              'Dokumen Sah Terverifikasi',
+                              'Terverifikasi Instansi',
                               style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w600,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
                                 color: Color(0xFF059669),
                               ),
                             ),
@@ -2885,25 +2854,25 @@ class _InstitutionWorkspaceScreenState
                       color: Colors.transparent,
                       child: InkWell(
                         onTap: () => _openOfficialDocument(record),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(6),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: catColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: catColor.withValues(alpha: 0.3)),
+                            color: accentColor.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: accentColor.withValues(alpha: 0.25)),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.open_in_new_rounded, size: 15, color: catColor),
+                              Icon(Icons.open_in_new_rounded, size: 14, color: accentColor),
                               const SizedBox(width: 6),
                               Text(
                                 'Buka Dokumen Resmi',
                                 style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: catColor,
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: accentColor,
                                 ),
                               ),
                             ],
@@ -2929,19 +2898,20 @@ class _InstitutionWorkspaceScreenState
     final real = double.tryParse(meta['realization']?.toString() ?? '') ?? 0;
     final remain = alloc - real;
     final ratio = alloc > 0 ? (real / alloc).clamp(0.0, 1.0) : 0.0;
+    final accentColor = _resolvedAccentColor;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+          color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: const Color(0xFF0F172A).withValues(alpha: isDark ? 0.2 : 0.03),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -2956,20 +2926,20 @@ class _InstitutionWorkspaceScreenState
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2563EB).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
+                  color: accentColor.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
                   'TA ${meta['period'] ?? '2026'}',
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF2563EB)),
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: accentColor),
                 ),
               ),
               const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: col.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
+                  color: col.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
                   _statusLabel(status),
@@ -2994,7 +2964,7 @@ class _InstitutionWorkspaceScreenState
                     icon: Icons.tune_rounded,
                     label: 'Sesuaikan Anggaran',
                     isDark: isDark,
-                    color: const Color(0xFF2563EB),
+                    color: accentColor,
                   ),
                   _buildPopupDivider(),
                   _buildPopupActionItem(
@@ -3084,62 +3054,37 @@ class _InstitutionWorkspaceScreenState
     );
   }
 
-  (Color, List<Color>, IconData, String?) _resolveReportTheme(String title, Map<String, dynamic> meta) {
+  (IconData, String?) _resolveReportTheme(String title, Map<String, dynamic> meta) {
     final t = title.toLowerCase();
     final cat = (meta['category'] ?? '').toString().toLowerCase();
 
     if (t.contains('akreditasi') || t.contains('ban-pt') || cat.contains('akreditasi')) {
-      return (
-        const Color(0xFF059669), // Emerald
-        const [Color(0xFF059669), Color(0xFF10B981)],
-        Icons.verified_rounded,
-        'assets/ban_pt.png',
-      );
+      return (Icons.verified_rounded, 'assets/ban_pt.png');
     }
     if (t.contains('mbkm') || t.contains('magang') || cat.contains('mbkm') || cat.contains('magang')) {
-      return (
-        const Color(0xFF4F46E5), // Indigo
-        const [Color(0xFF4F46E5), Color(0xFF6366F1)],
-        Icons.school_rounded,
-        'assets/kampus_merdeka.png',
-      );
+      return (Icons.school_rounded, 'assets/kampus_merdeka.png');
     }
     if (t.contains('survei') || t.contains('kepuasan') || cat.contains('survei') || cat.contains('kepuasan')) {
-      return (
-        const Color(0xFF0D9488), // Teal
-        const [Color(0xFF0D9488), Color(0xFF14B8A6)],
-        Icons.rate_review_rounded,
-        null,
-      );
+      return (Icons.rate_review_rounded, null);
     }
     if (t.contains('anggaran') || t.contains('keuangan') || t.contains('ekonomi') || cat.contains('keuangan')) {
-      return (
-        const Color(0xFFD97706), // Amber
-        const [Color(0xFFD97706), Color(0xFFF59E0B)],
-        Icons.account_balance_wallet_rounded,
-        null,
-      );
+      return (Icons.account_balance_wallet_rounded, null);
     }
-    return (
-      const Color(0xFF2563EB), // Royal Blue
-      const [Color(0xFF2563EB), Color(0xFF38BDF8)],
-      Icons.summarize_rounded,
-      'assets/kemendikbud.png',
-    );
+    return (Icons.summarize_rounded, 'assets/kemendikbud.png');
   }
 
   Widget _buildReportMetricPill({
     required IconData icon,
-    required Color color,
     required String label,
     required String value,
     required bool isDark,
+    Color? iconColor,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E1B32) : const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: isDark ? const Color(0xFF2F2B4A) : const Color(0xFFE2E8F0),
         ),
@@ -3147,7 +3092,11 @@ class _InstitutionWorkspaceScreenState
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: color),
+          Icon(
+            icon,
+            size: 14,
+            color: iconColor ?? (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+          ),
           const SizedBox(width: 6),
           Text(
             '$label: ',
@@ -3184,7 +3133,8 @@ class _InstitutionWorkspaceScreenState
         meta['author']?.toString() ??
         'Biro Penjaminan Mutu & Kerjasama';
 
-    final (catColor, catGradient, catIcon, assetPath) = _resolveReportTheme(title, meta);
+    final (catIcon, assetPath) = _resolveReportTheme(title, meta);
+    final accentColor = _resolvedAccentColor;
     final isPublished = status == 'published' || status == 'active';
     final statusBg = isPublished
         ? (isDark ? const Color(0xFF064E3B).withValues(alpha: 0.4) : const Color(0xFFECFDF5))
@@ -3201,7 +3151,6 @@ class _InstitutionWorkspaceScreenState
       metricBadges.add(
         _buildReportMetricPill(
           icon: Icons.groups_rounded,
-          color: const Color(0xFF4F46E5),
           label: 'Peserta Magang',
           value: '$val Mahasiswa',
           isDark: isDark,
@@ -3213,7 +3162,7 @@ class _InstitutionWorkspaceScreenState
       metricBadges.add(
         _buildReportMetricPill(
           icon: Icons.task_alt_rounded,
-          color: const Color(0xFF059669),
+          iconColor: const Color(0xFF059669),
           label: 'Kelulusan',
           value: meta['completion_rate'].toString(),
           isDark: isDark,
@@ -3227,7 +3176,6 @@ class _InstitutionWorkspaceScreenState
       metricBadges.add(
         _buildReportMetricPill(
           icon: Icons.star_rounded,
-          color: const Color(0xFFD97706),
           label: 'Skor Kepuasan Mitra',
           value: val,
           isDark: isDark,
@@ -3239,7 +3187,6 @@ class _InstitutionWorkspaceScreenState
       metricBadges.add(
         _buildReportMetricPill(
           icon: Icons.handshake_rounded,
-          color: const Color(0xFF2563EB),
           label: 'Tawaran Kerja Langsung',
           value: meta['employment_offer_rate'].toString(),
           isDark: isDark,
@@ -3249,7 +3196,6 @@ class _InstitutionWorkspaceScreenState
       metricBadges.add(
         _buildReportMetricPill(
           icon: Icons.trending_up_rounded,
-          color: const Color(0xFF2563EB),
           label: 'Dampak Ekonomi',
           value: meta['economic_impact'].toString(),
           isDark: isDark,
@@ -3261,7 +3207,7 @@ class _InstitutionWorkspaceScreenState
       metricBadges.add(
         _buildReportMetricPill(
           icon: Icons.fact_check_rounded,
-          color: const Color(0xFF059669),
+          iconColor: const Color(0xFF059669),
           label: 'Standar Mutu',
           value: meta['criteria_met'].toString(),
           isDark: isDark,
@@ -3273,7 +3219,6 @@ class _InstitutionWorkspaceScreenState
       metricBadges.add(
         _buildReportMetricPill(
           icon: Icons.military_tech_rounded,
-          color: const Color(0xFFD97706),
           label: 'Predikat BAN-PT',
           value: meta['status_accreditation'].toString(),
           isDark: isDark,
@@ -3285,7 +3230,6 @@ class _InstitutionWorkspaceScreenState
       metricBadges.add(
         _buildReportMetricPill(
           icon: Icons.bolt_rounded,
-          color: const Color(0xFF7C3AED),
           label: 'Keunggulan Utama',
           value: meta['key_strengths'].toString(),
           isDark: isDark,
@@ -3297,15 +3241,15 @@ class _InstitutionWorkspaceScreenState
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF161426) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isDark ? const Color(0xFF2B2844) : const Color(0xFFE2E8F0),
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: isDark ? 0.25 : 0.04),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
+            color: const Color(0xFF0F172A).withValues(alpha: isDark ? 0.2 : 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -3313,7 +3257,7 @@ class _InstitutionWorkspaceScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -3323,21 +3267,14 @@ class _InstitutionWorkspaceScreenState
                   children: [
                     // Official Emblem / Logo / Icon Box
                     Container(
-                      width: 52,
-                      height: 52,
+                      width: 48,
+                      height: 48,
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF201D35) : Colors.white,
-                        borderRadius: BorderRadius.circular(14),
+                        color: isDark ? const Color(0xFF1E1B32) : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: isDark ? const Color(0xFF383457) : const Color(0xFFE2E8F0),
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
                       ),
                       child: Center(
                         child: assetPath != null
@@ -3347,22 +3284,24 @@ class _InstitutionWorkspaceScreenState
                                   assetPath,
                                   fit: BoxFit.contain,
                                   errorBuilder: (_, _, _) => Container(
+                                    width: 34,
+                                    height: 34,
                                     decoration: BoxDecoration(
-                                      gradient: LinearGradient(colors: catGradient),
-                                      borderRadius: BorderRadius.circular(10),
+                                      color: accentColor.withValues(alpha: 0.08),
+                                      borderRadius: BorderRadius.circular(8),
                                     ),
-                                    child: Center(child: Icon(catIcon, color: Colors.white, size: 24)),
+                                    child: Center(child: Icon(catIcon, color: accentColor, size: 18)),
                                   ),
                                 ),
                               )
                             : Container(
-                                width: 40,
-                                height: 40,
+                                width: 34,
+                                height: 34,
                                 decoration: BoxDecoration(
-                                  gradient: LinearGradient(colors: catGradient),
-                                  borderRadius: BorderRadius.circular(10),
+                                  color: accentColor.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: Center(child: Icon(catIcon, color: Colors.white, size: 22)),
+                                child: Center(child: Icon(catIcon, color: accentColor, size: 18)),
                               ),
                       ),
                     ),
@@ -3381,23 +3320,23 @@ class _InstitutionWorkspaceScreenState
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: catColor.withValues(alpha: isDark ? 0.2 : 0.1),
-                                  borderRadius: BorderRadius.circular(8),
+                                  color: accentColor.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(6),
                                   border: Border.all(
-                                    color: catColor.withValues(alpha: isDark ? 0.4 : 0.25),
+                                    color: accentColor.withValues(alpha: 0.2),
                                   ),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(catIcon, size: 12, color: catColor),
+                                    Icon(catIcon, size: 12, color: accentColor),
                                     const SizedBox(width: 5),
                                     Text(
                                       category,
                                       style: TextStyle(
                                         fontSize: 11.5,
                                         fontWeight: FontWeight.w700,
-                                        color: isDark ? const Color(0xFFE2E8F0) : catColor,
+                                        color: accentColor,
                                       ),
                                     ),
                                   ],
@@ -3408,7 +3347,7 @@ class _InstitutionWorkspaceScreenState
                                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: isDark ? const Color(0xFF201D35) : const Color(0xFFF1F5F9),
-                                  borderRadius: BorderRadius.circular(8),
+                                  borderRadius: BorderRadius.circular(6),
                                   border: Border.all(
                                     color: isDark ? const Color(0xFF383457) : const Color(0xFFE2E8F0),
                                   ),
@@ -3438,7 +3377,7 @@ class _InstitutionWorkspaceScreenState
                                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: statusBg,
-                                  borderRadius: BorderRadius.circular(20),
+                                  borderRadius: BorderRadius.circular(6),
                                   border: Border.all(color: statusBorder),
                                 ),
                                 child: Row(
@@ -3470,9 +3409,9 @@ class _InstitutionWorkspaceScreenState
                           Text(
                             title,
                             style: TextStyle(
-                              fontSize: 16.5,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.3,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.2,
                               color: isDark ? Colors.white : const Color(0xFF0F172A),
                               height: 1.3,
                             ),
@@ -3507,7 +3446,7 @@ class _InstitutionWorkspaceScreenState
                           icon: Icons.open_in_new_rounded,
                           label: 'Buka Laporan Lengkap',
                           isDark: isDark,
-                          color: const Color(0xFF2563EB),
+                          color: accentColor,
                         ),
                         _buildPopupDivider(),
                         _buildPopupActionItem(
@@ -3515,7 +3454,7 @@ class _InstitutionWorkspaceScreenState
                           icon: Icons.edit_rounded,
                           label: 'Edit Data Laporan',
                           isDark: isDark,
-                          color: const Color(0xFF0284C7),
+                          color: accentColor,
                         ),
                         _buildPopupDivider(),
                         _buildPopupActionItem(
@@ -3548,7 +3487,7 @@ class _InstitutionWorkspaceScreenState
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: isDark ? const Color(0xFF1E1B32) : const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: isDark ? const Color(0xFF2F2B4D) : const Color(0xFFE2E8F0),
                       ),
@@ -3558,7 +3497,7 @@ class _InstitutionWorkspaceScreenState
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.insights_rounded, size: 14, color: catColor),
+                            Icon(Icons.insights_rounded, size: 14, color: accentColor),
                             const SizedBox(width: 6),
                             Text(
                               'Indikator Capaian & Ringkasan Evaluasi:',
@@ -3585,22 +3524,22 @@ class _InstitutionWorkspaceScreenState
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withValues(alpha: isDark ? 0.15 : 0.08),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.25)),
+                      color: const Color(0xFF10B981).withValues(alpha: isDark ? 0.12 : 0.06),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.2)),
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.verified_rounded, size: 18, color: Color(0xFF10B981)),
+                        const Icon(Icons.verified_outlined, size: 17, color: Color(0xFF059669)),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Text(
-                                'Hasil Utama & Temuan Audit:',
-                                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
+                                'Hasil Utama & Temuan Evaluasi:',
+                                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF059669)),
                               ),
                               const SizedBox(height: 2),
                               Text(
@@ -3623,10 +3562,10 @@ class _InstitutionWorkspaceScreenState
           ),
           // Footer Action Bar
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF141224) : const Color(0xFFF8FAFC),
-              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
+              color: isDark ? AppTheme.cardDark2.withValues(alpha: 0.4) : const Color(0xFFF8FAFC),
+              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(14)),
               border: Border(
                 top: BorderSide(color: isDark ? const Color(0xFF2B2844) : const Color(0xFFE2E8F0)),
               ),
@@ -3657,30 +3596,33 @@ class _InstitutionWorkspaceScreenState
                   ),
                 ),
                 const SizedBox(width: 12),
-                InkWell(
-                  onTap: () => _openOfficialDocument(record),
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                    decoration: BoxDecoration(
-                      color: catColor.withValues(alpha: isDark ? 0.25 : 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: catColor.withValues(alpha: 0.35)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.open_in_new_rounded, size: 14, color: isDark ? Colors.white : catColor),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Buka Laporan Lengkap',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: isDark ? Colors.white : catColor,
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => _openOfficialDocument(record),
+                    borderRadius: BorderRadius.circular(6),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: accentColor.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: accentColor.withValues(alpha: 0.25)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.open_in_new_rounded, size: 14, color: accentColor),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Buka Laporan Lengkap',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: accentColor,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -3756,24 +3698,8 @@ class _InstitutionWorkspaceScreenState
 
     final bool isCompleted = progress >= 100 || status == 'completed';
     final bool isNearDeadline = targetDate.isNotEmpty && _isTargetNear(targetDate);
-
-    // Color accents based on progress
-    final Color progressColor;
-    final List<Color> progressGradient;
-
-    if (isCompleted) {
-      progressColor = const Color(0xFF059669); // Emerald
-      progressGradient = const [Color(0xFF059669), Color(0xFF10B981)];
-    } else if (progress >= 75) {
-      progressColor = const Color(0xFF2563EB); // Royal Blue
-      progressGradient = const [Color(0xFF2563EB), Color(0xFF06B6D4)];
-    } else if (progress >= 40) {
-      progressColor = const Color(0xFF7C3AED); // Indigo/Purple
-      progressGradient = const [Color(0xFF7C3AED), Color(0xFF8B5CF6)];
-    } else {
-      progressColor = const Color(0xFFD97706); // Amber
-      progressGradient = const [Color(0xFFD97706), Color(0xFFF59E0B)];
-    }
+    final accentColor = _resolvedAccentColor;
+    final Color progressColor = isCompleted ? const Color(0xFF059669) : accentColor;
 
     // ── PROGRAM IDENTITY & AUTHENTIC EMBLEM RESOLUTION ─────────────────────
     final lowerTitle = title.toLowerCase();
@@ -3784,34 +3710,27 @@ class _InstitutionWorkspaceScreenState
     final String assetPath;
     final String agencyLabel;
     final String ikuCode;
-    final Color emblemAccent;
 
     if (combined.contains('magang') || combined.contains('mbkm') || combined.contains('merdeka')) {
       assetPath = 'assets/kampus_merdeka.png';
       agencyLabel = 'KEMENDIKBUDRISTEK • MBKM MANDIRI';
       ikuCode = 'IKU 2';
-      emblemAccent = const Color(0xFF059669);
     } else if (combined.contains('bnsp') || combined.contains('lsp') || combined.contains('sertifikasi')) {
       assetPath = 'assets/bnsp.png';
       agencyLabel = 'BNSP • STANDARISASI PROFESI NASIONAL';
       ikuCode = 'IKU 4';
-      emblemAccent = const Color(0xFFD97706);
     } else if (combined.contains('akreditasi') || combined.contains('ban-pt') || combined.contains('ban_pt')) {
       assetPath = 'assets/ban_pt.png';
       agencyLabel = 'BAN-PT • AKREDITASI PERGURUAN TINGGI';
       ikuCode = 'IKU 8';
-      emblemAccent = const Color(0xFF2563EB);
     } else if (combined.contains('kurikulum') || combined.contains('dudi') || combined.contains('kolaboratif') || combined.contains('pbl')) {
       assetPath = 'assets/kemendikbud.png';
       agencyLabel = 'DIREKTORAT KEMITRAAN DUDI • VOKASI';
       ikuCode = 'IKU 7';
-      emblemAccent = const Color(0xFF7C3AED);
     } else {
-      // Default: Tracer Study / Keterserapan Lulusan
       assetPath = 'assets/kemendikbud.png';
       agencyLabel = 'TRACER STUDY • VOKASI KEMENDIKBUD';
       ikuCode = 'IKU 1';
-      emblemAccent = const Color(0xFF1D4ED8);
     }
 
     // Baseline minimum target
@@ -3859,32 +3778,30 @@ class _InstitutionWorkspaceScreenState
 
     final statusBg = isCompleted
         ? (isDark ? const Color(0xFF064E3B).withValues(alpha: 0.4) : const Color(0xFFECFDF5))
-        : (isSurplus
-            ? (isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.4) : const Color(0xFFEFF6FF))
-            : (isDark ? const Color(0xFF451A03).withValues(alpha: 0.4) : const Color(0xFFFFFBEB)));
+        : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9));
     final statusBorder = isCompleted
         ? const Color(0xFFA7F3D0)
-        : (isSurplus ? const Color(0xFFBFDBFE) : const Color(0xFFFDE68A));
+        : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0));
     final statusTextCol = isCompleted
         ? const Color(0xFF059669)
-        : (isSurplus ? const Color(0xFF2563EB) : const Color(0xFFD97706));
+        : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569));
     final statusLabel = isCompleted
         ? 'Target Tercapai (100%)'
-        : (isSurplus ? 'Melampaui Target SPMI' : 'Sedang Berjalan');
+        : (isSurplus ? 'Melampaui Standar' : 'Sedang Berjalan');
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 18),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF161426) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isDark ? const Color(0xFF2B2844) : const Color(0xFFE2E8F0),
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: isDark ? 0.25 : 0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+            color: const Color(0xFF0F172A).withValues(alpha: isDark ? 0.2 : 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -3892,7 +3809,7 @@ class _InstitutionWorkspaceScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -3904,7 +3821,7 @@ class _InstitutionWorkspaceScreenState
                     _buildMonitoringEmblem(
                       assetPath: assetPath,
                       ikuCode: ikuCode,
-                      emblemColor: emblemAccent,
+                      accentColor: accentColor,
                       isDark: isDark,
                     ),
                     const SizedBox(width: 14),
@@ -3922,24 +3839,24 @@ class _InstitutionWorkspaceScreenState
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: emblemAccent.withValues(alpha: isDark ? 0.2 : 0.08),
-                                  borderRadius: BorderRadius.circular(8),
+                                  color: accentColor.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(6),
                                   border: Border.all(
-                                    color: emblemAccent.withValues(alpha: isDark ? 0.4 : 0.25),
+                                    color: accentColor.withValues(alpha: 0.2),
                                   ),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.verified_rounded, size: 12, color: emblemAccent),
+                                    Icon(Icons.verified_rounded, size: 12, color: accentColor),
                                     const SizedBox(width: 5),
                                     Text(
                                       agencyLabel,
                                       style: TextStyle(
                                         fontSize: 11,
-                                        fontWeight: FontWeight.w800,
+                                        fontWeight: FontWeight.w700,
                                         letterSpacing: 0.2,
-                                        color: emblemAccent,
+                                        color: accentColor,
                                       ),
                                     ),
                                   ],
@@ -3950,7 +3867,7 @@ class _InstitutionWorkspaceScreenState
                                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: statusBg,
-                                  borderRadius: BorderRadius.circular(20),
+                                  borderRadius: BorderRadius.circular(6),
                                   border: Border.all(color: statusBorder),
                                 ),
                                 child: Row(
@@ -3982,9 +3899,9 @@ class _InstitutionWorkspaceScreenState
                           Text(
                             title,
                             style: TextStyle(
-                              fontSize: 16.5,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.3,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.2,
                               color: isDark ? Colors.white : const Color(0xFF0F172A),
                               height: 1.35,
                             ),
@@ -4003,7 +3920,7 @@ class _InstitutionWorkspaceScreenState
                                   indicator,
                                   style: TextStyle(
                                     fontSize: 12,
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: FontWeight.w500,
                                     color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
                                   ),
                                   maxLines: 1,
@@ -4040,7 +3957,7 @@ class _InstitutionWorkspaceScreenState
                           icon: Icons.edit_note_rounded,
                           label: 'Update Progres & Target',
                           isDark: isDark,
-                          color: const Color(0xFF2563EB),
+                          color: accentColor,
                         ),
                         _buildPopupDivider(),
                         _buildPopupActionItem(
@@ -4069,10 +3986,10 @@ class _InstitutionWorkspaceScreenState
                 // ── QUANTITATIVE EXECUTIVE SCORECARD & BENCHMARK TRACKER ─────
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: isDark ? const Color(0xFF1B182E) : const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: isDark ? const Color(0xFF2D294D) : const Color(0xFFE2E8F0),
                     ),
@@ -4093,7 +4010,7 @@ class _InstitutionWorkspaceScreenState
                                   : (isSurplus
                                       ? '+${surplus.toStringAsFixed(0)}% Surplus'
                                       : '-${surplus.abs().toStringAsFixed(0)}% Gap'),
-                              color: progressColor,
+                              valueColor: progressColor,
                               isDark: isDark,
                               icon: Icons.query_stats_rounded,
                             ),
@@ -4101,7 +4018,7 @@ class _InstitutionWorkspaceScreenState
                               label: 'Standar Minimum',
                               value: '${targetMin.toStringAsFixed(0)}%',
                               badge: 'Ambang Batas SPMI',
-                              color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155),
+                              valueColor: isDark ? Colors.white : const Color(0xFF0F172A),
                               isDark: isDark,
                               icon: Icons.tune_rounded,
                             ),
@@ -4109,7 +4026,7 @@ class _InstitutionWorkspaceScreenState
                               label: 'Data Riil Terverifikasi',
                               value: '$metricAchieved / $metricTarget',
                               badge: metricUnit,
-                              color: const Color(0xFF059669),
+                              valueColor: isDark ? Colors.white : const Color(0xFF0F172A),
                               isDark: isDark,
                               icon: Icons.people_outline_rounded,
                             ),
@@ -4161,20 +4078,20 @@ class _InstitutionWorkspaceScreenState
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: (isSurplus ? const Color(0xFF059669) : const Color(0xFFD97706))
-                                      .withValues(alpha: isDark ? 0.2 : 0.1),
+                                  color: (isCompleted ? const Color(0xFF059669) : (isSurplus ? accentColor : const Color(0xFFD97706)))
+                                      .withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
                                   isCompleted
-                                      ? '✅ Capaian Tuntas (100%)'
+                                      ? 'Capaian Tuntas (100%)'
                                       : (isSurplus
-                                          ? '🎯 Melampaui Standar (+${surplus.toStringAsFixed(0)}%)'
-                                          : '⚠️ Perlu Akselerasi (-${surplus.abs().toStringAsFixed(0)}%)'),
+                                          ? 'Melampaui Standar (+${surplus.toStringAsFixed(0)}%)'
+                                          : 'Perlu Akselerasi (-${surplus.abs().toStringAsFixed(0)}%)'),
                                   style: TextStyle(
                                     fontSize: 10.5,
                                     fontWeight: FontWeight.w700,
-                                    color: isSurplus ? const Color(0xFF059669) : const Color(0xFFD97706),
+                                    color: isCompleted ? const Color(0xFF059669) : (isSurplus ? accentColor : const Color(0xFFD97706)),
                                   ),
                                 ),
                               ),
@@ -4187,11 +4104,11 @@ class _InstitutionWorkspaceScreenState
                             children: [
                               // Background Track
                               Container(
-                                height: 12,
+                                height: 10,
                                 width: double.infinity,
                                 decoration: BoxDecoration(
                                   color: isDark ? const Color(0xFF292543) : const Color(0xFFE2E8F0),
-                                  borderRadius: BorderRadius.circular(6),
+                                  borderRadius: BorderRadius.circular(5),
                                 ),
                               ),
                               // Active Progress Fill
@@ -4199,21 +4116,10 @@ class _InstitutionWorkspaceScreenState
                                 alignment: Alignment.centerLeft,
                                 widthFactor: (progress / 100).clamp(0.02, 1.0),
                                 child: Container(
-                                  height: 12,
+                                  height: 10,
                                   decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: progressGradient,
-                                      begin: Alignment.centerLeft,
-                                      end: Alignment.centerRight,
-                                    ),
-                                    borderRadius: BorderRadius.circular(6),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: progressColor.withValues(alpha: 0.35),
-                                        blurRadius: 6,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
+                                    color: progressColor,
+                                    borderRadius: BorderRadius.circular(5),
                                   ),
                                 ),
                               ),
@@ -4222,24 +4128,18 @@ class _InstitutionWorkspaceScreenState
                                 Positioned(
                                   left: 0,
                                   right: 0,
-                                  top: -4,
-                                  bottom: -4,
+                                  top: -3,
+                                  bottom: -3,
                                   child: FractionallySizedBox(
                                     alignment: Alignment.centerLeft,
                                     widthFactor: (targetMin / 100).clamp(0.05, 0.95),
                                     child: Align(
                                       alignment: Alignment.centerRight,
                                       child: Container(
-                                        width: 3.5,
+                                        width: 2.5,
                                         decoration: BoxDecoration(
-                                          color: isDark ? Colors.amber.shade300 : const Color(0xFF0F172A),
+                                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
                                           borderRadius: BorderRadius.circular(2),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withValues(alpha: 0.3),
-                                              blurRadius: 3,
-                                            ),
-                                          ],
                                         ),
                                       ),
                                     ),
@@ -4255,7 +4155,7 @@ class _InstitutionWorkspaceScreenState
                                 '0% Awal',
                                 style: TextStyle(
                                   fontSize: 10,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.w500,
                                   color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                                 ),
                               ),
@@ -4264,15 +4164,15 @@ class _InstitutionWorkspaceScreenState
                                   '▲ Ambang Batas SPMI: ${targetMin.toStringAsFixed(0)}%',
                                   style: TextStyle(
                                     fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                    color: isDark ? Colors.amber.shade300 : const Color(0xFF0F172A),
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
                                   ),
                                 ),
                               Text(
-                                '100% Sempurna',
+                                '100% Target',
                                 style: TextStyle(
                                   fontSize: 10,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.w500,
                                   color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                                 ),
                               ),
@@ -4310,28 +4210,20 @@ class _InstitutionWorkspaceScreenState
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: isCompleted
-                                    ? const Color(0xFF059669).withValues(alpha: isDark ? 0.2 : 0.1)
-                                    : (isNearDeadline
-                                        ? const Color(0xFFD97706).withValues(alpha: isDark ? 0.2 : 0.1)
-                                        : const Color(0xFF2563EB).withValues(alpha: isDark ? 0.2 : 0.1)),
+                                color: (isCompleted ? const Color(0xFF059669) : (isNearDeadline ? const Color(0xFFD97706) : accentColor))
+                                    .withValues(alpha: 0.08),
                                 borderRadius: BorderRadius.circular(6),
                                 border: Border.all(
-                                  color: isCompleted
-                                      ? const Color(0xFF059669).withValues(alpha: isDark ? 0.4 : 0.25)
-                                      : (isNearDeadline
-                                          ? const Color(0xFFD97706).withValues(alpha: isDark ? 0.4 : 0.25)
-                                          : const Color(0xFF2563EB).withValues(alpha: isDark ? 0.4 : 0.25)),
+                                  color: (isCompleted ? const Color(0xFF059669) : (isNearDeadline ? const Color(0xFFD97706) : accentColor))
+                                      .withValues(alpha: 0.25),
                                 ),
                               ),
                               child: Text(
-                                isCompleted ? '✅ Capaian Tuntas' : _formatDeadlineCountdown(targetDate),
+                                isCompleted ? 'Target Tercapai' : _formatDeadlineCountdown(targetDate),
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
-                                  color: isCompleted
-                                      ? const Color(0xFF059669)
-                                      : (isNearDeadline ? const Color(0xFFD97706) : const Color(0xFF2563EB)),
+                                  color: isCompleted ? const Color(0xFF059669) : (isNearDeadline ? const Color(0xFFD97706) : accentColor),
                                 ),
                               ),
                             ),
@@ -4365,10 +4257,10 @@ class _InstitutionWorkspaceScreenState
           ),
           // Footer Action Bar
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF141224) : const Color(0xFFF8FAFC),
-              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
+              color: isDark ? AppTheme.cardDark2.withValues(alpha: 0.4) : const Color(0xFFF8FAFC),
+              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(14)),
               border: Border(
                 top: BorderSide(color: isDark ? const Color(0xFF2B2844) : const Color(0xFFE2E8F0)),
               ),
@@ -4399,30 +4291,33 @@ class _InstitutionWorkspaceScreenState
                   ),
                 ),
                 const SizedBox(width: 12),
-                InkWell(
-                  onTap: () => _openEditor(record),
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                    decoration: BoxDecoration(
-                      color: progressColor.withValues(alpha: isDark ? 0.25 : 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: progressColor.withValues(alpha: 0.35)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.edit_note_rounded, size: 15, color: isDark ? Colors.white : progressColor),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Update Progres & Capaian',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: isDark ? Colors.white : progressColor,
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => _openEditor(record),
+                    borderRadius: BorderRadius.circular(6),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: accentColor.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: accentColor.withValues(alpha: 0.25)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.edit_note_rounded, size: 15, color: accentColor),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Update Progres & Capaian',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: accentColor,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -4437,31 +4332,33 @@ class _InstitutionWorkspaceScreenState
   Widget _buildMonitoringEmblem({
     required String assetPath,
     required String ikuCode,
-    required Color emblemColor,
+    Color? emblemColor,
+    Color? accentColor,
     required bool isDark,
   }) {
+    final effColor = accentColor ?? emblemColor ?? _resolvedAccentColor;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
-          width: 58,
-          height: 58,
+          width: 50,
+          height: 50,
           padding: const EdgeInsets.all(7),
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF1E1B32) : Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isDark
-                  ? emblemColor.withValues(alpha: 0.35)
+                  ? const Color(0xFF383457)
                   : const Color(0xFFE2E8F0),
-              width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: emblemColor.withValues(alpha: isDark ? 0.2 : 0.08),
-                blurRadius: 10,
-                offset: const Offset(0, 3),
+                color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
@@ -4471,8 +4368,8 @@ class _InstitutionWorkspaceScreenState
             errorBuilder: (context, error, stackTrace) => Center(
               child: Icon(
                 Icons.verified_rounded,
-                color: emblemColor,
-                size: 28,
+                color: effColor,
+                size: 24,
               ),
             ),
           ),
@@ -4481,10 +4378,10 @@ class _InstitutionWorkspaceScreenState
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
           decoration: BoxDecoration(
-            color: emblemColor.withValues(alpha: isDark ? 0.25 : 0.1),
-            borderRadius: BorderRadius.circular(6),
+            color: effColor.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(5),
             border: Border.all(
-              color: emblemColor.withValues(alpha: isDark ? 0.45 : 0.25),
+              color: effColor.withValues(alpha: 0.2),
               width: 0.8,
             ),
           ),
@@ -4494,7 +4391,7 @@ class _InstitutionWorkspaceScreenState
               fontSize: 10,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.3,
-              color: emblemColor,
+              color: effColor,
             ),
           ),
         ),
@@ -4506,15 +4403,18 @@ class _InstitutionWorkspaceScreenState
     required String label,
     required String value,
     required String badge,
-    required Color color,
+    Color? color,
+    Color? valueColor,
     required bool isDark,
     IconData? icon,
   }) {
+    final effColor = valueColor ?? color ?? (isDark ? Colors.white : const Color(0xFF0F172A));
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF221E38) : Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: isDark ? const Color(0xFF332E52) : const Color(0xFFE2E8F0),
         ),
@@ -4525,7 +4425,7 @@ class _InstitutionWorkspaceScreenState
           Row(
             children: [
               if (icon != null) ...[
-                Icon(icon, size: 13, color: color),
+                Icon(icon, size: 13, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
                 const SizedBox(width: 4),
               ],
               Expanded(
@@ -4546,10 +4446,10 @@ class _InstitutionWorkspaceScreenState
           Text(
             value,
             style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w900,
-              color: color,
-              letterSpacing: -0.5,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: effColor,
+              letterSpacing: -0.3,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -4558,15 +4458,15 @@ class _InstitutionWorkspaceScreenState
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: isDark ? 0.2 : 0.09),
-              borderRadius: BorderRadius.circular(5),
+              color: isDark ? const Color(0xFF2C2846) : const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
               badge,
               style: TextStyle(
                 fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: color,
+                fontWeight: FontWeight.w600,
+                color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -4581,15 +4481,14 @@ class _InstitutionWorkspaceScreenState
     required Map<String, dynamic> record,
     required String title,
     required String category,
-    required Color discColor,
-    required List<Color> discGradient,
-    required IconData discIcon,
+    Color? discColor,
+    IconData? discIcon,
     required bool isDark,
   }) {
     final meta = _metadata(record);
-    final titleLower = title.toLowerCase();
+    final accentColor = discColor ?? _resolvedAccentColor;
+    final icon = discIcon ?? Icons.auto_awesome_rounded;
 
-    // 1. Resolve Project Thumbnail Asset & Network URL
     String? assetPath;
     String? networkUrl;
 
@@ -4604,41 +4503,28 @@ class _InstitutionWorkspaceScreenState
       }
     }
 
-    if (titleLower.contains('nusantara heritage') || titleLower.contains('animasi')) {
-      assetPath = 'assets/showcases/nusantara_heritage_3d.jpg';
-      networkUrl ??= 'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?auto=format&fit=crop&w=400&q=80';
-    } else if (titleLower.contains('rempah') || titleLower.contains('kemasan') || titleLower.contains('branding')) {
-      assetPath = 'assets/showcases/rempah_nusantara_branding.jpg';
-      networkUrl ??= 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&w=400&q=80';
-    } else if (titleLower.contains('kreasibudaya') || titleLower.contains('mobile') || titleLower.contains('flutter') || titleLower.contains('aplikasi')) {
-      assetPath = 'assets/showcases/kreasibudaya_mobile.jpg';
-      networkUrl ??= 'https://images.unsplash.com/photo-1551650975-87deedd944c3?auto=format&fit=crop&w=400&q=80';
-    }
-
     return Container(
-      width: 72,
-      height: 72,
+      width: 64,
+      height: 64,
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E1B32) : const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDark ? AppTheme.inputBorder : const Color(0xFFCBD5E1),
-          width: 1.2,
+          color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: isDark ? 0.35 : 0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            color: const Color(0xFF0F172A).withValues(alpha: isDark ? 0.2 : 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(11),
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Thumbnail Image Layer (Asset -> Network -> Elegant Graphic Fallback)
             if (assetPath != null)
               Image.asset(
                 assetPath,
@@ -4648,53 +4534,36 @@ class _InstitutionWorkspaceScreenState
                     return Image.network(
                       networkUrl,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => _buildDisciplineHeroFallback(discGradient, discIcon, discColor),
+                      errorBuilder: (_, _, _) => _buildDisciplineHeroFallback(icon, accentColor, isDark),
                     );
                   }
-                  return _buildDisciplineHeroFallback(discGradient, discIcon, discColor);
+                  return _buildDisciplineHeroFallback(icon, accentColor, isDark);
                 },
               )
             else if (networkUrl != null && networkUrl.isNotEmpty)
               Image.network(
                 networkUrl,
                 fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => _buildDisciplineHeroFallback(discGradient, discIcon, discColor),
+                errorBuilder: (_, _, _) => _buildDisciplineHeroFallback(icon, accentColor, isDark),
               )
             else
-              _buildDisciplineHeroFallback(discGradient, discIcon, discColor),
+              _buildDisciplineHeroFallback(icon, accentColor, isDark),
 
-            // Subtle gradient overlay at bottom
+            // Subtle discipline badge on bottom-right
             Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: 28,
+              right: 4,
+              bottom: 4,
               child: Container(
+                padding: const EdgeInsets.all(3),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withValues(alpha: 0.70),
-                    ],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
+                  color: isDark ? const Color(0xFF0F172A).withValues(alpha: 0.85) : Colors.white.withValues(alpha: 0.9),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                    width: 0.8,
                   ),
                 ),
-              ),
-            ),
-
-            // Mini Badge in bottom-right corner indicating discipline
-            Positioned(
-              right: 5,
-              bottom: 5,
-              child: Container(
-                padding: const EdgeInsets.all(3.5),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.75),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 0.8),
-                ),
-                child: Icon(discIcon, color: Colors.white, size: 10),
+                child: Icon(icon, color: accentColor, size: 10),
               ),
             ),
           ],
@@ -4703,17 +4572,11 @@ class _InstitutionWorkspaceScreenState
     );
   }
 
-  Widget _buildDisciplineHeroFallback(List<Color> gradient, IconData icon, Color accentColor) {
+  Widget _buildDisciplineHeroFallback(IconData icon, Color accentColor, bool isDark) {
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: gradient,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
+      color: isDark ? const Color(0xFF1E1B32) : const Color(0xFFF8FAFC),
       child: Center(
-        child: Icon(icon, color: Colors.white, size: 28),
+        child: Icon(icon, color: accentColor, size: 24),
       ),
     );
   }
@@ -4723,76 +4586,51 @@ class _InstitutionWorkspaceScreenState
     final status = record['status']?.toString().toLowerCase() ?? 'published';
     final title = record['title']?.toString() ?? 'Karya & Portofolio Siswa';
     final desc = record['description']?.toString() ?? '';
-
-    // Creator info
     final creator = meta['creator_name']?.toString() ?? meta['creator']?.toString() ?? '-';
-
-    // Category info
     final category = meta['category']?.toString() ?? 'Karya Siswa';
-
-    // Year
     final year = meta['year']?.toString() ?? '';
-
-    // Portfolio URL / Link
     final portfolioUrl = meta['portfolio_url']?.toString() ?? meta['url']?.toString() ?? '';
-
-    // Award
     final award = meta['award']?.toString() ?? '';
 
-    // Discipline Color & Icon
     final catLower = category.toLowerCase();
-    final Color discColor;
-    final List<Color> discGradient;
     final IconData discIcon;
 
     if (catLower.contains('animasi') || catLower.contains('3d') || catLower.contains('cgi')) {
-      discColor = const Color(0xFF6366F1); // Indigo
-      discGradient = const [Color(0xFF6366F1), Color(0xFF8B5CF6)];
-      discIcon = Icons.movie_creation_rounded;
+      discIcon = Icons.movie_creation_outlined;
     } else if (catLower.contains('brand') || catLower.contains('dkv') || catLower.contains('ui') || catLower.contains('ux') || catLower.contains('desain')) {
-      discColor = const Color(0xFFEC4899); // Rose / Pink
-      discGradient = const [Color(0xFFEC4899), Color(0xFFF43F5E)];
-      discIcon = Icons.auto_awesome_rounded;
+      discIcon = Icons.design_services_outlined;
     } else if (catLower.contains('mobile') || catLower.contains('software') || catLower.contains('rpl') || catLower.contains('web') || catLower.contains('flutter') || catLower.contains('app')) {
-      discColor = const Color(0xFF0284C7); // Sky / Blue
-      discGradient = const [Color(0xFF0284C7), Color(0xFF2563EB)];
-      discIcon = Icons.smartphone_rounded;
+      discIcon = Icons.code_rounded;
     } else if (catLower.contains('film') || catLower.contains('video') || catLower.contains('broadcast') || catLower.contains('media')) {
-      discColor = const Color(0xFFF59E0B); // Amber / Orange
-      discGradient = const [Color(0xFFF59E0B), Color(0xFFD97706)];
-      discIcon = Icons.movie_filter_rounded;
+      discIcon = Icons.video_camera_back_outlined;
     } else {
-      discColor = const Color(0xFF8B5CF6);
-      discGradient = const [Color(0xFF8B5CF6), Color(0xFF6366F1)];
-      discIcon = Icons.auto_awesome_rounded;
+      discIcon = Icons.auto_awesome_outlined;
     }
+
+    final accentColor = _resolvedAccentColor;
 
     // Status styling
     final isPublished = status == 'published' || status == 'active';
-    final Color statusBg = isPublished ? const Color(0xFFECFDF5) : const Color(0xFFFFFBEB);
-    final Color statusBorder = isPublished ? const Color(0xFFA7F3D0) : const Color(0xFFFDE68A);
-    final Color statusTextCol = isPublished ? const Color(0xFF059669) : const Color(0xFFD97706);
+    final Color statusBg = isPublished
+        ? (isDark ? const Color(0xFF064E3B).withValues(alpha: 0.4) : const Color(0xFFECFDF5))
+        : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9));
+    final Color statusBorder = isPublished ? const Color(0xFFA7F3D0) : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0));
+    final Color statusTextCol = isPublished ? const Color(0xFF059669) : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569));
     final String statusLabel = isPublished ? 'Tervalidasi / Siap Pameran' : 'Draft / Dalam Kurasi';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
-          width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: isDark ? 0.25 : 0.04),
-            blurRadius: 18,
-            offset: const Offset(0, 4),
-          ),
-          BoxShadow(
-            color: discColor.withValues(alpha: isDark ? 0.08 : 0.03),
-            blurRadius: 28,
-            offset: const Offset(0, 8),
+            color: const Color(0xFF0F172A).withValues(alpha: isDark ? 0.2 : 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -4812,21 +4650,19 @@ class _InstitutionWorkspaceScreenState
             children: [
               // ── Top Header & Main Info ──
               Padding(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(18),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Visual project thumbnail with rich real artwork
                     _buildShowcaseMediaThumbnail(
                       record: record,
                       title: title,
                       category: category,
-                      discColor: discColor,
-                      discGradient: discGradient,
+                      discColor: accentColor,
                       discIcon: discIcon,
                       isDark: isDark,
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 14),
                     // Core Details
                     Expanded(
                       child: Column(
@@ -4840,65 +4676,65 @@ class _InstitutionWorkspaceScreenState
                             children: [
                               // Discipline Pill
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: discColor.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: discColor.withValues(alpha: 0.25)),
+                                  color: accentColor.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: accentColor.withValues(alpha: 0.2)),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(discIcon, size: 13, color: discColor),
+                                    Icon(discIcon, size: 12, color: accentColor),
                                     const SizedBox(width: 5),
                                     Text(
                                       category,
                                       style: TextStyle(
                                         fontSize: 11.5,
                                         fontWeight: FontWeight.w700,
-                                        color: discColor,
-                                        letterSpacing: 0.2,
+                                        color: accentColor,
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
                               // Angkatan Pill
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: isDark ? AppTheme.cardDark2 : const Color(0xFFF1F5F9),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
+                              if (year.isNotEmpty)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? AppTheme.cardDark2 : const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.school_outlined,
+                                        size: 12,
+                                        color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                                      ),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        'Angkatan $year',
+                                        style: TextStyle(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: isDark ? Colors.white70 : const Color(0xFF475569),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.school_outlined,
-                                      size: 13,
-                                      color: isDark ? Colors.white70 : const Color(0xFF64748B),
-                                    ),
-                                    const SizedBox(width: 5),
-                                    Text(
-                                      'Angkatan $year',
-                                      style: TextStyle(
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w600,
-                                        color: isDark ? Colors.white70 : const Color(0xFF475569),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
                               // Status Badge
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: statusBg,
-                                  borderRadius: BorderRadius.circular(20),
+                                  borderRadius: BorderRadius.circular(6),
                                   border: Border.all(color: statusBorder),
                                 ),
                                 child: Row(
@@ -4916,7 +4752,7 @@ class _InstitutionWorkspaceScreenState
                                     Text(
                                       statusLabel,
                                       style: TextStyle(
-                                        fontSize: 11.5,
+                                        fontSize: 11,
                                         fontWeight: FontWeight.w700,
                                         color: statusTextCol,
                                       ),
@@ -4926,15 +4762,15 @@ class _InstitutionWorkspaceScreenState
                               ),
                             ],
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 8),
                           // Title
                           Text(
                             title,
                             style: TextStyle(
-                              fontSize: 16.5,
-                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
                               color: isDark ? Colors.white : const Color(0xFF0F172A),
-                              letterSpacing: -0.3,
+                              letterSpacing: -0.2,
                               height: 1.3,
                             ),
                           ),
@@ -4944,14 +4780,14 @@ class _InstitutionWorkspaceScreenState
                             children: [
                               Icon(
                                 Icons.groups_outlined,
-                                size: 15,
+                                size: 14,
                                 color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                               ),
                               const SizedBox(width: 6),
                               Text(
                                 'Kreator: ',
                                 style: TextStyle(
-                                  fontSize: 12.5,
+                                  fontSize: 12,
                                   color: isDark ? AppTheme.textMuted : const Color(0xFF64748B),
                                 ),
                               ),
@@ -4960,8 +4796,8 @@ class _InstitutionWorkspaceScreenState
                                   creator,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
                                     color: isDark ? Colors.white : const Color(0xFF1E293B),
                                   ),
                                 ),
@@ -4972,7 +4808,7 @@ class _InstitutionWorkspaceScreenState
                             const SizedBox(height: 8),
                             Text(
                               desc,
-                              maxLines: 3,
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 13,
@@ -4984,7 +4820,7 @@ class _InstitutionWorkspaceScreenState
                         ],
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     // Action Popup Menu
                     PopupMenuButton<String>(
                       icon: Icon(Icons.more_vert_rounded, color: isDark ? const Color(0xFF94A3B8) : Colors.grey.shade500),
@@ -5012,7 +4848,7 @@ class _InstitutionWorkspaceScreenState
                             icon: Icons.open_in_new_rounded,
                             label: 'Buka Portofolio',
                             isDark: isDark,
-                            color: const Color(0xFF2563EB),
+                            color: accentColor,
                           ),
                           _buildPopupDivider(),
                         ],
@@ -5021,7 +4857,7 @@ class _InstitutionWorkspaceScreenState
                           icon: Icons.edit_outlined,
                           label: 'Edit Karya',
                           isDark: isDark,
-                          color: const Color(0xFF0284C7),
+                          color: accentColor,
                         ),
                         _buildPopupDivider(),
                         _buildPopupActionItem(
@@ -5040,40 +4876,40 @@ class _InstitutionWorkspaceScreenState
               // ── Prestasi / Award Banner (if available) ──
               if (award.isNotEmpty)
                 Container(
-                  margin: const EdgeInsets.fromLTRB(20, 0, 20, 14),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  margin: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFEF3C7),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFFCD34D)),
+                    color: isDark ? const Color(0xFF451A03).withValues(alpha: 0.3) : const Color(0xFFFFFBEB),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFFDE68A)),
                   ),
                   child: Row(
                     children: [
-                      const Text('🏆', style: TextStyle(fontSize: 16)),
+                      const Icon(Icons.emoji_events_outlined, size: 16, color: Color(0xFFD97706)),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           award,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF92400E),
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? const Color(0xFFFCD34D) : const Color(0xFF92400E),
                           ),
                         ),
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF59E0B),
+                          color: const Color(0xFFD97706),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: const Text(
                           'PRESTASI',
                           style: TextStyle(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w900,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
                             color: Colors.white,
-                            letterSpacing: 0.5,
+                            letterSpacing: 0.3,
                           ),
                         ),
                       ),
@@ -5089,27 +4925,26 @@ class _InstitutionWorkspaceScreenState
 
               // ── Action Footer ──
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                 decoration: BoxDecoration(
                   color: isDark ? AppTheme.cardDark2.withValues(alpha: 0.4) : const Color(0xFFF8FAFC),
-                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(18)),
+                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(14)),
                 ),
                 child: Row(
                   children: [
-                    // Info badge
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
                           portfolioUrl.isNotEmpty ? Icons.link_rounded : Icons.verified_outlined,
-                          size: 15,
+                          size: 14,
                           color: const Color(0xFF64748B),
                         ),
                         const SizedBox(width: 6),
                         Text(
                           portfolioUrl.isNotEmpty ? 'Tautan Portofolio Terhubung' : 'Terverifikasi Tim Vokasi',
                           style: const TextStyle(
-                            fontSize: 12,
+                            fontSize: 11.5,
                             fontWeight: FontWeight.w500,
                             color: Color(0xFF64748B),
                           ),
@@ -5123,37 +4958,37 @@ class _InstitutionWorkspaceScreenState
                         color: Colors.transparent,
                         child: InkWell(
                           onTap: () => _launchUrl(portfolioUrl, record: record),
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(6),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              color: discColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: discColor.withValues(alpha: 0.3)),
+                              color: accentColor.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: accentColor.withValues(alpha: 0.25)),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
                                   portfolioUrl.contains('youtube')
-                                      ? Icons.play_circle_fill_rounded
+                                      ? Icons.play_circle_outline_rounded
                                       : (portfolioUrl.contains('github')
                                           ? Icons.code_rounded
                                           : Icons.open_in_new_rounded),
-                                  size: 15,
-                                  color: discColor,
+                                  size: 14,
+                                  color: accentColor,
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
                                   portfolioUrl.contains('youtube')
-                                      ? 'Tonton Video Karya'
+                                      ? 'Tonton Video'
                                       : (portfolioUrl.contains('github')
-                                          ? 'Lihat Source Code'
-                                          : 'Buka Portofolio Karya ↗'),
+                                          ? 'Source Code'
+                                          : 'Buka Portofolio'),
                                   style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    color: discColor,
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: accentColor,
                                   ),
                                 ),
                               ],
@@ -5166,12 +5001,12 @@ class _InstitutionWorkspaceScreenState
                         color: Colors.transparent,
                         child: InkWell(
                           onTap: () => _openEditor(record),
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(6),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
                               color: const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(6),
                               border: Border.all(color: const Color(0xFFE2E8F0)),
                             ),
                             child: const Row(
@@ -5182,7 +5017,7 @@ class _InstitutionWorkspaceScreenState
                                 Text(
                                   'Kelola Karya',
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 11.5,
                                     fontWeight: FontWeight.w600,
                                     color: Color(0xFF475569),
                                   ),
@@ -6375,7 +6210,6 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
 
   Color get _accentPrimary => _isInstitution ? const Color(0xFF7C3AED) : const Color(0xFF2563EB);
   Color get _accentDarker => _isInstitution ? const Color(0xFF6D28D9) : const Color(0xFF1D4ED8);
-  Color get _accentGradientEnd => _isInstitution ? const Color(0xFFA855F7) : const Color(0xFF38BDF8);
   Color get _accentBright => _isInstitution ? const Color(0xFF8B5CF6) : const Color(0xFF3B82F6);
   Color get _accentLightText => _isInstitution ? const Color(0xFFA78BFA) : const Color(0xFF60A5FA);
   Color get _accentPaleText => _isInstitution ? const Color(0xFFDDD6FE) : const Color(0xFF93C5FD);
@@ -6797,12 +6631,8 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [_accentPrimary, _accentDarker],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
+                    color: _accentPrimary,
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Center(
                     child: Text(
@@ -7173,52 +7003,34 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
     final isPartnerResource = widget.resourceType == 'partners';
 
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       titlePadding: EdgeInsets.zero,
-      contentPadding: const EdgeInsets.fromLTRB(28, 20, 28, 12),
-      actionsPadding: const EdgeInsets.fromLTRB(28, 16, 28, 24),
+      contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+      actionsPadding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
       backgroundColor: _isDark ? const Color(0xFF1A182A) : Colors.white,
       title: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Top accent gradient bar
-          Container(
-            height: 4,
-            decoration: BoxDecoration(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(24),
-                topRight: Radius.circular(24),
-              ),
-              gradient: LinearGradient(
-                colors: [_accentPrimary, _accentGradientEnd],
-              ),
-            ),
-          ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(28, 20, 20, 16),
+            padding: const EdgeInsets.fromLTRB(24, 20, 20, 16),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [_accentPrimary, _accentDarker],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                    color: _isDark ? _accentPrimary.withValues(alpha: 0.15) : _accentPrimary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _isDark ? _accentPrimary.withValues(alpha: 0.3) : _accentPrimary.withValues(alpha: 0.2),
                     ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: _accentPrimary.withValues(alpha: _isDark ? 0.4 : 0.3),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
                   ),
-                  child: Icon(widget.icon, color: Colors.white, size: 24),
+                  child: Center(
+                    child: Icon(widget.icon, color: _accentPrimary, size: 22),
+                  ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -7229,10 +7041,10 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                             child: Text(
                               widget.existing == null ? widget.action : 'Edit ',
                               style: TextStyle(
-                                fontSize: 19,
-                                fontWeight: FontWeight.w800,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
                                 color: _isDark ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A),
-                                letterSpacing: -0.3,
+                                letterSpacing: -0.2,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -7241,22 +7053,18 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                             decoration: BoxDecoration(
-                              color: _isDark
-                                  ? _accentPrimary.withValues(alpha: 0.22)
-                                  : _accentBgLight,
+                              color: _isDark ? const Color(0xFF221E38) : const Color(0xFFF1F5F9),
                               borderRadius: BorderRadius.circular(6),
                               border: Border.all(
-                                color: _isDark
-                                    ? _accentBright.withValues(alpha: 0.4)
-                                    : _accentBorderLight,
+                                color: _isDark ? const Color(0xFF332E52) : const Color(0xFFE2E8F0),
                               ),
                             ),
                             child: Text(
-                              'B2B Governance',
+                              isPartnerResource ? 'Mitra Industri' : 'Data Resmi',
                               style: TextStyle(
                                 fontSize: 10.5,
-                                fontWeight: FontWeight.w700,
-                                color: _isDark ? _accentLightText : _accentPrimary,
+                                fontWeight: FontWeight.w600,
+                                color: _isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
                               ),
                             ),
                           ),
