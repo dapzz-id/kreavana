@@ -552,7 +552,7 @@ void main() {
       expect(corporateItem.quotaText, equals('0 dari 2 posisi'));
     });
 
-    testWidgets('ProgramMagangDetailScreen hides Tambah/Ajukan Siswa button and shows Pendaftaran Ditutup when quota is full', (tester) async {
+    testWidgets('ProgramMagangDetailScreen hides Tambah/Ajukan Peserta button and shows Pendaftaran Ditutup when quota is full', (tester) async {
       final oppFullQuota = OpportunityModel(
         id: 'test_opp_full_1',
         title: 'Program Magang 3D Modeler',
@@ -605,8 +605,8 @@ void main() {
       // Ensure Tambah Peserta button does NOT exist
       expect(find.byKey(const Key('btn_tambah_peserta')), findsNothing);
       expect(find.text('Tambah Peserta'), findsNothing);
-      expect(find.text('Tambah Siswa'), findsNothing);
-      expect(find.text('Ajukan Siswa'), findsNothing);
+      expect(find.text('Tambah Peserta'), findsNothing);
+      expect(find.text('Ajukan Peserta'), findsNothing);
 
       // Closed info banner should be visible
       expect(find.textContaining('Pendaftaran program ini telah ditutup karena kuota posisi telah terpenuhi'), findsOneWidget);

@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:url_launcher/url_launcher_string.dart';
+import 'package:dio/dio.dart';
+import 'package:file_picker/file_picker.dart';
 import '../models/user_model.dart';
+import '../models/opportunity_model.dart';
+import '../models/opportunity_application_model.dart';
 import '../services/api_service.dart';
 import '../services/app_router.dart';
 import '../services/opportunity_service.dart';
@@ -99,7 +104,7 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
 
             // 2. Fallback: Parse pitchMessage if submittedDocuments didn't have student_name
             if (studentName.isEmpty && a.pitchMessage.isNotEmpty) {
-              final match = RegExp(r'Siswa:\s*([^(|]+)(?:\(([^)]+)\))?', caseSensitive: false).firstMatch(a.pitchMessage);
+              final match = RegExp(r'(?:Siswa|Peserta):\s*([^(|]+)(?:\(([^)]+)\))?', caseSensitive: false).firstMatch(a.pitchMessage);
               if (match != null) {
                 studentName = match.group(1)?.trim() ?? '';
                 if (studentMajor.isEmpty) {
@@ -153,10 +158,12 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
 
             // Clean up note text so serialized tags aren't redundantly displayed
             var displayNote = noteText;
-            if (displayNote.contains('Siswa:')) {
+            final hasPrefix = displayNote.toLowerCase().contains('siswa:') || displayNote.toLowerCase().contains('peserta:');
+            if (hasPrefix) {
               final segments = displayNote.split('|').map((s) => s.trim()).toList();
               final cleanSegments = segments.where((s) =>
                 !s.toLowerCase().startsWith('siswa:') &&
+                !s.toLowerCase().startsWith('peserta:') &&
                 !s.toLowerCase().startsWith('portofolio:')
               ).toList();
               displayNote = cleanSegments.join(' • ');
@@ -265,7 +272,7 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
             role: '3D Environment Artist',
             appliedDate: '12 Feb 2026',
             status: 'Diterima',
-            note: 'Telah menandatangani MoU penempatan magang resmi sekolah.',
+            note: 'Telah menandatangani MoU penempatan magang resmi institusi.',
           ),
           CorporateApplicant(
             name: 'Fauzan Hakim',
@@ -340,7 +347,7 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
     if (!mounted) return;
     AppSweetAlert.success(
       context,
-      'Kemitraan institusi $instName berhasil disetujui. Anda dapat meninjau dan menerima berkas siswa dari institusi ini.',
+      'Kemitraan institusi $instName berhasil disetujui. Anda dapat meninjau dan menerima berkas peserta dari institusi ini.',
       title: 'Institusi Disetujui',
     );
   }
@@ -372,7 +379,7 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
           ),
           content: Text(
             'Anda yakin ingin menolak institusi "$instName"?\n\n'
-            'Perhatian: Menolak institusi akan secara otomatis membatalkan kemitraan, sehingga seluruh ($count) siswa dari institusi ini tidak dapat disetujui dan langsung dihapus dari daftar pelamar program magang.',
+            'Perhatian: Menolak institusi akan secara otomatis membatalkan kemitraan, sehingga seluruh ($count) peserta dari institusi ini tidak dapat disetujui dan langsung dihapus dari daftar pelamar program magang.',
             style: const TextStyle(fontSize: 13.5, color: Color(0xFF334155), height: 1.45),
           ),
           actions: [
@@ -408,8 +415,8 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
                 if (!mounted) return;
                 AppSweetAlert.error(
                   context,
-                  'Institusi $instName telah ditolak. Seluruh ($count) siswa dari institusi ini otomatis tidak dapat disetujui dan telah dihapus dari daftar.',
-                  title: 'Institusi Ditolak & Siswa Dihapus',
+                  'Institusi $instName telah ditolak. Seluruh ($count) peserta dari institusi ini otomatis tidak dapat disetujui dan telah dihapus dari daftar.',
+                  title: 'Institusi Ditolak & Peserta Dihapus',
                 );
               },
               icon: const Icon(Icons.cancel_rounded, size: 16),
@@ -444,7 +451,7 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
     if (_getInstitutionStatus(inst) == 'rejected') {
       AppSweetAlert.error(
         context,
-        'Institusi $inst telah ditolak. Siswa dari institusi ini otomatis tidak bisa disetujui untuk masuk program magang.',
+        'Institusi $inst telah ditolak. Peserta dari institusi ini otomatis tidak bisa disetujui untuk masuk program magang.',
         title: 'Institusi Ditolak',
       );
       return;
@@ -1141,7 +1148,7 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
                     child: _buildGovernanceItem(
                       icon: Icons.description_outlined,
                       title: 'MoU & Perjanjian Penempatan',
-                      desc: 'Terintegrasi otomatis dengan pangkalan data sekolah vokasi mitra Kreavana.',
+                      desc: 'Terintegrasi otomatis dengan pangkalan data institusi mitra Kreavana.',
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -1149,7 +1156,7 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
                     child: _buildGovernanceItem(
                       icon: Icons.fact_check_outlined,
                       title: 'Monitoring & Logbook Vokasi',
-                      desc: 'Penilaian capaian kinerja magang dapat dipantau langsung oleh guru pembimbing.',
+                      desc: 'Penilaian capaian kinerja magang dapat dipantau langsung oleh pembimbing institusi.',
                     ),
                   ),
                 ],
@@ -1226,7 +1233,7 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
                 controller: _applicantSearchController,
                 onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
-                  hintText: 'Cari nama pelamar, asal sekolah/kampus, atau posisi...',
+                  hintText: 'Cari nama pelamar, asal institusi/kampus, atau posisi...',
                   prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Color(0xFF2563EB)),
                   suffixIcon: _applicantSearchController.text.isNotEmpty
                       ? IconButton(
@@ -1425,7 +1432,7 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
-                                '${instApplicants.length} Siswa Diajukan',
+                                '${instApplicants.length} Peserta Diajukan',
                                 style: const TextStyle(
                                   fontSize: 11.5,
                                   fontWeight: FontWeight.w600,
@@ -1434,7 +1441,7 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
                               ),
                             ),
                             Text(
-                              isExpanded ? 'Klik untuk menutup daftar' : 'Klik untuk melihat daftar anak',
+                              isExpanded ? 'Klik untuk menutup daftar' : 'Klik untuk melihat daftar peserta',
                               style: TextStyle(
                                 fontSize: 11.5,
                                 color: Colors.grey.shade500,
@@ -1604,7 +1611,7 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Siswa Pengganti • Menggantikan ${app.replacedApplicantName ?? "kandidat sebelumnya"} (Wajib Disetujui Corporate)',
+                      'Peserta Pengganti • Menggantikan ${app.replacedApplicantName ?? "kandidat sebelumnya"} (Wajib Disetujui Corporate)',
                       style: const TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w700,
@@ -2013,9 +2020,9 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
     final meta = showcase['metadata'] ?? showcase['meta'];
     final metaMap = (meta is Map) ? meta : <String, dynamic>{};
 
-    final title = showcase['title']?.toString() ?? 'Portofolio Siswa';
+    final title = showcase['title']?.toString() ?? 'Portofolio Peserta';
     final description = showcase['description']?.toString() ?? '';
-    final category = metaMap['category']?.toString() ?? 'Karya & Portofolio Siswa';
+    final category = metaMap['category']?.toString() ?? 'Karya & Portofolio Peserta';
     final year = metaMap['year']?.toString() ?? '';
     final imageUrl = metaMap['image_url']?.toString() ?? '';
     final portfolioUrl = (app.portfolioUrl.isNotEmpty)
@@ -2087,7 +2094,7 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Karya & Portofolio Siswa',
+                                'Karya & Portofolio Peserta',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w800,

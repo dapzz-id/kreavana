@@ -135,7 +135,7 @@ void main() {
       expect(find.text('Diterima'), findsWidgets);
 
       // Search for 'Dimas'
-      final searchField = find.widgetWithText(TextFormField, 'Cari nama pelamar, asal sekolah/kampus, atau posisi...');
+      final searchField = find.widgetWithText(TextFormField, 'Cari nama pelamar, asal institusi/kampus, atau posisi...');
       expect(searchField, findsOneWidget);
       await tester.enterText(searchField, 'Dimas');
       await tester.pumpAndSettle();
@@ -405,7 +405,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify popup content
-      expect(find.text('Karya & Portofolio Siswa'), findsOneWidget);
+      expect(find.text('Karya & Portofolio Peserta'), findsOneWidget);
       expect(find.text('Portofolio Videografi & Sinematografi Komersial 4K'), findsOneWidget);
       expect(find.text('Desain Komunikasi Visual & Videografi'), findsOneWidget);
       expect(find.textContaining('https://github.com/blznqhtn'), findsWidgets);
@@ -414,7 +414,7 @@ void main() {
       // Close popup
       await tester.tap(find.text('Tutup'));
       await tester.pumpAndSettle();
-      expect(find.text('Karya & Portofolio Siswa'), findsNothing);
+      expect(find.text('Karya & Portofolio Peserta'), findsNothing);
     });
 
     testWidgets('Accepted student displays Diterima Magang status badge and hides Ubah Status dropdown',

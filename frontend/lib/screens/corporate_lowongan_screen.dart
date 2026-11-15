@@ -164,6 +164,7 @@ class CorporateVacancyItem {
           (notes.startsWith('Memiliki') ||
            notes.startsWith('Mampu') ||
            notes.startsWith('Siswa') ||
+           notes.startsWith('Peserta') ||
            notes.startsWith('Mahasiswa') ||
            notes.startsWith('Disiplin') ||
            notes.startsWith('Menguasai') ||
@@ -750,7 +751,7 @@ class _CorporateLowonganScreenState extends State<CorporateLowonganScreen> {
       {
         'title': 'Pelamar Terdaftar',
         'value': '$totalApplicants',
-        'desc': 'Talenta & siswa vokasi',
+        'desc': 'Talenta & peserta institusi',
         'icon': Icons.people_outline_rounded,
         'color': const Color(0xFF8B5CF6),
       },
@@ -2260,7 +2261,7 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
                               minLines: 3,
                               maxLines: 4,
                               decoration: _inputDecoration(
-                                hint: 'Contoh: Kerja sama penempatan 10 siswa vokasi magang pada produksi serial animasi nusantara...',
+                                hint: 'Contoh: Kerja sama penempatan 10 peserta magang pada produksi serial animasi nusantara...',
                                 prefixIcon: Icons.notes_rounded,
                               ),
                               validator: (v) =>

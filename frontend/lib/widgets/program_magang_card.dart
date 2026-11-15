@@ -144,7 +144,7 @@ class ProgramMagangCard extends StatelessWidget {
       key: key,
       title: opp.title,
       description: opp.description ??
-          'Kerja sama penempatan siswa vokasi magang pada industri kreatif mitra.',
+          'Kerja sama penempatan peserta magang institusi pada industri kreatif mitra.',
       categoryBadge: cat,
       categoryBadgeColor: catColor,
       categoryBadgeBg: catBg,

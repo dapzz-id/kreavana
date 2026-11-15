@@ -58,7 +58,7 @@ void main() {
 
       expect(item.id, equals('opp-job-1'));
       expect(item.category, equals('job'));
-      expect(item.categoryLabel, equals('Pekerjaan'));
+      expect(item.categoryLabel, equals('Lowongan Kerja'));
       expect(item.statusLabel, equals('Pendaftaran Dibuka'));
       expect(item.registrationPeriod, equals('30 Nov 2026'));
       expect(item.allowance, equals('Rp 20.000.000 / bulan'));

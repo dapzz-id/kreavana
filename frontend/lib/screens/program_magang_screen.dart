@@ -384,7 +384,7 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
                 const AppBreadcrumbs(
                   items: [
                     BreadcrumbItem(label: 'Beranda', icon: Icons.home_outlined),
-                    BreadcrumbItem(label: 'Pengelolaan Sekolah', icon: Icons.school_outlined),
+                    BreadcrumbItem(label: 'Pengelolaan Institusi', icon: Icons.school_outlined),
                     BreadcrumbItem(
                       label: 'Program & Magang',
                       icon: Icons.work_outline_rounded,
