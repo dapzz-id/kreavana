@@ -49,7 +49,10 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
 
   Future<void> _fetchRealApplications() async {
     final oppId = _currentVacancy.opportunity?.id ?? _currentVacancy.id;
-    if (oppId.isEmpty || oppId.startsWith('corp_magang_') || oppId.startsWith('corp_vac_detail')) {
+    if (oppId.isEmpty ||
+        oppId.startsWith('corp_magang_') ||
+        oppId.startsWith('corp_vac_detail') ||
+        oppId.startsWith('test_')) {
       return;
     }
 
@@ -1970,8 +1973,8 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
                 ),
               ],
 
-              // Ubah Status dropdown HANYA muncul jika siswa belum berstatus Diterima
-              if (!isAccepted) ...[
+              // Ubah Status dropdown HANYA muncul jika siswa belum berstatus Diterima dan belum Ditolak
+              if (!isAccepted && !isRejected) ...[
                 PopupMenuButton<String>(
                   key: ValueKey('popup_status_${app.name}'),
                   onSelected: (val) {
@@ -2017,7 +2020,7 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
                     ),
                   ),
                 ),
-              ] else ...[
+              ] else if (isAccepted) ...[
                 // Bila siswa sudah diterima, dropdown dihilangkan dan digantikan konfirmasi status resmi
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

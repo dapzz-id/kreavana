@@ -467,7 +467,7 @@ void main() {
         quotaText: '10 dari 10 posisi',
         allowance: 'Rp 2.000.000 / bulan',
         requirements: const ['Siswa SMK vokasi'],
-        applicantsCount: 2,
+        applicantsCount: 3,
         applicants: const [
           CorporateApplicant(
             name: 'Achmad Bilzan',
@@ -486,6 +486,14 @@ void main() {
             appliedDate: '15 Nov 2026',
             status: 'Menunggu Review',
           ),
+          CorporateApplicant(
+            name: 'Kadavi Raditya',
+            institution: 'Kreavana Demo Institution',
+            studentDescription: 'RPL',
+            role: 'VIDEOGRAPHER',
+            appliedDate: '15 Nov 2026',
+            status: 'Ditolak',
+          ),
         ],
       );
 
@@ -500,7 +508,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Go to Daftar Pelamar tab
-      await tester.tap(find.text('Daftar Pelamar (2)'));
+      await tester.tap(find.text('Daftar Pelamar (3)'));
       await tester.pumpAndSettle();
 
       // 1. Verify Achmad Bilzan has Diterima Magang badge and Resmi Diterima Magang confirmation
@@ -512,6 +520,10 @@ void main() {
 
       // 3. Verify pending student (Rian Pratama) still HAS the Ubah Status dropdown
       expect(find.byKey(const ValueKey('popup_status_Rian Pratama')), findsOneWidget);
+
+      // 4. Verify rejected student (Kadavi Raditya) has Ubah Status dropdown HIDDEN and shows Ajukan Siswa Pengganti
+      expect(find.byKey(const ValueKey('popup_status_Kadavi Raditya')), findsNothing);
+      expect(find.byKey(const ValueKey('btn_propose_replacement_Kadavi Raditya')), findsOneWidget);
     });
   });
 }
