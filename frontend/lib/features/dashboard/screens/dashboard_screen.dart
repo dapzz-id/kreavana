@@ -75,6 +75,27 @@ class DashboardScreen extends StatefulWidget {
     required this.onUserUpdated,
   });
 
+  /// Checks whether [user] belongs to an educational institution / school role.
+  static bool isInstitutionUser(UserModel user) {
+    if (user.isInstitution) return true;
+    final sub = CreatorSidebarMenus.normalizeSubRole(user.subRole);
+    final role = user.role.toLowerCase().trim();
+    final verif = user.verificationType?.toLowerCase().trim() ?? '';
+    final uname = user.username.toLowerCase().trim();
+    return (role == 'user' || role == 'creator' || role == 'institution' || role == 'school') &&
+        (sub == 'institution' ||
+            sub == 'institusi' ||
+            sub == 'school' ||
+            sub == 'education' ||
+            sub == 'campus' ||
+            sub == 'sekolah' ||
+            sub == 'kampus' ||
+            verif == 'institution' ||
+            uname.contains('institution') ||
+            uname.contains('sekolah') ||
+            uname.contains('smk'));
+  }
+
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
@@ -106,25 +127,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       widget.user.role == 'creator' ||
       widget.user.isCreator;
 
-  bool get _isInstitution {
-    if (widget.user.isInstitution) return true;
-    final sub = CreatorSidebarMenus.normalizeSubRole(widget.user.subRole);
-    final role = widget.user.role.toLowerCase().trim();
-    final verif = widget.user.verificationType?.toLowerCase().trim() ?? '';
-    final uname = widget.user.username.toLowerCase().trim();
-    return (role == 'user' || role == 'creator' || role == 'institution' || role == 'school') &&
-        (sub == 'institution' ||
-            sub == 'institusi' ||
-            sub == 'school' ||
-            sub == 'education' ||
-            sub == 'campus' ||
-            sub == 'sekolah' ||
-            sub == 'kampus' ||
-            verif == 'institution' ||
-            uname.contains('institution') ||
-            uname.contains('sekolah') ||
-            uname.contains('smk'));
-  }
+  bool get _isInstitution => DashboardScreen.isInstitutionUser(widget.user);
 
   bool get _isTalentAndPerformer {
     final sub = CreatorSidebarMenus.normalizeSubRole(widget.user.subRole);
@@ -624,14 +627,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             'action': 'Review Karya',
           },
         ],
-        quickActions: [
-          {'icon': Icons.work_outline, 'label': 'Program & Magang'},
-          {'icon': Icons.collections_bookmark_outlined, 'label': 'Review Karya'},
-          {'icon': Icons.badge_outlined, 'label': 'Direktori Talenta'},
-          {'icon': Icons.calendar_month_outlined, 'label': 'Atur Jadwal'},
-          {'icon': Icons.assessment_outlined, 'label': 'Laporan'},
-          {'icon': Icons.insights_rounded, 'label': 'Grafik Performa'},
-        ],
+        quickActions: const [],
         aiTips: [
           'Verifikasi berkas karya siswa sebelum dipublikasikan ke etalase publik Kreavana',
           'Hubungkan siswa magang dengan mentor industri bersertifikat di platform',
@@ -7494,12 +7490,16 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   // ── Right sidebar ────────────────────────────────────────────────────────────
   Widget _buildRightSidebar(bool isDark) {
+    final hasQuickActions =
+        !_isInstitution && _getRoleConfig().quickActions.isNotEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildProfileCard(isDark),
-        const SizedBox(height: 14),
-        _buildQuickActionsCard(isDark),
+        if (hasQuickActions) ...[
+          const SizedBox(height: 14),
+          _buildQuickActionsCard(isDark),
+        ],
         const SizedBox(height: 14),
         _buildAiTipsCard(isDark),
         const SizedBox(height: 14),
@@ -7780,49 +7780,11 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildQuickActionsCard(bool isDark) {
-    final config = _getRoleConfig();
-    final actions = config.quickActions;
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.cardDark : Colors.white,
-        borderRadius: BorderRadius.circular(AppTheme.radiusMD),
-        border: Border.all(
-          color: isDark ? AppTheme.inputBorder : AppTheme.inputBorderLight,
-        ),
-        boxShadow: isDark ? null : AppTheme.cardShadowLight,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Aksi Cepat',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 14),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 10,
-              childAspectRatio: 0.9,
-            ),
-            itemCount: actions.length,
-            itemBuilder: (context, index) {
-              final action = actions[index];
-              return _QuickActionItemCard(
-                action: action,
-                isDark: isDark,
-                onTap: () => _navigateTo(action['label'] as String),
-                accentColor: AppTheme.primaryPurple,
-              );
-            },
-          ),
-        ],
-      ),
+    return DashboardQuickActionsCard(
+      isInstitution: _isInstitution,
+      actions: _getRoleConfig().quickActions,
+      isDark: isDark,
+      onTapAction: _navigateTo,
     );
   }
 
@@ -9817,6 +9779,71 @@ class _InteractiveDashboardItemCardState extends State<_InteractiveDashboardItem
       );
     }
     return card;
+  }
+}
+
+/// Renders the dashboard quick actions grid, hidden for institution users.
+class DashboardQuickActionsCard extends StatelessWidget {
+  final bool isInstitution;
+  final List<Map<String, dynamic>> actions;
+  final bool isDark;
+  final ValueChanged<String> onTapAction;
+
+  const DashboardQuickActionsCard({
+    super.key,
+    required this.isInstitution,
+    required this.actions,
+    required this.isDark,
+    required this.onTapAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (isInstitution || actions.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardDark : Colors.white,
+        borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : AppTheme.inputBorderLight,
+        ),
+        boxShadow: isDark ? null : AppTheme.cardShadowLight,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Aksi Cepat',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 14),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 10,
+              childAspectRatio: 0.9,
+            ),
+            itemCount: actions.length,
+            itemBuilder: (context, index) {
+              final action = actions[index];
+              return _QuickActionItemCard(
+                action: action,
+                isDark: isDark,
+                onTap: () => onTapAction(action['label'] as String),
+                accentColor: AppTheme.primaryPurple,
+              );
+            },
+          ),
+        ],
+      ),
+    );
   }
 }
 
