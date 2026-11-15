@@ -1793,15 +1793,26 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                             color: statusBg,
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: Text(
-                            s.status == 'Pending' && s.isAdditional
-                                ? 'Pending (Menunggu Corporate)'
-                                : s.status,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: statusColor,
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (s.status == 'Diterima' || s.status.toLowerCase().contains('diterima')) ...[
+                                const Icon(Icons.check_circle_rounded, size: 12, color: Color(0xFF16A34A)),
+                                const SizedBox(width: 4),
+                              ],
+                              Text(
+                                s.status == 'Pending' && s.isAdditional
+                                    ? 'Pending (Menunggu Corporate)'
+                                    : (s.status == 'Diterima'
+                                        ? (widget.opportunity.isMagang ? 'Diterima Magang' : 'Diterima Kerja')
+                                        : s.status),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: statusColor,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -1834,6 +1845,34 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                   fontSize: 12,
                   color: isDark ? Colors.white70 : const Color(0xFF334155),
                 ),
+              ),
+            ),
+          ],
+          if (s.status == 'Diterima' || s.status.toLowerCase().contains('diterima')) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFDCFCE7),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF86EFAC)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.verified_rounded, size: 14, color: Color(0xFF16A34A)),
+                  const SizedBox(width: 6),
+                  Text(
+                    widget.opportunity.isMagang
+                        ? 'Siswa resmi diterima mengikuti program magang industri ini'
+                        : 'Kandidat resmi diterima pada lowongan pekerjaan ini',
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF16A34A),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

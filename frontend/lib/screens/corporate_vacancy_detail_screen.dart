@@ -1746,6 +1746,7 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
       return const SizedBox.shrink();
     }
     final rawIdx = _applicants.indexOf(app);
+    final isAccepted = app.status == 'Diterima' || app.status.toLowerCase().contains('diterima');
     final isRejected = app.status == 'Ditolak';
     final isReplacement = app.isReplacement;
     final isPendingCorporate = app.status == 'Menunggu Persetujuan Corporate' ||
@@ -1962,45 +1963,81 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
                 ),
               ],
 
-              PopupMenuButton<String>(
-                onSelected: (val) {
-                  if (rawIdx != -1) {
-                    _updateApplicantStatus(rawIdx, val);
-                  }
-                },
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                itemBuilder: (ctx) => [
-                  const PopupMenuItem(value: 'Menunggu Review', child: Text('Menunggu Review')),
-                  const PopupMenuItem(value: 'Interview', child: Text('Jadwalkan Interview')),
-                  const PopupMenuItem(value: 'Diterima', child: Text('Terima Magang / Kerja')),
-                  const PopupMenuItem(value: 'Ditolak', child: Text('Tolak Berkas')),
-                ],
-                child: Container(
+              // Ubah Status dropdown HANYA muncul jika siswa belum berstatus Diterima
+              if (!isAccepted) ...[
+                PopupMenuButton<String>(
+                  key: ValueKey('popup_status_${app.name}'),
+                  onSelected: (val) {
+                    if (rawIdx != -1) {
+                      _updateApplicantStatus(rawIdx, val);
+                    }
+                  },
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  itemBuilder: (ctx) => [
+                    const PopupMenuItem(value: 'Menunggu Review', child: Text('Menunggu Review')),
+                    const PopupMenuItem(value: 'Interview', child: Text('Jadwalkan Interview')),
+                    PopupMenuItem(
+                      value: 'Diterima',
+                      child: Text(_currentVacancy.category == 'magang'
+                          ? 'Terima Magang'
+                          : 'Terima Kerja'),
+                    ),
+                    const PopupMenuItem(value: 'Ditolak', child: Text('Tolak Berkas')),
+                  ],
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.edit_note_rounded, size: 14, color: Color(0xFF475569)),
+                        SizedBox(width: 4),
+                        Text(
+                          'Ubah Status',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF334155),
+                          ),
+                        ),
+                        SizedBox(width: 2),
+                        Icon(Icons.keyboard_arrow_down_rounded, size: 14, color: Color(0xFF475569)),
+                      ],
+                    ),
+                  ),
+                ),
+              ] else ...[
+                // Bila siswa sudah diterima, dropdown dihilangkan dan digantikan konfirmasi status resmi
+                Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
+                    color: const Color(0xFFDCFCE7),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFFCBD5E1)),
+                    border: Border.all(color: const Color(0xFF86EFAC)),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.edit_note_rounded, size: 14, color: Color(0xFF475569)),
-                      SizedBox(width: 4),
+                      const Icon(Icons.check_circle_rounded, size: 14, color: Color(0xFF16A34A)),
+                      const SizedBox(width: 5),
                       Text(
-                        'Ubah Status',
-                        style: TextStyle(
+                        _currentVacancy.category == 'magang'
+                            ? 'Resmi Diterima Magang'
+                            : 'Resmi Diterima Kerja',
+                        style: const TextStyle(
                           fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF334155),
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF16A34A),
                         ),
                       ),
-                      SizedBox(width: 2),
-                      Icon(Icons.keyboard_arrow_down_rounded, size: 14, color: Color(0xFF475569)),
                     ],
                   ),
                 ),
-              ),
+              ],
 
               // Button to propose replacement student if rejected!
               if (isRejected) ...[
@@ -2080,27 +2117,40 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
   Widget _buildApplicantStatusBadge(String status) {
     Color bg;
     Color fg;
+    String displayLabel = status;
+    IconData icon;
+
     switch (status) {
       case 'Diterima':
+      case 'Diterima Magang':
+      case 'Diterima Kerja':
         bg = const Color(0xFFDCFCE7);
         fg = const Color(0xFF16A34A);
+        displayLabel = _currentVacancy.category == 'magang'
+            ? 'Diterima Magang'
+            : 'Diterima Kerja';
+        icon = Icons.check_circle_rounded;
         break;
       case 'Interview':
         bg = const Color(0xFFDBEAFE);
         fg = const Color(0xFF2563EB);
+        icon = Icons.event_available_rounded;
         break;
       case 'Ditolak':
         bg = const Color(0xFFFEE2E2);
         fg = const Color(0xFFDC2626);
+        icon = Icons.cancel_rounded;
         break;
       case 'Menunggu Persetujuan Corporate':
         bg = const Color(0xFFEDE9FE);
         fg = const Color(0xFF7C3AED);
+        icon = Icons.hourglass_top_rounded;
         break;
       case 'Menunggu Review':
       default:
         bg = const Color(0xFFFEF3C7);
         fg = const Color(0xFFD97706);
+        icon = Icons.pending_outlined;
         break;
     }
 
@@ -2110,13 +2160,20 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
         color: bg,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(
-        status,
-        style: TextStyle(
-          fontSize: 11.5,
-          fontWeight: FontWeight.w700,
-          color: fg,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: fg),
+          const SizedBox(width: 4),
+          Text(
+            displayLabel,
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: fg,
+            ),
+          ),
+        ],
       ),
     );
   }
