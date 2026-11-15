@@ -31,8 +31,6 @@ import '../../../screens/direct_message_screen.dart';
 import '../../../services/chat_service.dart';
 import '../../../app/app_animations.dart';
 import '../../../widgets/app_sweet_alert.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter/services.dart';
 import '../../../screens/explore_screen.dart';
 class _RoleDashboardConfig {
   final String badge;
@@ -3759,208 +3757,89 @@ class _DashboardScreenState extends State<DashboardScreen>
     BuildContext context,
     Map<String, dynamic> creator,
   ) async {
-    final rawPhone = creator['phone']?.toString() ??
-        creator['contact']?.toString() ??
-        creator['whatsapp']?.toString() ??
-        '081298765432';
     final name = creator['name']?.toString() ?? 'Kreator';
+    final rawUserId = creator['user_id']?.toString() ?? creator['id']?.toString() ?? '';
+    final username = creator['username']?.toString() ?? '';
+    final role = creator['role']?.toString() ?? creator['category']?.toString() ?? 'Kreator';
+    final avatarUrl = creator['avatar_url']?.toString() ?? creator['avatar']?.toString() ?? '';
 
-    String cleanPhone = rawPhone.replaceAll(RegExp(r'\D'), '');
-    if (cleanPhone.startsWith('0')) {
-      cleanPhone = '62${cleanPhone.substring(1)}';
-    } else if (!cleanPhone.startsWith('62')) {
-      cleanPhone = '62$cleanPhone';
-    }
-
-    final message = Uri.encodeComponent(
-      'Halo $name, saya dari Institusi Kreavana ingin berdiskusi mengenai proyek kolaborasi.',
-    );
-    final waUri = Uri.parse('https://wa.me/$cleanPhone?text=$message');
-
-    AppSweetAlert.info(
-      context,
-      'Mengarahkan ke kontak WhatsApp $name ($cleanPhone)...',
-      title: 'Menghubungkan WhatsApp',
-    );
+    Map<String, dynamic>? targetChat;
 
     try {
-      final launched = await launchUrl(waUri, mode: LaunchMode.externalApplication);
-      if (!launched) {
-        final fallbackLaunched = await launchUrl(waUri);
-        if (!fallbackLaunched && context.mounted) {
-          _showCreatorContactDialog(context, name, cleanPhone, rawPhone);
+      final existingChats = await ChatService.fetchChats().timeout(
+        const Duration(milliseconds: 1800),
+        onTimeout: () => <dynamic>[],
+      );
+      final queryName = name.toLowerCase().trim();
+      final queryUser = username.toLowerCase().trim();
+
+      for (final raw in existingChats) {
+        if (raw is! Map) continue;
+        final c = Map<String, dynamic>.from(raw);
+        if (c['isGroup'] == true) continue;
+
+        final cName = c['name']?.toString().toLowerCase().trim();
+        final cUsername = c['username']?.toString().toLowerCase().trim();
+        final cUserId = c['other_user_id']?.toString() ?? c['user_id']?.toString();
+        final cId = c['id']?.toString();
+
+        if (queryName.isNotEmpty && cName == queryName) {
+          targetChat = c;
+          break;
+        }
+        if (queryUser.isNotEmpty && (cUsername == queryUser || cName == queryUser)) {
+          targetChat = c;
+          break;
+        }
+        if (rawUserId.isNotEmpty && (cUserId == rawUserId || cId == rawUserId)) {
+          targetChat = c;
+          break;
         }
       }
-    } catch (_) {
-      if (context.mounted) {
-        _showCreatorContactDialog(context, name, cleanPhone, rawPhone);
-      }
-    }
-  }
+    } catch (_) {}
 
-  void _showCreatorContactDialog(
-    BuildContext context,
-    String name,
-    String cleanPhone,
-    String displayPhone,
-  ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    showDialog(
-      context: context,
-      builder: (dialogCtx) {
-        return AlertDialog(
-          backgroundColor: isDark ? const Color(0xFF1E1B2E) : Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-          contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-          title: Row(
-            children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.15),
-                child: const Icon(Icons.person, color: AppTheme.primaryPurple, size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const Text(
-                      'Kontak Kreator Rekomendasi',
-                      style: TextStyle(fontSize: 11, color: Colors.grey),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF161426) : const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isDark ? const Color(0xFF2B2844) : const Color(0xFFE2E8F0),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.perm_phone_msg_rounded, size: 22, color: AppTheme.primaryPurple),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Nomor Kontak Langsung', style: TextStyle(fontSize: 10, color: Colors.grey)),
-                          const SizedBox(height: 2),
-                          SelectableText(
-                            displayPhone,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.5,
-                              color: isDark ? Colors.white : Colors.black87,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.copy_rounded, size: 18),
-                      tooltip: 'Salin Nomor',
-                      onPressed: () {
-                        Clipboard.setData(ClipboardData(text: displayPhone));
-                        Navigator.pop(dialogCtx);
-                        AppSweetAlert.success(
-                          context,
-                          'Nomor $displayPhone berhasil disalin ke clipboard',
-                          title: 'Nomor Disalin',
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () async {
-                        Navigator.pop(dialogCtx);
-                        final uri = Uri.parse('tel:$cleanPhone');
-                        try {
-                          await launchUrl(uri, mode: LaunchMode.externalApplication);
-                        } catch (_) {
-                          Clipboard.setData(ClipboardData(text: displayPhone));
-                          if (context.mounted) {
-                            AppSweetAlert.info(
-                              context,
-                              'Nomor $displayPhone telah disalin ke clipboard.',
-                              title: 'Nomor Disalin',
-                            );
-                          }
-                        }
-                      },
-                      icon: const Icon(Icons.call_rounded, size: 16),
-                      label: const Text('Panggil', style: TextStyle(fontSize: 12)),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        side: const BorderSide(color: AppTheme.primaryPurple),
-                        foregroundColor: AppTheme.primaryPurple,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        Navigator.pop(dialogCtx);
-                        final message = Uri.encodeComponent(
-                          'Halo $name, saya dari Institusi Kreavana ingin berdiskusi mengenai proyek kolaborasi.',
-                        );
-                        final waUri = Uri.parse('https://wa.me/$cleanPhone?text=$message');
-                        try {
-                          await launchUrl(waUri, mode: LaunchMode.externalApplication);
-                        } catch (_) {
-                          Clipboard.setData(ClipboardData(text: displayPhone));
-                          if (context.mounted) {
-                            AppSweetAlert.warning(
-                              context,
-                              'Membuka WhatsApp gagal. Nomor $displayPhone telah disalin ke clipboard.',
-                              title: 'Gagal Buka WhatsApp',
-                            );
-                          }
-                        }
-                      },
-                      icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16),
-                      label: const Text('WhatsApp', style: TextStyle(fontSize: 12)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF25D366),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+    // Jika belum ada di riwayat chat, coba panggil startPersonalChat backend
+    if (targetChat == null && rawUserId.isNotEmpty && !rawUserId.startsWith('demo_')) {
+      try {
+        final res = await ChatService.startPersonalChat(rawUserId).timeout(
+          const Duration(milliseconds: 2000),
+          onTimeout: () => <String, dynamic>{'status': false},
         );
-      },
+        if (res['status'] == true && res['data'] != null) {
+          targetChat = Map<String, dynamic>.from(res['data']);
+        }
+      } catch (_) {}
+    }
+
+    // Fallback instan jika chat belum pernah ada atau offline demo
+    targetChat ??= {
+      'id': rawUserId.isNotEmpty ? rawUserId : 'chat_${name.toLowerCase().replaceAll(RegExp(r'\s+'), '_')}',
+      'user_id': rawUserId,
+      'other_user_id': rawUserId,
+      'name': name,
+      'username': username.isNotEmpty ? username : name.toLowerCase().replaceAll(RegExp(r'\s+'), '_'),
+      'role': role,
+      'avatar_url': avatarUrl,
+      'is_online': true,
+      'isOnline': true,
+      'isGroup': false,
+      'messages': <Map<String, dynamic>>[],
+      'type': 'personal',
+    };
+
+    if (!context.mounted) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DirectMessageScreen(
+          currentUser: widget.user,
+          initialChat: targetChat,
+          chatId: targetChat?['id'],
+          targetUserId: rawUserId.isNotEmpty ? rawUserId : null,
+          showSidebar: true,
+        ),
+      ),
     );
   }
 
@@ -8063,31 +7942,43 @@ class _DashboardScreenState extends State<DashboardScreen>
     final List<Map<String, dynamic>> topCreators = _vendorRecommendations.isNotEmpty
         ? _vendorRecommendations.take(3).map((v) => {
             'id': v['id']?.toString(),
+            'user_id': v['user_id']?.toString() ?? v['id']?.toString(),
+            'username': v['username']?.toString(),
             'name': v['name']?.toString() ?? 'Kreator',
             'role': v['category']?.toString() ?? 'Kreator Spesialis',
             'rating': '${v['rating'] ?? '5.0'} (${v['review_count'] ?? '20'})',
             'avatar': 'camera',
+            'avatar_url': v['avatar_url']?.toString(),
             'phone': v['phone']?.toString() ?? '081298765432',
           }).toList()
         : [
             {
-              'name': 'Dimas Arya',
-              'role': 'Videographer & FPV',
-              'rating': '5.0 (24)',
+              'id': 'videographer_demo',
+              'user_id': 'videographer_demo',
+              'name': 'Kreavana Demo Videographer',
+              'username': 'videographer_demo',
+              'role': 'Videographer',
+              'rating': '5.0 (0)',
               'avatar': 'videocam',
               'phone': '081298765432',
             },
             {
-              'name': 'Kevin Jonathan',
-              'role': 'Photographer & Editor',
-              'rating': '5.0 (18)',
+              'id': 'community_demo',
+              'user_id': 'community_demo',
+              'name': 'Kreavana Demo Community',
+              'username': 'community_demo',
+              'role': 'Community',
+              'rating': '5.0 (0)',
               'avatar': 'camera',
               'phone': '081387654321',
             },
             {
-              'name': 'Andi Editor Pro',
-              'role': 'Motion & 3D Editor',
-              'rating': '4.9 (31)',
+              'id': 'eo_demo',
+              'user_id': 'eo_demo',
+              'name': 'Kreavana Demo Event Organizer',
+              'username': 'eo_demo',
+              'role': 'Event Organizer',
+              'rating': '5.0 (0)',
               'avatar': 'palette',
               'phone': '081901234567',
             },

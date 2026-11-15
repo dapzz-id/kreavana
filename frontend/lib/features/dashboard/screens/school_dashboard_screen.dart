@@ -3442,7 +3442,7 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
                       'avatar': '',
                       'is_online': true,
                     },
-                    showSidebar: false,
+                    showSidebar: true,
                   ),
                 ),
               );
@@ -3479,7 +3479,7 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
             'avatar': '',
             'is_online': true,
           },
-          showSidebar: false,
+          showSidebar: true,
         ),
       ),
     );
@@ -3505,7 +3505,7 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
             'avatar': '',
             'is_online': true,
           },
-          showSidebar: false,
+          showSidebar: true,
         ),
       ),
     );

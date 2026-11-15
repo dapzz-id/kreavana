@@ -389,6 +389,8 @@ class DashboardService extends BaseService implements DashboardServiceInterface
 
             return [
                 'id' => $user->id,
+                'user_id' => $user->id,
+                'username' => $user->username,
                 'name' => $user->name,
                 'category' => $category,
                 'rating' => number_format((float) ($user->rating ?? 5.0), 1),

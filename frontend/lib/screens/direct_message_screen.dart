@@ -78,15 +78,34 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
     BadgeService().markMessagesRead();
     if (widget.initialChat != null) {
       selectedChat = widget.initialChat;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        chatListKey.currentState?.loadChats();
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await chatListKey.currentState?.loadChats();
+        if (widget.targetUserId != null &&
+            (selectedChat?['id'] == null ||
+                selectedChat!['id'].toString().startsWith('chat_') ||
+                selectedChat!['id'].toString().startsWith('creator_') ||
+                selectedChat!['id'].toString().startsWith('partner_') ||
+                selectedChat!['id'].toString().startsWith('talent_') ||
+                selectedChat!['id'].toString().startsWith('personal_') ||
+                selectedChat!['id'].toString().startsWith('demo_'))) {
+          try {
+            final res = await ChatService.startPersonalChat(widget.targetUserId!);
+            if (res['status'] == true && res['data'] != null && mounted) {
+              final realChat = Map<String, dynamic>.from(res['data']);
+              setState(() {
+                selectedChat = realChat;
+              });
+              chatListKey.currentState?.loadChats();
+            }
+          } catch (_) {}
+        }
         if (mounted && MediaQuery.of(context).size.width <= 800) {
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => Scaffold(
                 body: ChatDetailSection(
-                  chat: widget.initialChat!,
+                  chat: selectedChat ?? widget.initialChat!,
                   isMobile: true,
                   currentUser: _resolvedUser ?? widget.currentUser,
                   onMessageSent: () {
@@ -716,6 +735,37 @@ class ChatListSectionState extends State<ChatListSection> {
               .toList();
           _invitations = invs.map((i) => Map<String, dynamic>.from(i)).toList();
           isLoading = false;
+
+          final selChat = widget.selectedChat;
+          if (selChat != null) {
+            final selId = selChat['id']?.toString();
+            final selUserId = selChat['user_id']?.toString() ??
+                selChat['other_user_id']?.toString();
+            final selName = selChat['name']?.toString().toLowerCase().trim();
+            final selUsername = selChat['username']?.toString().toLowerCase().trim();
+
+            final existingIndex = _personalChats.indexWhere((c) {
+              final cId = c['id']?.toString();
+              final cUserId = c['other_user_id']?.toString() ?? c['user_id']?.toString();
+              final cName = c['name']?.toString().toLowerCase().trim();
+              final cUsername = c['username']?.toString().toLowerCase().trim();
+
+              if (selId != null && selId.isNotEmpty && (cId == selId || cUserId == selId)) return true;
+              if (selUserId != null && selUserId.isNotEmpty && (cId == selUserId || cUserId == selUserId)) return true;
+              if (selUsername != null && selUsername.isNotEmpty && (cUsername == selUsername || cName == selUsername)) return true;
+              if (selName != null && selName.isNotEmpty && (cName == selName || cUsername == selName)) return true;
+              return false;
+            });
+
+            if (existingIndex != -1) {
+              final matched = _personalChats[existingIndex];
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) widget.onChatSelected(matched);
+              });
+            } else if (selChat['isGroup'] != true) {
+              _personalChats.insert(0, Map<String, dynamic>.from(selChat));
+            }
+          }
         });
 
 
@@ -1562,8 +1612,15 @@ class ChatListSectionState extends State<ChatListSection> {
                       }
 
                       final chat = chats[index];
-                      final isSelected =
-                          widget.selectedChat?['id'] == chat['id'];
+                      final sel = widget.selectedChat;
+                      final isSelected = sel != null && (
+                        sel['id']?.toString() == chat['id']?.toString() ||
+                        (sel['user_id'] != null && chat['other_user_id'] != null && sel['user_id'].toString() == chat['other_user_id'].toString()) ||
+                        (sel['other_user_id'] != null && chat['other_user_id'] != null && sel['other_user_id'].toString() == chat['other_user_id'].toString()) ||
+                        (sel['id'] != null && chat['other_user_id'] != null && sel['id'].toString() == chat['other_user_id'].toString()) ||
+                        (sel['user_id'] != null && chat['id'] != null && sel['user_id'].toString() == chat['id'].toString()) ||
+                        (sel['name'] != null && chat['name'] != null && sel['name'].toString().trim().isNotEmpty && sel['name'].toString().toLowerCase().trim() == chat['name'].toString().toLowerCase().trim())
+                      );
                       return AnimatedEntrance(
                         delay: Duration(milliseconds: 40 * index.clamp(0, 6)),
                         child: _buildChatTile(context, chat, isSelected),
@@ -1836,13 +1893,61 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
         _showEmojiPicker = false;
       });
       try {
+        String activeChatId = widget.chat['id'].toString();
+        final targetUserId = widget.chat['user_id']?.toString() ??
+            widget.chat['other_user_id']?.toString();
+
+        if ((activeChatId.startsWith('chat_') ||
+                activeChatId.startsWith('creator_') ||
+                activeChatId.startsWith('partner_') ||
+                activeChatId.startsWith('talent_') ||
+                activeChatId.startsWith('personal_')) &&
+            targetUserId != null &&
+            targetUserId.isNotEmpty &&
+            !targetUserId.startsWith('demo_')) {
+          try {
+            final res = await ChatService.startPersonalChat(targetUserId);
+            if (res['status'] == true && res['data'] != null) {
+              final realId = res['data']['id']?.toString();
+              if (realId != null && realId.isNotEmpty) {
+                activeChatId = realId;
+                widget.chat['id'] = realId;
+              }
+            }
+          } catch (_) {}
+        }
+
         final result = await ChatService.sendMessage(
-          widget.chat['id'].toString(),
+          activeChatId,
           text,
           replyToId: replyId,
         );
 
         if (result['status'] == false) {
+          final isSynthetic = activeChatId.startsWith('chat_') ||
+              activeChatId.startsWith('creator_') ||
+              activeChatId.startsWith('partner_') ||
+              activeChatId.startsWith('talent_') ||
+              activeChatId.startsWith('demo_') ||
+              activeChatId.startsWith('personal_');
+          if (isSynthetic) {
+            final demoMsg = {
+              'id': 'sim_${DateTime.now().millisecondsSinceEpoch}',
+              'chat_id': activeChatId,
+              'user_id': widget.currentUser?.id ?? 'me',
+              'text': text,
+              'content': text,
+              'isMe': true,
+              'created_at': DateTime.now().toIso8601String(),
+              'time': 'Baru saja',
+              '_decrypt_failed': false,
+            };
+            setState(() {
+              _messages.insert(0, demoMsg);
+            });
+            widget.onMessageSent?.call();
+            return;
+          }
           final errorMsg =
               result['message']?.toString() ?? 'Gagal mengirim pesan';
           if (mounted) AppSnackbar.error(context, errorMsg);
