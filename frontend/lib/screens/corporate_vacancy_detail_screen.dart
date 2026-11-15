@@ -308,6 +308,13 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
   Future<void> _approveInstitution(String instName) async {
     setState(() {
       _institutionStatuses[instName] = 'approved';
+      for (int i = 0; i < _applicants.length; i++) {
+        if (_getInstitutionBaseName(_applicants[i].institution) == instName) {
+          if (_applicants[i].status != 'Diterima' && _applicants[i].status != 'Ditolak') {
+            _applicants[i] = _applicants[i].copyWith(status: 'Menunggu Review');
+          }
+        }
+      }
     });
 
     final instApps = _applicants
@@ -321,7 +328,7 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
         try {
           await OpportunityService.reviewApplication(
             applicationId: app.id!,
-            decision: 'approve',
+            decision: 'consider',
           );
         } catch (_) {}
       }

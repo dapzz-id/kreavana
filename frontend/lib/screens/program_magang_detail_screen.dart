@@ -41,12 +41,25 @@ class SchoolMagangStudent {
   factory SchoolMagangStudent.fromApplication(
     OpportunityApplicationModel app, {
     required bool schoolHasApprovedStudent,
+    bool isSchoolApproved = false,
   }) {
     final s = app.status.toLowerCase();
     String label = 'Pending';
-    if (s == 'approved') label = 'Diterima';
-    if (s == 'rejected') label = 'Ditolak';
-    if (s == 'interview' || s == 'under_consideration') label = 'Interview';
+    if (s == 'approved') {
+      label = 'Diterima';
+    } else if (s == 'rejected') {
+      label = 'Ditolak';
+    } else if (s == 'interview') {
+      label = 'Interview';
+    } else if (isSchoolApproved ||
+        schoolHasApprovedStudent ||
+        s == 'review' ||
+        s == 'in_review' ||
+        s == 'under_consideration') {
+      label = 'Review';
+    } else {
+      label = 'Pending';
+    }
 
     Map<String, dynamic> doc = {};
     if (app.submittedDocuments.isNotEmpty) {
@@ -112,8 +125,7 @@ class SchoolMagangStudent {
       status: label,
       portfolioUrl: portfolioUrl,
       note: note,
-      isAdditional: isAdditional ||
-          (schoolHasApprovedStudent && (s == 'pending' || s == 'submitted')),
+      isAdditional: isAdditional,
       isReplacement: isReplacement,
       replacedStudentName: replacedName,
     );
@@ -192,7 +204,10 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
 
     try {
       final oppId = widget.opportunity.id ?? '';
-      if (oppId.isEmpty) return;
+      if (oppId.isEmpty || oppId.startsWith('test_')) {
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
 
       final results = await Future.wait([
         OpportunityService.getDetail(oppId).catchError((_) => null),
@@ -211,8 +226,22 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
           ? apps.where((a) => a.creatorId == currentSchoolId).toList()
           : apps;
 
-      final hasApproved =
+      final hasApprovedStudent =
           schoolApps.any((a) => a.status.toLowerCase() == 'approved');
+
+      final isSchoolApprovedByOpp = effectiveOpp.approvedCreators.any(
+        (c) => c.id == currentSchoolId || c.name.toLowerCase() == _currentUser?.name.toLowerCase(),
+      ) || (effectiveOpp.approvedCreators.isNotEmpty && (widget.isAppliedPartnership || effectiveOpp.hasApplied));
+
+      final hasUnderReview = schoolApps.any((a) {
+        final st = a.status.toLowerCase();
+        return st == 'under_consideration' || st == 'review' || st == 'in_review';
+      });
+
+      final isSchoolApproved = hasApprovedStudent ||
+          isSchoolApprovedByOpp ||
+          _schoolPartnershipStatus == 'approved' ||
+          hasUnderReview;
 
       // Check real DB terms or notes for explicit corporate additional student request
       bool corporateRequestsAdditional = false;
@@ -230,13 +259,14 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
           .map(
             (a) => SchoolMagangStudent.fromApplication(
               a,
-              schoolHasApprovedStudent: hasApproved,
+              schoolHasApprovedStudent: hasApprovedStudent,
+              isSchoolApproved: isSchoolApproved,
             ),
           )
           .toList();
 
       setState(() {
-        if (hasApproved) {
+        if (isSchoolApproved) {
           _schoolPartnershipStatus = 'approved';
         } else if (schoolApps.isNotEmpty || effectiveOpp.hasApplied) {
           _schoolPartnershipStatus = 'pending';
@@ -258,8 +288,15 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
   List<SchoolMagangStudent> get _filteredStudents {
     return _students.where((s) {
       if (_selectedStudentFilter != 'Semua') {
-        if (_selectedStudentFilter == 'Pending') {
-          if (s.status != 'Pending' && !s.status.toLowerCase().contains('menunggu')) {
+        if (_selectedStudentFilter == 'Pending' || _selectedStudentFilter == 'Review') {
+          if (s.status != 'Pending' &&
+              s.status != 'Review' &&
+              !s.status.toLowerCase().contains('menunggu') &&
+              !s.status.toLowerCase().contains('review')) {
+            return false;
+          }
+        } else if (_selectedStudentFilter == 'Diterima') {
+          if (s.status != 'Diterima' && !s.status.toLowerCase().contains('diterima')) {
             return false;
           }
         } else if (s.status != _selectedStudentFilter) {
@@ -837,8 +874,7 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                                     : (replacedStudent != null
                                         ? 'Siswa pengganti menggantikan ${replacedStudent.name}.'
                                         : 'Siswa diajukan oleh institusi untuk program magang.');
-                                final additionalFlag =
-                                    isAdditionalStudent || _schoolPartnershipStatus == 'approved';
+                                final additionalFlag = isAdditionalStudent;
 
                                 setDialogState(() => isSubmitting = true);
 
@@ -1191,11 +1227,11 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
             ? 'Status Sekolah: Menunggu Persetujuan Corporate (Pending)'
             : 'Status Sekolah: Belum Mengajukan Lamaran');
 
-    final acceptedCount = _students.where((s) => s.status == 'Diterima').length;
-    final pendingCount = _students.where((s) => s.status == 'Pending').length;
+    final acceptedCount = _students.where((s) => s.status == 'Diterima' || s.status.toLowerCase().contains('diterima')).length;
+    final reviewCount = _students.where((s) => s.status == 'Review' || s.status == 'Pending' || s.status.toLowerCase().contains('menunggu')).length;
 
     final String subText = isApproved
-        ? 'Institusi Anda telah disetujui pada ${widget.opportunity.isMagang ? 'program magang ini' : 'lowongan pekerjaan ini'} ($acceptedCount ${widget.opportunity.isMagang ? 'siswa' : 'kandidat'} diterima${pendingCount > 0 ? ', $pendingCount ${widget.opportunity.isMagang ? 'siswa' : 'kandidat'} tambahan menunggu review' : ''}). Penambahan kandidat baru tidak mengubah status persetujuan sekolah Anda.'
+        ? 'Institusi Anda telah disetujui pada ${widget.opportunity.isMagang ? 'program magang ini' : 'lowongan pekerjaan ini'}${acceptedCount > 0 ? ' ($acceptedCount ${widget.opportunity.isMagang ? 'siswa' : 'kandidat'} diterima' : ''}${reviewCount > 0 ? (acceptedCount > 0 ? ', $reviewCount dalam review' : ' ($reviewCount ${widget.opportunity.isMagang ? 'siswa' : 'kandidat'} dalam review') : ''}${acceptedCount > 0 || reviewCount > 0 ? ')' : ''}. Penambahan kandidat baru tidak mengubah status persetujuan sekolah Anda.'
         : (isPending
             ? 'Pengajuan kemitraan ${widget.opportunity.isMagang ? 'magang' : 'rekrutmen'} sekolah Anda sedang ditinjau oleh pihak Corporate.'
             : 'Sekolah Anda belum mendaftarkan ${widget.opportunity.isMagang ? 'siswa pada program magang ini' : 'kandidat pada lowongan pekerjaan ini'}. Buka tab "Daftar Siswa" lalu klik "+ Ajukan Siswa" untuk mendaftarkan kandidat.');
@@ -1518,8 +1554,8 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
   }
 
   Widget _buildStudentsTab(bool isDark, bool isDesktop, Color accentColor) {
-    final accepted = _students.where((s) => s.status == 'Diterima').length;
-    final pending = _students.where((s) => s.status == 'Pending').length;
+    final accepted = _students.where((s) => s.status == 'Diterima' || s.status.toLowerCase().contains('diterima')).length;
+    final reviewOrPending = _students.where((s) => s.status == 'Review' || s.status == 'Pending' || s.status.toLowerCase().contains('menunggu')).length;
     final interview = _students.where((s) => s.status == 'Interview').length;
     final rejected = _students.where((s) => s.status == 'Ditolak').length;
 
@@ -1545,7 +1581,7 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
             children: [
               _buildStudentStatBadge('Total Diajukan', _students.length, const Color(0xFF6366F1)),
               _buildStudentStatBadge('Diterima', accepted, const Color(0xFF16A34A)),
-              _buildStudentStatBadge('Pending (Baru/Tambahan)', pending, const Color(0xFFD97706)),
+              _buildStudentStatBadge(_schoolPartnershipStatus == 'approved' ? 'Dalam Review' : 'Pending', reviewOrPending, const Color(0xFFD97706)),
               _buildStudentStatBadge('Interview', interview, const Color(0xFF2563EB)),
               _buildStudentStatBadge('Ditolak', rejected, const Color(0xFFDC2626)),
             ],
@@ -1569,7 +1605,7 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
               );
               final addButton = ElevatedButton.icon(
                 onPressed: () => _openSubmitStudentDialog(
-                  isAdditionalStudent: _schoolPartnershipStatus == 'approved',
+                  isAdditionalStudent: false,
                 ),
                 icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
                 label: Text(
@@ -1615,8 +1651,16 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: ['Semua', 'Diterima', 'Pending', 'Interview', 'Ditolak'].map((f) {
-                final sel = _selectedStudentFilter == f;
+              children: [
+                'Semua',
+                'Diterima',
+                _schoolPartnershipStatus == 'approved' ? 'Review' : 'Pending',
+                'Interview',
+                'Ditolak',
+              ].map((f) {
+                final sel = _selectedStudentFilter == f ||
+                    (f == 'Review' && _selectedStudentFilter == 'Pending') ||
+                    (f == 'Pending' && _selectedStudentFilter == 'Review');
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: ChoiceChip(
@@ -1717,15 +1761,24 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
   Widget _buildStudentCard(SchoolMagangStudent s, bool isDark) {
     Color statusColor = const Color(0xFFD97706);
     Color statusBg = const Color(0xFFFEF3C7);
-    if (s.status == 'Diterima') {
+    IconData statusIcon = Icons.hourglass_top_rounded;
+
+    if (s.status == 'Diterima' || s.status.toLowerCase().contains('diterima')) {
       statusColor = const Color(0xFF16A34A);
       statusBg = const Color(0xFFDCFCE7);
+      statusIcon = Icons.check_circle_rounded;
     } else if (s.status == 'Interview') {
       statusColor = const Color(0xFF2563EB);
       statusBg = const Color(0xFFDBEAFE);
+      statusIcon = Icons.event_available_rounded;
     } else if (s.status == 'Ditolak') {
       statusColor = const Color(0xFFDC2626);
       statusBg = const Color(0xFFFEE2E2);
+      statusIcon = Icons.cancel_rounded;
+    } else if (s.status == 'Review' || s.status.toLowerCase().contains('review')) {
+      statusColor = const Color(0xFFD97706);
+      statusBg = const Color(0xFFFEF3C7);
+      statusIcon = Icons.rate_review_outlined;
     }
 
     return Container(
@@ -1796,10 +1849,8 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              if (s.status == 'Diterima' || s.status.toLowerCase().contains('diterima')) ...[
-                                const Icon(Icons.check_circle_rounded, size: 12, color: Color(0xFF16A34A)),
-                                const SizedBox(width: 4),
-                              ],
+                              Icon(statusIcon, size: 12, color: statusColor),
+                              const SizedBox(width: 4),
                               Text(
                                 s.status == 'Pending' && s.isAdditional
                                     ? 'Pending (Menunggu Corporate)'

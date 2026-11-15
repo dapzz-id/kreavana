@@ -305,7 +305,7 @@ void main() {
       expect(oppCard.requirements, isEmpty);
     });
 
-    test('SchoolMagangStudent.fromApplication keeps additional students Pending independently', () {
+    test('SchoolMagangStudent.fromApplication sets student status to Review when institution is approved', () {
       final approvedApp = OpportunityApplicationModel.fromJson({
         'id': 'app-1',
         'opportunity_id': 'opp-magang-1',
@@ -322,7 +322,7 @@ void main() {
         ],
       });
 
-      final additionalPendingApp = OpportunityApplicationModel.fromJson({
+      final pendingApp = OpportunityApplicationModel.fromJson({
         'id': 'app-2',
         'opportunity_id': 'opp-magang-1',
         'sub_role_slug': 'animator',
@@ -330,28 +330,41 @@ void main() {
         'created_at': '2026-11-15',
         'submitted_documents': [
           {
-            'student_name': 'Budi Santoso',
-            'student_class': 'XII Animasi 2',
-            'student_portfolio': 'https://portfolio.example/budi',
-            'submission_type': 'additional',
+            'student_name': 'Kadavi Raditya',
+            'student_class': 'RPL',
+            'student_portfolio': 'https://github.com/kadaviraditya',
+            'submission_type': 'initial',
           },
         ],
       });
 
+      // 1. When institution is NOT yet approved, pending student status remains Pending and is not marked additional
+      final studentBeforeInstApproved = SchoolMagangStudent.fromApplication(
+        pendingApp,
+        schoolHasApprovedStudent: false,
+        isSchoolApproved: false,
+      );
+      expect(studentBeforeInstApproved.name, equals('Kadavi Raditya'));
+      expect(studentBeforeInstApproved.status, equals('Pending'));
+      expect(studentBeforeInstApproved.isAdditional, isFalse);
+
+      // 2. When institution is approved by corporate, pending student status becomes Review
       final approvedStudent = SchoolMagangStudent.fromApplication(
         approvedApp,
         schoolHasApprovedStudent: true,
+        isSchoolApproved: true,
       );
-      final additionalStudent = SchoolMagangStudent.fromApplication(
-        additionalPendingApp,
+      final studentAfterInstApproved = SchoolMagangStudent.fromApplication(
+        pendingApp,
         schoolHasApprovedStudent: true,
+        isSchoolApproved: true,
       );
 
       expect(approvedStudent.name, equals('Siti Nurhaliza'));
       expect(approvedStudent.status, equals('Diterima'));
-      expect(additionalStudent.name, equals('Budi Santoso'));
-      expect(additionalStudent.status, equals('Pending'));
-      expect(additionalStudent.isAdditional, isTrue);
+      expect(studentAfterInstApproved.name, equals('Kadavi Raditya'));
+      expect(studentAfterInstApproved.status, equals('Review'));
+      expect(studentAfterInstApproved.isAdditional, isFalse);
     });
 
     testWidgets('AppPaginationBar paginates max 6 items per page and supports Prev/Next cleanly', (tester) async {
@@ -450,6 +463,61 @@ void main() {
       expect(find.textContaining('Semua Lowongan Magang'), findsAtLeastNWidgets(1));
       expect(find.text('Program Magang MBKM 3D Modeler Batch I 2026'), findsNothing);
       expect(find.text('Riset Kolaborasi Preservasi Budaya Digital'), findsNothing);
+    });
+
+    testWidgets('ProgramMagangDetailScreen displays Review badge for students when institution is approved and no false Siswa Tambahan', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1280, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final opp = OpportunityModel(
+        id: 'test_opp_magang_review_1',
+        title: 'Project Manager PV Electric',
+        description: 'Lowongan pekerjaan proyek',
+        subRoleSlug: 'magang',
+        status: 'open',
+        deadline: '2026-11-30',
+        approvedCreators: [
+          OpportunityApprovedCreatorModel(
+            id: 'inst-1',
+            name: 'Kreavana Demo Institution',
+            username: 'inst_demo',
+          ),
+        ],
+      );
+
+      final institutionUser = UserModel(
+        id: 'inst-1',
+        name: 'Kreavana Demo Institution',
+        username: 'inst_demo',
+        email: 'inst@demo.id',
+        role: 'institution',
+        subRole: 'institution',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ProgramMagangDetailScreen(
+            opportunity: opp,
+            user: institutionUser,
+            isAppliedPartnership: true,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Check banner status is Approved
+      expect(find.text('Status Sekolah: Disetujui / Bermitra (Approved)'), findsOneWidget);
+
+      // Tap Daftar Siswa tab
+      final daftarSiswaTab = find.textContaining('Daftar Siswa');
+      expect(daftarSiswaTab, findsOneWidget);
+      await tester.tap(daftarSiswaTab);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Filter chips should include Review instead of Pending
+      expect(find.widgetWithText(ChoiceChip, 'Review'), findsOneWidget);
     });
   });
 }
