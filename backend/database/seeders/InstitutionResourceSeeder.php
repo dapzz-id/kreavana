@@ -136,6 +136,20 @@ class InstitutionResourceSeeder extends Seeder
             // ─────────────────────────────────────────────────────────────
             [
                 'resource_type' => 'showcases',
+                'title' => 'Portofolio Videografi & Sinematografi Komersial 4K',
+                'description' => 'Kompilasi karya video iklan komersial, teaser visual kreatif, dan showreel videografi korporat resolusi 4K dengan color grading sinematik.',
+                'status' => 'published',
+                'metadata' => [
+                    'category' => 'Desain Komunikasi Visual & Videografi',
+                    'creator_name' => 'Achmad Bilzan',
+                    'image_url' => 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=600&q=80',
+                    'portfolio_url' => 'https://github.com/blznqhtn',
+                    'year' => '2026',
+                ],
+                'published_at' => now()->subDays(1),
+            ],
+            [
+                'resource_type' => 'showcases',
                 'title' => 'Film Animasi Pendek 3D: "Legenda Sang Penjaga Rimba"',
                 'description' => 'Karya tugas akhir kolaborasi 8 siswa Animasi 3D bertema konservasi satwa langka nusantara dengan visual CGI cinematic 4K.',
                 'status' => 'published',

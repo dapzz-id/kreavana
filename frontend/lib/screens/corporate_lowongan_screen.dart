@@ -24,6 +24,9 @@ class CorporateApplicant {
   final String note;
   final bool isReplacement;
   final String? replacedApplicantName;
+  final String studentDescription;
+  final String? institutionId;
+  final Map<String, dynamic>? showcaseItem;
 
   const CorporateApplicant({
     required this.name,
@@ -31,11 +34,22 @@ class CorporateApplicant {
     required this.role,
     required this.appliedDate,
     required this.status,
-    this.portfolioUrl = 'https://kreavana.id/portfolio',
+    this.portfolioUrl = '',
     this.note = '',
     this.isReplacement = false,
     this.replacedApplicantName,
+    this.studentDescription = '',
+    this.institutionId,
+    this.showcaseItem,
   });
+
+  bool get hasShowcase => showcaseItem != null && showcaseItem!.isNotEmpty;
+  bool get hasExternalLink =>
+      portfolioUrl.trim().isNotEmpty &&
+      (portfolioUrl.startsWith('http://') ||
+          portfolioUrl.startsWith('https://') ||
+          portfolioUrl.contains('.'));
+  bool get hasPortfolio => hasShowcase || hasExternalLink;
 
   CorporateApplicant copyWith({
     String? name,
@@ -47,6 +61,9 @@ class CorporateApplicant {
     String? note,
     bool? isReplacement,
     String? replacedApplicantName,
+    String? studentDescription,
+    String? institutionId,
+    Map<String, dynamic>? showcaseItem,
   }) {
     return CorporateApplicant(
       name: name ?? this.name,
@@ -58,6 +75,9 @@ class CorporateApplicant {
       note: note ?? this.note,
       isReplacement: isReplacement ?? this.isReplacement,
       replacedApplicantName: replacedApplicantName ?? this.replacedApplicantName,
+      studentDescription: studentDescription ?? this.studentDescription,
+      institutionId: institutionId ?? this.institutionId,
+      showcaseItem: showcaseItem ?? this.showcaseItem,
     );
   }
 }

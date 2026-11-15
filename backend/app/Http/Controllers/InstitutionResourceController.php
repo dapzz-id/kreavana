@@ -330,6 +330,16 @@ class InstitutionResourceController extends Controller
                   ->orWhere('metadata->corporate_user_id', $request->user()->id)
                   ->orWhere('metadata->corporate_username', $request->user()->username);
             });
+        } elseif (in_array($type, ['showcases', 'talents', 'announcements'], true) && ($isCorporate || $request->has('institution_id') || $request->has('user_id'))) {
+            // Public/industry showcases and talents viewable across institutions or filtered by institution
+            if ($request->has('institution_id')) {
+                $query->where('user_id', $request->input('institution_id'));
+            } elseif ($request->has('user_id')) {
+                $query->where('user_id', $request->input('user_id'));
+            }
+            if ($isCorporate) {
+                $query->whereIn('status', ['published', 'active']);
+            }
         } else {
             // CRITICAL: Scope strictly to the parent institution owner to prevent data leak!
             $query->where('user_id', $ownerId);

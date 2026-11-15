@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/user_model.dart';
+import '../services/api_service.dart';
 import '../services/app_router.dart';
 import '../services/opportunity_service.dart';
 import '../widgets/desktop_sidebar_layout.dart';
@@ -53,6 +55,16 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
 
     try {
       final apps = await OpportunityService.getOpportunityApplications(oppId);
+
+      // Fetch showcases from institution resources to cross-reference student portfolios
+      List<Map<String, dynamic>> showcases = [];
+      try {
+        final res = await ApiService.get('institution/resources', queryParams: {'type': 'showcases'});
+        if (res['status'] == true && res['data'] is List) {
+          showcases = List<Map<String, dynamic>>.from(res['data']);
+        }
+      } catch (_) {}
+
       if (mounted) {
         if (apps.isNotEmpty) {
           final mapped = apps.map((a) {
@@ -62,15 +74,106 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
             if (statusLower == 'rejected') statusLabel = 'Ditolak';
             if (statusLower == 'interview') statusLabel = 'Interview';
 
+            String studentName = '';
+            String studentMajor = '';
+            String portfolioUrl = '';
+            String noteText = a.pitchMessage;
+            bool isReplacement = false;
+            String? replacedApplicantName;
+
+            // 1. Check submittedDocuments
+            if (a.submittedDocuments.isNotEmpty) {
+              final doc = a.submittedDocuments.first;
+              studentName = doc['student_name']?.toString().trim() ?? '';
+              studentMajor = doc['major_class']?.toString().trim() ?? doc['major']?.toString().trim() ?? '';
+              portfolioUrl = doc['portfolio_url']?.toString().trim() ?? doc['portfolio']?.toString().trim() ?? '';
+              if (doc['note'] != null && doc['note'].toString().trim().isNotEmpty) {
+                noteText = doc['note'].toString().trim();
+              }
+              isReplacement = doc['is_replacement'] == true;
+              replacedApplicantName = doc['replaced_student_name']?.toString().trim();
+            }
+
+            // 2. Fallback: Parse pitchMessage if submittedDocuments didn't have student_name
+            if (studentName.isEmpty && a.pitchMessage.isNotEmpty) {
+              final match = RegExp(r'Siswa:\s*([^(|]+)(?:\(([^)]+)\))?', caseSensitive: false).firstMatch(a.pitchMessage);
+              if (match != null) {
+                studentName = match.group(1)?.trim() ?? '';
+                if (studentMajor.isEmpty) {
+                  studentMajor = match.group(2)?.trim() ?? '';
+                }
+              }
+
+              if (portfolioUrl.isEmpty) {
+                final portMatch = RegExp(r'Portofolio:\s*([^|]+)', caseSensitive: false).firstMatch(a.pitchMessage);
+                if (portMatch != null) {
+                  portfolioUrl = portMatch.group(1)?.trim() ?? '';
+                }
+              }
+            }
+
+            final isInstitutionSubmission = studentName.isNotEmpty;
+            final resolvedName = isInstitutionSubmission ? studentName : (a.creator?.name ?? 'Pelamar');
+            final resolvedInstitution = isInstitutionSubmission
+                ? (a.creator?.name.isNotEmpty == true ? a.creator!.name : 'Institusi Mitra')
+                : (a.creator?.subRole ?? (_currentVacancy.category == 'magang' ? 'Institusi Vokasi' : 'Umum'));
+            final resolvedStudentDesc = isInstitutionSubmission
+                ? (studentMajor.isNotEmpty ? studentMajor : (a.creator?.name ?? ''))
+                : (a.creator?.subRole ?? 'Pelamar Mandiri');
+
+            // 3. Match with showcases in database
+            Map<String, dynamic>? matchingShowcase;
+            if (resolvedName.isNotEmpty && showcases.isNotEmpty) {
+              final sNameLower = resolvedName.toLowerCase();
+              for (final sc in showcases) {
+                final meta = sc['metadata'] ?? sc['meta'];
+                final metaMap = (meta is Map) ? meta : <String, dynamic>{};
+                final creatorName = (metaMap['creator_name'] ?? metaMap['creator'] ?? '').toString().toLowerCase();
+                final scTitle = (sc['title'] ?? '').toString().toLowerCase();
+                final scDesc = (sc['description'] ?? '').toString().toLowerCase();
+
+                if (creatorName.contains(sNameLower) ||
+                    sNameLower.contains(creatorName) ||
+                    scTitle.contains(sNameLower) ||
+                    scDesc.contains(sNameLower)) {
+                  matchingShowcase = sc;
+                  if (portfolioUrl.isEmpty) {
+                    final scUrl = metaMap['portfolio_url']?.toString() ?? metaMap['url']?.toString() ?? '';
+                    if (scUrl.isNotEmpty) {
+                      portfolioUrl = scUrl;
+                    }
+                  }
+                  break;
+                }
+              }
+            }
+
+            // Clean up note text so serialized tags aren't redundantly displayed
+            var displayNote = noteText;
+            if (displayNote.contains('Siswa:')) {
+              final segments = displayNote.split('|').map((s) => s.trim()).toList();
+              final cleanSegments = segments.where((s) =>
+                !s.toLowerCase().startsWith('siswa:') &&
+                !s.toLowerCase().startsWith('portofolio:')
+              ).toList();
+              displayNote = cleanSegments.join(' • ');
+            }
+
             return CorporateApplicant(
-              name: a.creator?.name ?? 'Pelamar',
-              institution: a.creator?.subRole ?? (_currentVacancy.category == 'magang' ? 'Institusi Vokasi' : 'Umum'),
+              name: resolvedName,
+              institution: resolvedInstitution,
+              studentDescription: resolvedStudentDesc,
+              institutionId: a.creator?.id,
               role: a.subRoleSlug.replaceAll('_', ' ').toUpperCase(),
               appliedDate: a.createdAt != null
                   ? ProgramMagangCard.formatDateDisplay(a.createdAt)
                   : 'Hari ini',
               status: statusLabel,
-              note: a.pitchMessage,
+              portfolioUrl: portfolioUrl,
+              note: displayNote,
+              isReplacement: isReplacement,
+              replacedApplicantName: replacedApplicantName,
+              showcaseItem: matchingShowcase,
             );
           }).toList();
           setState(() {
@@ -426,9 +529,12 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
                   final instBase = _getInstitutionBaseName(rejectedApp.institution);
                   final newApplicant = CorporateApplicant(
                     name: nameCtrl.text.trim(),
-                    institution: majorCtrl.text.trim().isNotEmpty
-                        ? '$instBase - ${majorCtrl.text.trim()}'
-                        : rejectedApp.institution,
+                    institution: instBase,
+                    studentDescription: majorCtrl.text.trim().isNotEmpty
+                        ? majorCtrl.text.trim()
+                        : (rejectedApp.studentDescription.isNotEmpty
+                            ? rejectedApp.studentDescription
+                            : rejectedApp.institution),
                     role: roleCtrl.text.trim(),
                     appliedDate: 'Hari ini',
                     status: 'Menunggu Persetujuan Corporate',
@@ -491,7 +597,10 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
     final targetStatus = isCurrentlyOpen ? 'closed' : 'open';
 
     final oppId = _currentVacancy.opportunity?.id ?? _currentVacancy.id;
-    if (oppId.isNotEmpty && !oppId.startsWith('corp_magang_') && !oppId.startsWith('corp_vac_')) {
+    if (oppId.isNotEmpty &&
+        !oppId.startsWith('corp_magang_') &&
+        !oppId.startsWith('corp_vac_') &&
+        !oppId.startsWith('test_vac_')) {
       final res = await OpportunityService.updateStatus(oppId, targetStatus);
       if (res['status'] != true) {
         if (!mounted) return;
@@ -1629,7 +1738,7 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
                     ? const Color(0xFF7C3AED).withValues(alpha: 0.12)
                     : const Color(0xFF2563EB).withValues(alpha: 0.12),
                 child: Text(
-                  app.name.isNotEmpty ? app.name[0] : 'U',
+                  app.name.isNotEmpty ? app.name[0].toUpperCase() : 'S',
                   style: TextStyle(
                     fontSize: 15,
                     color: isReplacement ? const Color(0xFF7C3AED) : const Color(0xFF2563EB),
@@ -1644,18 +1753,20 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
                   children: [
                     Text(
                       app.name,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14.5,
                         fontWeight: FontWeight.w800,
-                        color: Color(0xFF0F172A),
+                        color: isDark ? Colors.white : const Color(0xFF0F172A),
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      app.institution,
+                      app.studentDescription.isNotEmpty
+                          ? app.studentDescription
+                          : app.institution,
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey.shade600,
+                        color: isDark ? Colors.white60 : Colors.grey.shade600,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -1732,24 +1843,21 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
             runSpacing: 8,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              OutlinedButton.icon(
-                onPressed: () {
-                  AppSweetAlert.info(
-                    context,
-                    'Tautan Portofolio: ${app.portfolioUrl}',
-                    title: 'Portofolio Pelamar',
-                  );
-                },
-                icon: const Icon(Icons.launch_rounded, size: 13),
-                label: const Text('Portofolio'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF2563EB),
-                  side: const BorderSide(color: Color(0xFF93C5FD)),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  textStyle: const TextStyle(fontSize: 12),
+              if (app.hasPortfolio) ...[
+                OutlinedButton.icon(
+                  key: ValueKey('btn_portfolio_${app.name}'),
+                  onPressed: () => _handleOpenPortfolio(app),
+                  icon: const Icon(Icons.launch_rounded, size: 13),
+                  label: const Text('Portofolio'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF2563EB),
+                    side: const BorderSide(color: Color(0xFF93C5FD)),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    textStyle: const TextStyle(fontSize: 12),
+                  ),
                 ),
-              ),
+              ],
 
               // Quick approval buttons for replacement student
               if (isPendingCorporate && rawIdx != -1) ...[
@@ -1935,6 +2043,435 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
           color: fg,
         ),
       ),
+    );
+  }
+
+  void _handleOpenPortfolio(CorporateApplicant app) {
+    if (app.hasShowcase) {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      _showStudentShowcaseDialog(context, app, isDark);
+    } else if (app.hasExternalLink) {
+      _launchExternalUrl(app.portfolioUrl);
+    }
+  }
+
+  Future<void> _launchExternalUrl(String rawUrl) async {
+    final trimmed = rawUrl.trim();
+    if (trimmed.isEmpty) return;
+
+    var urlToOpen = trimmed;
+    if (!urlToOpen.startsWith('http://') && !urlToOpen.startsWith('https://')) {
+      urlToOpen = 'https://$urlToOpen';
+    }
+
+    try {
+      final uri = Uri.parse(urlToOpen);
+      await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+        webOnlyWindowName: '_blank',
+      );
+    } catch (e) {
+      if (mounted) {
+        AppSweetAlert.error(
+          context,
+          'Gagal membuka tautan portofolio: $e',
+          title: 'Error Membuka Tautan',
+        );
+      }
+    }
+  }
+
+  void _showStudentShowcaseDialog(BuildContext context, CorporateApplicant app, bool isDark) {
+    final showcase = app.showcaseItem ?? {};
+    final meta = showcase['metadata'] ?? showcase['meta'];
+    final metaMap = (meta is Map) ? meta : <String, dynamic>{};
+
+    final title = showcase['title']?.toString() ?? 'Portofolio Siswa';
+    final description = showcase['description']?.toString() ?? '';
+    final category = metaMap['category']?.toString() ?? 'Karya & Portofolio Siswa';
+    final year = metaMap['year']?.toString() ?? '';
+    final imageUrl = metaMap['image_url']?.toString() ?? '';
+    final portfolioUrl = (app.portfolioUrl.isNotEmpty)
+        ? app.portfolioUrl
+        : (metaMap['portfolio_url']?.toString() ?? metaMap['url']?.toString() ?? '');
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        final dialogWidth = MediaQuery.of(dialogCtx).size.width;
+        final isSmall = dialogWidth < 600;
+
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: EdgeInsets.symmetric(
+            horizontal: isSmall ? 16 : 32,
+            vertical: 24,
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 620),
+            child: Container(
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 24,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // ── Dialog Header ──
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20),
+                      ),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.collections_bookmark_rounded,
+                            size: 20,
+                            color: Color(0xFF2563EB),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Karya & Portofolio Siswa',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Terdaftar di database karya institusi',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded, size: 20),
+                          onPressed: () => Navigator.of(dialogCtx).pop(),
+                          tooltip: 'Tutup',
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // ── Dialog Body ──
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Student Identification Row
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 22,
+                                  backgroundColor: const Color(0xFF2563EB).withValues(alpha: 0.15),
+                                  child: Text(
+                                    app.name.isNotEmpty ? app.name[0].toUpperCase() : 'S',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                      color: Color(0xFF2563EB),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        app.name,
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w800,
+                                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        app.studentDescription.isNotEmpty
+                                            ? '${app.studentDescription} • ${app.institution}'
+                                            : app.institution,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFDCFCE7),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: const Color(0xFF86EFAC)),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.verified_rounded, size: 14, color: Color(0xFF16A34A)),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'Terverifikasi',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF16A34A),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+
+                          // Showcase Thumbnail / Image if available
+                          if (imageUrl.isNotEmpty) ...[
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                height: 200,
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                                ),
+                                child: Image.network(
+                                  imageUrl,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (ctx, err, stack) {
+                                    return Center(
+                                      child: Icon(
+                                        Icons.image_outlined,
+                                        size: 40,
+                                        color: isDark ? Colors.white38 : Colors.grey.shade400,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+
+                          // Showcase Title & Tags
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEFF6FF),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                                ),
+                                child: Text(
+                                  category,
+                                  style: const TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF2563EB),
+                                  ),
+                                ),
+                              ),
+                              if (year.isNotEmpty)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    'Angkatan / Tahun $year',
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: isDark ? Colors.white70 : const Color(0xFF475569),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            title,
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                            ),
+                          ),
+                          if (description.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              description,
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                height: 1.55,
+                                color: isDark ? Colors.white70 : const Color(0xFF334155),
+                              ),
+                            ),
+                          ],
+
+                          // External Link / GitHub Box
+                          if (portfolioUrl.isNotEmpty) ...[
+                            const SizedBox(height: 20),
+                            Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFFBFDBFE)),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        portfolioUrl.contains('github.com')
+                                            ? Icons.code_rounded
+                                            : Icons.link_rounded,
+                                        size: 18,
+                                        color: const Color(0xFF2563EB),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        portfolioUrl.contains('github.com')
+                                            ? 'Repositori / Portofolio GitHub'
+                                            : 'Tautan Portofolio Eksternal',
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF1E3A8A),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  InkWell(
+                                    onTap: () => _launchExternalUrl(portfolioUrl),
+                                    child: Text(
+                                      portfolioUrl,
+                                      style: const TextStyle(
+                                        fontSize: 12.5,
+                                        color: Color(0xFF2563EB),
+                                        decoration: TextDecoration.underline,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: FilledButton.icon(
+                                      onPressed: () => _launchExternalUrl(portfolioUrl),
+                                      icon: const Icon(Icons.open_in_new_rounded, size: 15),
+                                      label: Text(
+                                        portfolioUrl.contains('github.com')
+                                            ? 'Buka Repositori GitHub (Tab Baru)'
+                                            : 'Buka Tautan Portofolio (Tab Baru)',
+                                        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
+                                      ),
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: const Color(0xFF2563EB),
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(vertical: 10),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // ── Dialog Footer ──
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(20),
+                        bottomRight: Radius.circular(20),
+                      ),
+                      border: Border(
+                        top: BorderSide(
+                          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(dialogCtx).pop(),
+                          child: const Text('Tutup'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

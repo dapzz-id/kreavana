@@ -346,5 +346,103 @@ void main() {
       // Budi Santoso should now be accepted ('Diterima')
       expect(find.text('Budi Santoso'), findsOneWidget);
     });
+
+    testWidgets('Applicant card renders student name, description, institution in accordion header, and handles showcase popup / hidden portfolio button',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1280, 2200));
+
+      final testVacancyWithShowcase = CorporateVacancyItem(
+        id: 'test_vac_showcase',
+        title: 'Program Magang PV Electric Batch I 2027',
+        description: 'Kerja sama penempatan talenta vokasi.',
+        category: 'magang',
+        categoryLabel: 'Magang',
+        status: 'open',
+        statusLabel: 'Pendaftaran Dibuka',
+        statusBadgeColor: const Color(0xFF16A34A),
+        statusBadgeBg: const Color(0xFFDCFCE7),
+        registrationPeriod: '28 Nov 2026',
+        quotaText: '10 dari 10 posisi',
+        allowance: 'Rp 2.000.000 / bulan',
+        requirements: const ['Siswa SMK vokasi'],
+        applicantsCount: 2,
+        applicants: const [
+          CorporateApplicant(
+            name: 'Achmad Bilzan',
+            institution: 'Kreavana Demo Institution',
+            studentDescription: 'Desain Komunikasi Visual',
+            role: 'VIDEOGRAPHER',
+            appliedDate: '15 Nov 2026',
+            status: 'Menunggu Review',
+            portfolioUrl: 'https://github.com/blznqhtn',
+            showcaseItem: {
+              'title': 'Portofolio Videografi & Sinematografi Komersial 4K',
+              'description': 'Kompilasi karya video iklan komersial resolusi 4K.',
+              'metadata': {
+                'category': 'Desain Komunikasi Visual & Videografi',
+                'year': '2026',
+                'portfolio_url': 'https://github.com/blznqhtn',
+              },
+            },
+          ),
+          CorporateApplicant(
+            name: 'Siswa Tanpa Portofolio',
+            institution: 'Kreavana Demo Institution',
+            studentDescription: 'Teknik Komputer',
+            role: 'IT SUPPORT',
+            appliedDate: '15 Nov 2026',
+            status: 'Menunggu Review',
+            portfolioUrl: '',
+            showcaseItem: null,
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CorporateVacancyDetailScreen(
+            item: testVacancyWithShowcase,
+            user: corpUser,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Go to Daftar Pelamar tab
+      await tester.tap(find.text('Daftar Pelamar (2)'));
+      await tester.pumpAndSettle();
+
+      // 1. Accordion header must display the institution name (Kreavana Demo Institution)
+      expect(find.text('Kreavana Demo Institution'), findsWidgets);
+
+      // 2. Applicant card must display student name (Achmad Bilzan) and student description (Desain Komunikasi Visual)
+      expect(find.text('Achmad Bilzan'), findsOneWidget);
+      expect(find.text('Desain Komunikasi Visual'), findsOneWidget);
+
+      // 3. Achmad Bilzan has a portfolio/showcase -> Portofolio button MUST be present
+      final bilzanPortBtn = find.byKey(const ValueKey('btn_portfolio_Achmad Bilzan'));
+      expect(bilzanPortBtn, findsOneWidget);
+
+      // 4. Siswa Tanpa Portofolio has NO portfolio and NO showcase -> button MUST NOT be present
+      final noPortBtn = find.byKey(const ValueKey('btn_portfolio_Siswa Tanpa Portofolio'));
+      expect(noPortBtn, findsNothing);
+
+      // 5. Clicking Achmad Bilzan's Portofolio button opens the popup dialog with showcase details
+      await tester.ensureVisible(bilzanPortBtn);
+      await tester.tap(bilzanPortBtn);
+      await tester.pumpAndSettle();
+
+      // Verify popup content
+      expect(find.text('Karya & Portofolio Siswa'), findsOneWidget);
+      expect(find.text('Portofolio Videografi & Sinematografi Komersial 4K'), findsOneWidget);
+      expect(find.text('Desain Komunikasi Visual & Videografi'), findsOneWidget);
+      expect(find.textContaining('https://github.com/blznqhtn'), findsWidgets);
+      expect(find.text('Buka Repositori GitHub (Tab Baru)'), findsOneWidget);
+
+      // Close popup
+      await tester.tap(find.text('Tutup'));
+      await tester.pumpAndSettle();
+      expect(find.text('Karya & Portofolio Siswa'), findsNothing);
+    });
   });
 }
