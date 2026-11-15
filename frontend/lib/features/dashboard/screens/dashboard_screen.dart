@@ -26,6 +26,7 @@ import '../services/dashboard_service.dart';
 import '../../../models/job_contract.dart';
 import '../../../widgets/creator_sidebar_menus.dart';
 import '../../../widgets/app_bar_badge.dart';
+import '../../../widgets/role_navigation_helper.dart';
 import '../../../screens/detail_kebutuhan_screen.dart';
 import '../../../screens/direct_message_screen.dart';
 import '../../../services/chat_service.dart';
@@ -8537,11 +8538,34 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   // ── AppBar ───────────────────────────────────────────────────────────────────
   PreferredSizeWidget _buildAppBar(bool isDark) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isCompact = screenWidth < 600;
+    final isMobileShell = screenWidth <= 900;
+    final shellScope = KreavanaShellScope.maybeOf(context);
+    final showDrawerBtn = isMobileShell && (shellScope?.hasDrawer ?? false);
+
     return AppBar(
       toolbarHeight: 70,
       automaticallyImplyLeading: false,
+      titleSpacing: isCompact ? 6 : 16,
       title: Row(
         children: [
+          if (showDrawerBtn) ...[
+            IconButton(
+              icon: Icon(
+                Icons.menu_rounded,
+                color: isDark ? Colors.white : AppTheme.textDark,
+              ),
+              tooltip: 'Menu Navigasi',
+              visualDensity: VisualDensity.compact,
+              padding: isCompact ? EdgeInsets.zero : null,
+              constraints: isCompact
+                  ? const BoxConstraints(minWidth: 36, minHeight: 36)
+                  : null,
+              onPressed: shellScope!.openDrawer,
+            ),
+            SizedBox(width: isCompact ? 4 : 6),
+          ],
           // Search bar interaktif dengan hover glow & scale
           Expanded(
             child: InteractiveDashboardSearchBar(
@@ -8551,7 +8575,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               placeholder: _getSearchHint(),
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: isCompact ? 6 : 12),
           if (!widget.user.isGuest) ...[
             AppBarBadgeWidget(
               icon: Icons.notifications_none_outlined,
@@ -8560,7 +8584,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               onTap: () => _navigateTo('Notifikasi'),
               tooltipMessage: 'Notifikasi',
             ),
-            const SizedBox(width: 6),
+            SizedBox(width: isCompact ? 4 : 6),
             AppBarBadgeWidget(
               icon: Icons.chat_bubble_outline,
               isDark: isDark,
@@ -8568,7 +8592,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               onTap: () => _navigateTo('Pesan'),
               tooltipMessage: 'Pesan & Diskusi',
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: isCompact ? 4 : 8),
           ],
           // Theme toggle interaktif dengan rotasi & glow
           AppBarThemeToggle(
@@ -8577,7 +8601,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             accentColor: AppTheme.primaryPurple,
           ),
           if (widget.user.isGuest) ...[
-            const SizedBox(width: 10),
+            SizedBox(width: isCompact ? 6 : 10),
             AppBarGuestActions(
               isDark: isDark,
               accentColor: AppTheme.primaryPurple,
@@ -8585,7 +8609,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               onRegister: () => context.go(AppRoutes.register),
             ),
           ] else ...[
-            const SizedBox(width: 8),
+            SizedBox(width: isCompact ? 4 : 8),
             // Profile Badge interaktif dengan capsule glow & chevron animation
             AppBarProfileBadge(
               user: widget.user,

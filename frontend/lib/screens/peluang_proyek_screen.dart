@@ -793,7 +793,7 @@ class _PeluangProyekScreenState extends State<PeluangProyekScreen> {
       ),
     );
 
-    if (isDesktop && widget.showSidebar) {
+    if (widget.showSidebar) {
       return DesktopSidebarLayout(
         user: widget.user,
         activeRoute: 'explore',

@@ -43,6 +43,8 @@ import '../widgets/sidebar_hover_tile.dart';
 import '../services/sidebar_scroll_manager.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'not_found_screen.dart';
+import '../services/badge_service.dart';
+import '../widgets/role_navigation_helper.dart';
 
 class MainNavigation extends StatefulWidget {
   final UserModel initialUser;
@@ -63,6 +65,100 @@ class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
   int _messageScreenVersion = 0;
   bool _isSidebarCollapsed = false;
+  final GlobalKey<ScaffoldState> _mobileScaffoldKey = GlobalKey<ScaffoldState>();
+
+  String _activeRouteKeyForIndex(int activeIndex) {
+    if (_currentUser.isAdmin) {
+      return switch (activeIndex) {
+        0 => 'admin_dashboard',
+        1 => 'admin_verification',
+        2 => 'admin_resolution',
+        3 => 'admin_settings',
+        4 => 'admin_notifications',
+        5 => 'admin_profile',
+        _ => 'admin_dashboard',
+      };
+    }
+    return switch (activeIndex) {
+      0 => 'beranda',
+      1 => 'explore',
+      2 => 'proyek_saya',
+      3 => 'marketplace',
+      4 => 'agenda',
+      5 => 'kolaborasi',
+      6 => 'reputasi',
+      7 => 'pembayaran',
+      8 => 'pengaturan',
+      9 => 'profil',
+      10 => 'notifikasi',
+      11 => 'pesan',
+      12 => 'peluang_proyek',
+      13 => 'kapasitas_jadwal',
+      14 => 'ai',
+      _ => 'beranda',
+    };
+  }
+
+  Widget _buildRoleMobileDrawer(
+    BuildContext context, {
+    required String activeRouteKey,
+    required int activeMainNavIndex,
+    required int unreadMessages,
+    required int unreadNotifications,
+  }) {
+    return RoleNavigationHelper.buildMobileDrawer(
+      context: context,
+      user: _currentUser,
+      activeRoute: activeRouteKey,
+      activeMainNavIndex: activeMainNavIndex,
+      unreadMessages: unreadMessages,
+      unreadNotifications: unreadNotifications,
+      onSelectEntry: (entry) {
+        if (entry.isAiAction) {
+          if (!RoleNavigationHelper.checkGuestGuard(
+            context,
+            _currentUser,
+            mainNavIndex: 14,
+            guestActionLabel: entry.guestActionLabel,
+          )) {
+            return;
+          }
+          _navigateToScreenIndex(14);
+          return;
+        }
+        final creatorEntry = entry.creatorServiceEntry;
+        if (creatorEntry != null) {
+          _handleCreatorMenuEntry(creatorEntry);
+          return;
+        }
+        if (!RoleNavigationHelper.checkGuestGuard(
+          context,
+          _currentUser,
+          mainNavIndex: entry.mainNavIndex,
+          guestActionLabel: entry.guestActionLabel,
+        )) {
+          return;
+        }
+        if (entry.mainNavIndex != null) {
+          _navigateToScreenIndex(entry.mainNavIndex!);
+        } else if (entry.routePath != null) {
+          _navigateToRoute(entry.routePath!);
+        }
+      },
+      onOpenUpgrade: () =>
+          UpgradePlanModal.show(context, user: _currentUser),
+      onOpenProfile: () {
+        if (_currentUser.isAdmin) {
+          _navigateToScreenIndex(5);
+        } else if (_isSchool || _isGovernment) {
+          _navigateToRoute(AppRoutes.profilInstitusi);
+        } else {
+          _navigateToScreenIndex(9);
+        }
+      },
+      onLogout: _showLogoutDialog,
+    );
+  }
   bool _isMobileDrawerOpen = false;
   final Set<int> _loadedScreenIndices = {};
   final Map<int, Widget> _screenCache = {};
@@ -910,7 +1006,7 @@ class _MainNavigationState extends State<MainNavigation> {
           isMobileDrawer: isMobileDrawer,
           isAi: true,
         ),
-      if ((_isCreatorUser || _isCompany) && !_isGovernment && !_isSchool)
+      if (_isCreatorUser && !_isGovernment && !_isSchool && !_isCompany)
         _buildSidebarItem(
           icon: Icons.explore_outlined,
           activeIcon: Icons.explore,
@@ -943,6 +1039,17 @@ class _MainNavigationState extends State<MainNavigation> {
           isCollapsed: isCollapsed,
           isMobileDrawer: isMobileDrawer,
         ),
+      if (_isSchool && (SystemSettingsService.isWalletEnabled || _currentUser.isAdmin))
+        _buildSidebarItem(
+          icon: Icons.account_balance_wallet_outlined,
+          activeIcon: Icons.account_balance_wallet_rounded,
+          label: 'Dompet & Pembayaran',
+          index: 7,
+          theme: theme,
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isMobileDrawer: isMobileDrawer,
+        ),
       if (!_hasSpecificCreatorSubRole && !_isCompany && !_isSchool && !_isGovernment) ...[
         if (SystemSettingsService.isMarketplaceEnabled || _currentUser.isAdmin)
           _buildSidebarItem(
@@ -967,10 +1074,7 @@ class _MainNavigationState extends State<MainNavigation> {
             isMobileDrawer: isMobileDrawer,
           ),
       ],
-      if (!isCollapsed && _isSchool) ...[
-        const SizedBox(height: 18),
-        _buildSidebarSectionHeader('PENGELOLAAN SEKOLAH', isDark),
-      ] else if (!isCollapsed && _isGovernment) ...[
+      if (!isCollapsed && _isGovernment) ...[
         const SizedBox(height: 18),
         _buildSidebarSectionHeader('PENGELOLAAN', isDark),
       ] else if (!isCollapsed && _isCompany) ...[
@@ -985,90 +1089,84 @@ class _MainNavigationState extends State<MainNavigation> {
         _buildSidebarSectionHeader('LAINNYA', isDark),
       ],
       if (_isSchool) ...[
-        _buildSidebarLink(
-          icon: Icons.work_outline,
-          label: 'Program & Magang',
-          onTap: () => _navigateToRoute(AppRoutes.programMagang),
-          isDark: isDark,
-          isCollapsed: isCollapsed,
-          isSelected: _activeGovRoute == 'program_magang',
-          isMobileDrawer: isMobileDrawer,
-        ),
-        _buildSidebarLink(
-          icon: Icons.event_outlined,
-          label: 'Kegiatan & Event',
-          onTap: () => _navigateToScreenIndex(4),
-          isDark: isDark,
-          isCollapsed: isCollapsed,
-          isSelected: _currentIndex == 4 && _activeGovRoute == null,
-          isMobileDrawer: isMobileDrawer,
-        ),
-        _buildSidebarLink(
-          icon: Icons.diversity_3_outlined,
-          label: 'Mitra Industri & Sanggar',
-          onTap: () => _navigateToRoute(AppRoutes.mitraIndustri),
-          isDark: isDark,
-          isCollapsed: isCollapsed,
-          isSelected: _activeGovRoute == 'mitra_komunitas',
-          isMobileDrawer: isMobileDrawer,
-        ),
-        _buildSidebarLink(
-          icon: Icons.palette_outlined,
-          label: 'Karya & Portofolio Siswa',
-          onTap: () => _navigateToRoute(AppRoutes.karyaSiswa),
-          isDark: isDark,
-          isCollapsed: isCollapsed,
-          isSelected: _activeGovRoute == 'karya_siswa',
-          isMobileDrawer: isMobileDrawer,
-        ),
-        if (!isCollapsed) ...[
-          const SizedBox(height: 18),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              'DATA & DOKUMEN',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white54 : Colors.grey.shade500,
-                letterSpacing: 0.5,
-              ),
+        if (_currentUser.hasInstitutionPermission('program_magang') ||
+            _currentUser.hasInstitutionPermission('kegiatan_event') ||
+            _currentUser.hasInstitutionPermission('mitra_industri') ||
+            _currentUser.hasInstitutionPermission('karya_siswa')) ...[
+          if (!isCollapsed) ...[
+            const SizedBox(height: 18),
+            _buildSidebarSectionHeader('PENGELOLAAN SEKOLAH', isDark),
+          ],
+          if (_currentUser.hasInstitutionPermission('program_magang'))
+            _buildSidebarLink(
+              icon: Icons.work_outline,
+              label: 'Program & Magang',
+              onTap: () => _navigateToRoute(AppRoutes.programMagang),
+              isDark: isDark,
+              isCollapsed: isCollapsed,
+              isSelected: _activeGovRoute == 'program_magang',
+              isMobileDrawer: isMobileDrawer,
             ),
+          if (_currentUser.hasInstitutionPermission('kegiatan_event'))
+            _buildSidebarLink(
+              icon: Icons.event_outlined,
+              label: 'Kegiatan & Event',
+              onTap: () => _navigateToScreenIndex(4),
+              isDark: isDark,
+              isCollapsed: isCollapsed,
+              isSelected: _currentIndex == 4 && _activeGovRoute == null,
+              isMobileDrawer: isMobileDrawer,
+            ),
+          if (_currentUser.hasInstitutionPermission('mitra_industri'))
+            _buildSidebarLink(
+              icon: Icons.diversity_3_outlined,
+              label: 'Mitra Industri & Sanggar',
+              onTap: () => _navigateToRoute(AppRoutes.mitraIndustri),
+              isDark: isDark,
+              isCollapsed: isCollapsed,
+              isSelected: _activeGovRoute == 'mitra_komunitas',
+              isMobileDrawer: isMobileDrawer,
+            ),
+          if (_currentUser.hasInstitutionPermission('karya_siswa'))
+            _buildSidebarLink(
+              icon: Icons.palette_outlined,
+              label: 'Karya & Portofolio Siswa',
+              onTap: () => _navigateToRoute(AppRoutes.karyaSiswa),
+              isDark: isDark,
+              isCollapsed: isCollapsed,
+              isSelected: _activeGovRoute == 'karya_siswa',
+              isMobileDrawer: isMobileDrawer,
+            ),
+        ],
+        if (_currentUser.hasInstitutionPermission('dokumen_institusi')) ...[
+          if (!isCollapsed) ...[
+            const SizedBox(height: 18),
+            _buildSidebarSectionHeader('DATA & DOKUMEN', isDark),
+          ],
+          _buildSidebarLink(
+            icon: Icons.folder_outlined,
+            label: 'Dokumen & MoU',
+            onTap: () => _navigateToRoute(AppRoutes.dokumenInstitusi),
+            isDark: isDark,
+            isCollapsed: isCollapsed,
+            isSelected: _activeGovRoute == 'dokumen_instansi',
+            isMobileDrawer: isMobileDrawer,
           ),
         ],
-        _buildSidebarLink(
-          icon: Icons.folder_outlined,
-          label: 'Dokumen & MoU',
-          onTap: () => _navigateToRoute(AppRoutes.dokumenInstitusi),
-          isDark: isDark,
-          isCollapsed: isCollapsed,
-          isSelected: _activeGovRoute == 'dokumen_instansi',
-          isMobileDrawer: isMobileDrawer,
-        ),
         if (!isCollapsed) ...[
           const SizedBox(height: 18),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              'PENGATURAN',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white54 : Colors.grey.shade500,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ),
+          _buildSidebarSectionHeader('PENGATURAN', isDark),
         ],
-        _buildSidebarLink(
-          icon: Icons.account_balance_outlined,
-          label: 'Profil Institusi',
-          onTap: () => _navigateToRoute(AppRoutes.profilInstitusi),
-          isDark: isDark,
-          isCollapsed: isCollapsed,
-          isSelected: _activeGovRoute == 'profil_instansi',
-          isMobileDrawer: isMobileDrawer,
-        ),
+        if (_currentUser.isInstitutionAdmin)
+          _buildSidebarLink(
+            icon: Icons.account_balance_outlined,
+            label: 'Profil Institusi',
+            onTap: () => _navigateToRoute(AppRoutes.profilInstitusi),
+            isDark: isDark,
+            isCollapsed: isCollapsed,
+            isSelected: _activeGovRoute == 'profil_instansi',
+            isMobileDrawer: isMobileDrawer,
+          ),
         _buildSidebarLink(
           icon: Icons.settings_outlined,
           label: 'Pengaturan Akun',
@@ -1078,15 +1176,16 @@ class _MainNavigationState extends State<MainNavigation> {
           isSelected: _currentIndex == 8 && _activeGovRoute == null,
           isMobileDrawer: isMobileDrawer,
         ),
-        _buildSidebarLink(
-          icon: Icons.admin_panel_settings_outlined,
-          label: 'Tim & Hak Akses',
-          onTap: () => _navigateToRoute(AppRoutes.timHakAkses),
-          isDark: isDark,
-          isCollapsed: isCollapsed,
-          isSelected: _activeGovRoute == 'tim_hak_akses',
-          isMobileDrawer: isMobileDrawer,
-        ),
+        if (_currentUser.isInstitutionAdmin)
+          _buildSidebarLink(
+            icon: Icons.admin_panel_settings_outlined,
+            label: 'Tim & Hak Akses',
+            onTap: () => _navigateToRoute(AppRoutes.timHakAkses),
+            isDark: isDark,
+            isCollapsed: isCollapsed,
+            isSelected: _activeGovRoute == 'tim_hak_akses',
+            isMobileDrawer: isMobileDrawer,
+          ),
         if (!isMobileDrawer)
           _buildUpgradePromoCard(isDark, isCollapsed: isCollapsed),
       ] else if (_isGovernment) ...[
@@ -1708,131 +1807,6 @@ class _MainNavigationState extends State<MainNavigation> {
     );
   }
 
-  Widget _buildMobileDrawer(
-    BuildContext context,
-    bool isDark,
-    ThemeData theme,
-  ) {
-    return Drawer(
-      backgroundColor: isDark ? const Color(0xFF141221) : Colors.white,
-      child: SafeArea(
-        child: Column(
-          children: [
-            Container(
-              height: 65,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              alignment: Alignment.center,
-              child: Row(
-                children: [
-                  Image.asset(
-                    'assets/brandlogo.png',
-                    width: 32,
-                    height: 32,
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, _, _) => const Icon(
-                      Icons.auto_awesome,
-                      color: AppTheme.primaryPurple,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  const Text(
-                    'Kreavana',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-            ),
-            Divider(
-              height: 1,
-              thickness: 1,
-              color: isDark ? const Color(0xFF2D2A3E) : Colors.grey.shade200,
-            ),
-            if (!_currentUser.isAdmin) _buildMobileUpgradeAction(isDark),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.only(top: 8),
-                children: _buildSidebarItemsList(
-                  theme: theme,
-                  isDark: isDark,
-                  isCollapsed: false,
-                  isMobileDrawer: true,
-                ),
-              ),
-            ),
-            Divider(
-              height: 1,
-              thickness: 1,
-              color: isDark ? const Color(0xFF2D2A3E) : Colors.grey.shade200,
-            ),
-            _buildUserBottomCard(isDark: isDark, isCollapsed: false),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMobileUpgradeAction(bool isDark) {
-    final accentColor = SubRoleThemeEngine.getAccentColorForUser(_currentUser);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
-      child: Material(
-        color: accentColor.withValues(alpha: isDark ? 0.2 : 0.08),
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          onTap: () {
-            Navigator.pop(context);
-            UpgradePlanModal.show(context);
-          },
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-            child: Row(
-              children: [
-                Icon(Icons.workspace_premium_outlined, color: accentColor),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Upgrade Akun',
-                        style: TextStyle(
-                          color: isDark ? Colors.white : Colors.black87,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                        ),
-                      ),
-                      Text(
-                        'Buka fitur dan paket premium',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: isDark ? Colors.white60 : Colors.black54,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(Icons.chevron_right_rounded, color: accentColor),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildClientDashboardScreen() {
     if (_currentUser.isMarketing) {
       return MarketingDashboardScreen(user: _currentUser);
@@ -2233,93 +2207,87 @@ class _MainNavigationState extends State<MainNavigation> {
       );
     } else {
       // ─── Mobile Layout ─────────────────────────────────────────────────
-      final mobileBottomNavIndex = switch (activeIndex) {
-        0 => 0,
-        1 => 1,
-        2 => 2,
-        11 => 3,
-        9 => 4,
-        _ => -1,
-      };
+      return ListenableBuilder(
+        listenable: Listenable.merge([
+          BadgeService(),
+          SystemSettingsService.moduleStatuses,
+        ]),
+        builder: (context, _) {
+          final badges = BadgeService();
+          final activeRouteKey = _activeRouteKeyForIndex(activeIndex);
+          final dests = RoleNavigationHelper.getMobileBottomNavDestinations(
+            _currentUser,
+            unreadMessages: badges.unreadMessages,
+            unreadNotifications: badges.unreadNotifications,
+          );
+          final mobileBottomNavIndex =
+              RoleNavigationHelper.resolveActiveBottomNavIndex(
+                dests,
+                activeRouteKey,
+                mainNavIndex: activeIndex,
+              );
 
-      scaffoldWidget = Scaffold(
-        drawer: _buildMobileDrawer(context, isDark, theme),
-        onDrawerChanged: (isOpen) {
-          setState(() {
-            _isMobileDrawerOpen = isOpen;
-          });
+          final mobileScaffold = Scaffold(
+            key: _mobileScaffoldKey,
+            drawer: _buildRoleMobileDrawer(
+              context,
+              activeRouteKey: activeRouteKey,
+              activeMainNavIndex: activeIndex,
+              unreadMessages: badges.unreadMessages,
+              unreadNotifications: badges.unreadNotifications,
+            ),
+            onDrawerChanged: (isOpen) {
+              setState(() {
+                _isMobileDrawerOpen = isOpen;
+              });
+            },
+            body: SafeArea(
+              bottom: false,
+              child: IndexedStack(index: activeIndex, children: screens),
+            ),
+            bottomNavigationBar: CustomBottomNavBar(
+              currentIndex: mobileBottomNavIndex,
+              onTap: (navIndex) {
+                if (navIndex < 0 || navIndex >= dests.length) return;
+                final dest = dests[navIndex];
+                if (dest.isMenuTrigger) {
+                  _mobileScaffoldKey.currentState?.openDrawer();
+                  return;
+                }
+                if (!RoleNavigationHelper.checkGuestGuard(
+                  context,
+                  _currentUser,
+                  mainNavIndex: dest.mainNavIndex,
+                )) {
+                  return;
+                }
+                if (dest.mainNavIndex != null) {
+                  if (dest.mainNavIndex == 11 &&
+                      Navigator.of(context).canPop()) {
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                  }
+                  _navigateToScreenIndex(dest.mainNavIndex!);
+                } else if (dest.routePath != null) {
+                  _navigateToRoute(dest.routePath!);
+                }
+              },
+              items: dests.map((d) => d.toBottomNavItem()).toList(),
+            ),
+          );
+
+          return KreavanaShellScope(
+            onOpenDrawer: () => _mobileScaffoldKey.currentState?.openDrawer(),
+            child: Stack(
+              children: [
+                mobileScaffold,
+                if (!_isMobileDrawerOpen &&
+                    activeIndex != 14 &&
+                    (SystemSettingsService.isAiEnabled || _currentUser.isAdmin))
+                  KreavanaAiFloatingWidget(hasPageFab: hasPageFab),
+              ],
+            ),
+          );
         },
-        body: SafeArea(
-          bottom: false,
-          child: IndexedStack(index: activeIndex, children: screens),
-        ),
-        bottomNavigationBar: CustomBottomNavBar(
-          currentIndex: mobileBottomNavIndex,
-          onTap: (navIndex) {
-            if (navIndex == 3 && Navigator.of(context).canPop()) {
-              Navigator.of(context).popUntil((route) => route.isFirst);
-            }
-            final targetIndex = switch (navIndex) {
-              0 => 0,
-              1 => 1,
-              2 => 2,
-              3 => 11,
-              4 => 9,
-              _ => 0,
-            };
-            _navigateToScreenIndex(targetIndex);
-          },
-          items: _currentUser.isAdmin
-              ? [
-                  const BottomNavItem(
-                    icon: Icons.admin_panel_settings_outlined,
-                    activeIcon: Icons.admin_panel_settings,
-                    label: 'Admin',
-                  ),
-                  const BottomNavItem(
-                    icon: Icons.verified_user_outlined,
-                    activeIcon: Icons.verified_user,
-                    label: 'Verifikasi',
-                  ),
-                  const BottomNavItem(
-                    icon: Icons.notifications_none_outlined,
-                    activeIcon: Icons.notifications,
-                    label: 'Notifikasi',
-                  ),
-                  const BottomNavItem(
-                    icon: Icons.person_outline,
-                    activeIcon: Icons.person,
-                    label: 'Profil',
-                  ),
-                ]
-              : [
-                  const BottomNavItem(
-                    icon: Icons.home_outlined,
-                    activeIcon: Icons.home,
-                    label: 'Beranda',
-                  ),
-                  const BottomNavItem(
-                    icon: Icons.explore_outlined,
-                    activeIcon: Icons.explore,
-                    label: 'Jelajahi',
-                  ),
-                  const BottomNavItem(
-                    icon: Icons.work_outline,
-                    activeIcon: Icons.work,
-                    label: 'Proyek',
-                  ),
-                  const BottomNavItem(
-                    icon: Icons.chat_bubble_outline,
-                    activeIcon: Icons.chat_bubble,
-                    label: 'Pesan',
-                  ),
-                  const BottomNavItem(
-                    icon: Icons.person_outline,
-                    activeIcon: Icons.person,
-                    label: 'Profil',
-                  ),
-                ],
-        ),
       );
     }
 

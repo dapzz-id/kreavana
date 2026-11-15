@@ -6002,15 +6002,12 @@ class _InstitutionWorkspaceScreenState
       body: _buildBody(isDark),
     );
 
-    if (MediaQuery.of(context).size.width > 900) {
-      return DesktopSidebarLayout(
-        user: widget.user,
-        activeRoute: _activeRoute,
-        onUserUpdated: widget.onUserUpdated,
-        child: content,
-      );
-    }
-    return content;
+    return DesktopSidebarLayout(
+      user: widget.user,
+      activeRoute: _activeRoute,
+      onUserUpdated: widget.onUserUpdated,
+      child: content,
+    );
   }
 }
 

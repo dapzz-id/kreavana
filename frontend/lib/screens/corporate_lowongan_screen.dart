@@ -558,9 +558,11 @@ class _CorporateLowonganScreenState extends State<CorporateLowonganScreen> {
           onRefresh: _fetchVacancies,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.symmetric(
-              horizontal: isDesktop ? 24.0 : 16.0,
-              vertical: 20.0,
+            padding: EdgeInsets.fromLTRB(
+              isDesktop ? 24.0 : 16.0,
+              20.0,
+              isDesktop ? 24.0 : 16.0,
+              isDesktop ? 40.0 : 156.0,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -622,7 +624,7 @@ class _CorporateLowonganScreenState extends State<CorporateLowonganScreen> {
     );
 
     final effectiveUser = _currentUser;
-    if (isDesktop && effectiveUser != null) {
+    if (effectiveUser != null) {
       return DesktopSidebarLayout(
         user: effectiveUser,
         activeRoute: 'lowongan_magang',

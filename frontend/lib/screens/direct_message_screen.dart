@@ -226,8 +226,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
         ),
       );
       if (widget.showSidebar &&
-          effectiveUser != null &&
-          MediaQuery.of(context).size.width > 900) {
+          effectiveUser != null) {
         return DesktopSidebarLayout(
           user: effectiveUser,
           activeRoute: 'direct_message',
@@ -319,8 +318,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
     );
 
     if (widget.showSidebar &&
-        effectiveUser != null &&
-        MediaQuery.of(context).size.width > 900) {
+        effectiveUser != null) {
       return DesktopSidebarLayout(
         user: effectiveUser,
         activeRoute: 'direct_message',

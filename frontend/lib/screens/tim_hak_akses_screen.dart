@@ -1404,16 +1404,22 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.only(right: 16),
+            padding: EdgeInsets.only(
+              right: MediaQuery.of(context).size.width < 600 ? 10 : 16,
+            ),
             child: ElevatedButton.icon(
               onPressed: _openInviteMemberDialog,
               icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
-              label: const Text('Tambah / Undang Staf'),
+              label: Text(
+                MediaQuery.of(context).size.width < 600
+                    ? 'Undang'
+                    : 'Tambah / Undang Staf',
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryPurple,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
+                padding: EdgeInsets.symmetric(
+                  horizontal: MediaQuery.of(context).size.width < 600 ? 10 : 16,
                   vertical: 10,
                 ),
                 shape: RoundedRectangleBorder(

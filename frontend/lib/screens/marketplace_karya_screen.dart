@@ -345,7 +345,7 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
         ),
       );
 
-      if (isWide && effectiveUser != null) {
+      if (effectiveUser != null) {
         return DesktopSidebarLayout(
           user: effectiveUser,
           activeRoute: 'beranda',
@@ -360,7 +360,7 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
       backgroundColor: isDark ? AppTheme.surfaceDark : AppTheme.surfaceLight,
       floatingActionButton: Padding(
         padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).size.width < 800 ? 90 : 0,
+          bottom: 0,
         ),
         child: (widget.user != null && widget.user!.isCreator)
             ? FloatingActionButton.extended(
@@ -644,13 +644,15 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
                         ),
                       ),
                     ),
-                  const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
+                  SliverPadding(
+                    padding: EdgeInsets.only(bottom: isWide ? 100 : 156),
+                  ),
                 ],
               ),
             ),
     );
 
-    if (isWide && effectiveUser != null) {
+    if (effectiveUser != null) {
       return DesktopSidebarLayout(
         user: effectiveUser,
         activeRoute: 'marketplace',

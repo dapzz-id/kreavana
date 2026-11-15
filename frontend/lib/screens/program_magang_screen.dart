@@ -317,9 +317,11 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
           child: SingleChildScrollView(
             controller: _scrollController,
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.symmetric(
-              horizontal: isDesktop ? 24.0 : 16.0,
-              vertical: 20.0,
+            padding: EdgeInsets.fromLTRB(
+              isDesktop ? 24.0 : 16.0,
+              20.0,
+              isDesktop ? 24.0 : 16.0,
+              isDesktop ? 40.0 : 156.0,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -410,16 +412,12 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
           : null,
     );
 
-    if (isDesktop) {
-      return DesktopSidebarLayout(
-        user: effectiveUser,
-        activeRoute: 'program_magang',
-        onUserUpdated: widget.onUserUpdated,
-        child: content,
-      );
-    }
-
-    return content;
+    return DesktopSidebarLayout(
+      user: effectiveUser,
+      activeRoute: 'program_magang',
+      onUserUpdated: widget.onUserUpdated,
+      child: content,
+    );
   }
 
   // ── Header Widget ──────────────────────────────────────────────────────────

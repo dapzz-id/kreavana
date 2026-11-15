@@ -5,6 +5,7 @@ import '../models/schedule_model.dart';
 import '../models/user_model.dart';
 import '../services/schedule_service.dart';
 import '../widgets/app_empty_state.dart';
+import '../widgets/desktop_sidebar_layout.dart';
 
 class CreatorCalendarScreen extends StatefulWidget {
   final UserModel? user;
@@ -629,7 +630,7 @@ class _CreatorCalendarScreenState extends State<CreatorCalendarScreen> {
     final totalUnavailable = _schedules.where((s) => s.isUnavailable).length;
     final totalAvailable = totalOverrides - totalUnavailable;
 
-    return Scaffold(
+    final scaffold = Scaffold(
       backgroundColor: isDark ? AppTheme.surfaceDark : AppTheme.surfaceLight,
       appBar: AppBar(
         automaticallyImplyLeading: !isDesktop && Navigator.canPop(context),
@@ -699,7 +700,7 @@ class _CreatorCalendarScreenState extends State<CreatorCalendarScreen> {
                 isDesktop ? 32 : 16,
                 20,
                 isDesktop ? 32 : 16,
-                90,
+                isDesktop ? 90 : 156,
               ),
                   children: [
                     // Top Summary Cards
@@ -774,6 +775,17 @@ class _CreatorCalendarScreenState extends State<CreatorCalendarScreen> {
                   ],
                 ),
     );
+
+    if (widget.user != null) {
+      return DesktopSidebarLayout(
+        user: widget.user!,
+        activeRoute: 'kapasitas_jadwal',
+        onUserUpdated: widget.onUserUpdated,
+        child: scaffold,
+      );
+    }
+
+    return scaffold;
   }
 
   Widget _buildSummaryCard({
