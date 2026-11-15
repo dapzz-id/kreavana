@@ -44,3 +44,19 @@ Lihat detail lengkap di `.agent/rules/page-routing-and-permissions.md` atau `.gi
    - Corporate (`/lowongan-corporate`, `/pengadaan-vendor`) hanya untuk `isCorporate` / `isAdmin`.
    - Workspace instansi/organisasi (`/tim-hak-akses`, `/dokumen-institusi`, `/pengumuman-institusi`, `/monitoring-evaluasi`, `/laporan-kegiatan`, `/mitra-industri`, `/realisasi-anggaran`) hanya untuk role organisasi resmi atau admin.
 
+---
+
+## 📋 Mandatory Rules: AI Prompt Discipline, Database-Backed Data & Migrations
+
+Lihat detail lengkap di `.agent/rules/ai-prompt-and-database-standards.md` atau `.github/rules/ai-prompt-and-database-standards.md`.
+
+1. **Wajib Baca Aturan Terlebih Dahulu (`Baca Aturan Dulu`)**:
+   - Pada setiap prompt baru, AI **WAJIB membaca seluruh file aturan terlebih dahulu** (`GEMINI.md`, `AGENTS.md`, `CLAUDE.md`, `.claude/CLAUDE.md`, `.agent/rules/*.md`, `.github/rules/*.md`, dan `.github/copilot-instructions.md`) sebelum merancang solusi atau mengedit kode.
+2. **Data Dummy Berdasarkan Database (DILARANG Mockup Frontend)**:
+   - Dilarang membuat data dummy statis / array mockup hardcoded di frontend Flutter atau fallback array statis di controller API.
+   - Seluruh data tampilan wajib berasal dari database nyata (`backend` / `users_api`); tampilkan *empty state* bersih jika database kosong.
+   - Jika perlu membuat data dummy/demo/testing, buatlah melalui Laravel Seeder (`backend/database/seeders/`, `users_api/database/seeders/`), Factory, atau record database asli sesuai skema tabel.
+3. **Edit Database Wajib Membuat Migrasi Baru**:
+   - Dilarang mengedit, mengubah, atau menghapus file migrasi lama di `backend/database/migrations/` atau `users_api/database/migrations/`.
+   - Setiap perubahan pada tabel database yang sudah ada (tambah/ubah/hapus kolom, enum, index, atau foreign key) **WAJIB membuat file migrasi baru** (`php artisan make:migration <nama_deskriptif>`) serta memperbarui Model/Seeder terkait dan mengecek syntax dengan `php -l`.
+
