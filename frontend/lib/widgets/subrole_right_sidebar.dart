@@ -97,8 +97,10 @@ class SubRoleRightSidebar extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildProfileCard(context, accentColor),
-        const SizedBox(height: 16),
-        _buildQuickActionsCard(context, accentColor),
+        if (!_isSchool) ...[
+          const SizedBox(height: 16),
+          _buildQuickActionsCard(context, accentColor),
+        ],
         const SizedBox(height: 16),
         _buildUpcomingAgendaCard(context, accentColor),
         const SizedBox(height: 16),
@@ -394,6 +396,7 @@ class SubRoleRightSidebar extends StatelessWidget {
   }
 
   Widget _buildQuickActionsCard(BuildContext context, Color accentColor) {
+    if (_isSchool) return const SizedBox.shrink();
     final List<_SidebarQuickAction> actions;
 
     if (_isGovernment) {
@@ -491,101 +494,6 @@ class SubRoleRightSidebar extends StatelessWidget {
                   onUserUpdated: onUserUpdated,
                 ),
               ),
-            ),
-          ),
-        ),
-      ];
-    } else if (_isSchool) {
-      actions = [
-        _SidebarQuickAction(
-          icon: Icons.school_outlined,
-          label: 'Program Magang',
-          onTap: () => _guardAndExecute(
-            context,
-            actionName: 'mengakses program magang siswa',
-            action: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ProyekSayaScreen(user: user, onUserUpdated: onUserUpdated),
-              ),
-            ),
-          ),
-        ),
-        _SidebarQuickAction(
-          icon: Icons.palette_outlined,
-          label: 'Karya Siswa',
-          onTap: () => _guardAndExecute(
-            context,
-            actionName: 'mengakses portofolio karya siswa',
-            action: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => InstitutionWorkspaceScreen(
-                  user: user,
-                  resourceType: 'showcases',
-                  onUserUpdated: onUserUpdated,
-                ),
-              ),
-            ),
-          ),
-        ),
-        _SidebarQuickAction(
-          icon: Icons.event_outlined,
-          label: 'Agenda Sekolah',
-          onTap: () => _guardAndExecute(
-            context,
-            actionName: 'mengakses agenda sekolah',
-            action: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => AgendaScreen(user: user, onUserUpdated: onUserUpdated),
-              ),
-            ),
-          ),
-        ),
-        _SidebarQuickAction(
-          icon: Icons.diversity_3_outlined,
-          label: 'Mitra Industri',
-          onTap: () => _guardAndExecute(
-            context,
-            actionName: 'mengakses mitra industri dan sanggar',
-            action: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => InstitutionWorkspaceScreen(
-                  user: user,
-                  resourceType: 'partners',
-                  onUserUpdated: onUserUpdated,
-                ),
-              ),
-            ),
-          ),
-        ),
-        _SidebarQuickAction(
-          icon: Icons.folder_shared_outlined,
-          label: 'Dokumen & MoU',
-          onTap: () => _guardAndExecute(
-            context,
-            actionName: 'mengakses arsip dokumen & MoU',
-            action: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => InstitutionWorkspaceScreen(
-                  user: user,
-                  resourceType: 'documents',
-                  onUserUpdated: onUserUpdated,
-                ),
-              ),
-            ),
-          ),
-        ),
-        _SidebarQuickAction(
-          icon: Icons.person_search_outlined,
-          label: 'Cari Vendor',
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ExploreScreen(user: user),
             ),
           ),
         ),
