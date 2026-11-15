@@ -448,5 +448,70 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Karya & Portofolio Siswa'), findsNothing);
     });
+
+    testWidgets('Accepted student displays Diterima Magang status badge and hides Ubah Status dropdown',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1280, 2200));
+
+      final testVacancyWithAcceptedStudent = CorporateVacancyItem(
+        id: 'test_vac_accepted',
+        title: 'Program Magang PV Electric Batch I 2027',
+        description: 'Kerja sama penempatan talenta vokasi.',
+        category: 'magang',
+        categoryLabel: 'Magang',
+        status: 'open',
+        statusLabel: 'Pendaftaran Dibuka',
+        statusBadgeColor: const Color(0xFF16A34A),
+        statusBadgeBg: const Color(0xFFDCFCE7),
+        registrationPeriod: '28 Nov 2026',
+        quotaText: '10 dari 10 posisi',
+        allowance: 'Rp 2.000.000 / bulan',
+        requirements: const ['Siswa SMK vokasi'],
+        applicantsCount: 2,
+        applicants: const [
+          CorporateApplicant(
+            name: 'Achmad Bilzan',
+            institution: 'Kreavana Demo Institution',
+            studentDescription: 'Desain Komunikasi Visual',
+            role: 'VIDEOGRAPHER',
+            appliedDate: '15 Nov 2026',
+            status: 'Diterima',
+            portfolioUrl: 'https://github.com/blznqhtn',
+          ),
+          CorporateApplicant(
+            name: 'Rian Pratama',
+            institution: 'Kreavana Demo Institution',
+            studentDescription: 'RPL',
+            role: 'VIDEOGRAPHER',
+            appliedDate: '15 Nov 2026',
+            status: 'Menunggu Review',
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CorporateVacancyDetailScreen(
+            item: testVacancyWithAcceptedStudent,
+            user: corpUser,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Go to Daftar Pelamar tab
+      await tester.tap(find.text('Daftar Pelamar (2)'));
+      await tester.pumpAndSettle();
+
+      // 1. Verify Achmad Bilzan has Diterima Magang badge and Resmi Diterima Magang confirmation
+      expect(find.text('Diterima Magang'), findsOneWidget);
+      expect(find.text('Resmi Diterima Magang'), findsOneWidget);
+
+      // 2. Verify Achmad Bilzan's Ubah Status dropdown is HIDDEN
+      expect(find.byKey(const ValueKey('popup_status_Achmad Bilzan')), findsNothing);
+
+      // 3. Verify pending student (Rian Pratama) still HAS the Ubah Status dropdown
+      expect(find.byKey(const ValueKey('popup_status_Rian Pratama')), findsOneWidget);
+    });
   });
 }
