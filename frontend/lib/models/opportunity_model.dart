@@ -183,6 +183,10 @@ class OpportunityApprovedCreatorModel {
   final String? creatorSignature;
   final String? creatorSignedAt;
   final List<String> dynamicTerms;
+  final String? studentName;
+  final String? studentMajor;
+  final String? pitchMessage;
+  final List<Map<String, dynamic>> submittedDocuments;
 
   OpportunityApprovedCreatorModel({
     required this.id,
@@ -199,6 +203,10 @@ class OpportunityApprovedCreatorModel {
     this.creatorSignature,
     this.creatorSignedAt,
     this.dynamicTerms = const [],
+    this.studentName,
+    this.studentMajor,
+    this.pitchMessage,
+    this.submittedDocuments = const [],
   });
 
   bool get isClientSigned =>
@@ -209,7 +217,57 @@ class OpportunityApprovedCreatorModel {
       (creatorSignature != null && creatorSignature!.isNotEmpty);
   bool get isContractFinal => isClientSigned && isSigned;
 
+  String get studentDisplayName {
+    if (studentName != null && studentName!.trim().isNotEmpty) {
+      return studentName!.trim();
+    }
+    if (submittedDocuments.isNotEmpty) {
+      final doc0 = submittedDocuments.first;
+      final dName = (doc0['student_name'] ?? doc0['name'] ?? '').toString().trim();
+      if (dName.isNotEmpty) return dName;
+    }
+    if (pitchMessage != null && pitchMessage!.startsWith('Siswa:')) {
+      final parts = pitchMessage!.split('|').map((p) => p.trim()).toList();
+      final head = parts.first.replaceFirst('Siswa:', '').trim();
+      final pStart = head.lastIndexOf('(');
+      final pEnd = head.lastIndexOf(')');
+      if (pStart > 0 && pEnd > pStart) {
+        return head.substring(0, pStart).trim();
+      }
+      return head;
+    }
+    return name;
+  }
+
+  String get studentMajorDisplay {
+    if (studentMajor != null && studentMajor!.trim().isNotEmpty) {
+      return studentMajor!.trim();
+    }
+    if (submittedDocuments.isNotEmpty) {
+      final doc0 = submittedDocuments.first;
+      final dMajor = (doc0['major'] ?? doc0['jurusan'] ?? '').toString().trim();
+      if (dMajor.isNotEmpty) return dMajor;
+    }
+    if (pitchMessage != null && pitchMessage!.startsWith('Siswa:')) {
+      final parts = pitchMessage!.split('|').map((p) => p.trim()).toList();
+      final head = parts.first.replaceFirst('Siswa:', '').trim();
+      final pStart = head.lastIndexOf('(');
+      final pEnd = head.lastIndexOf(')');
+      if (pStart > 0 && pEnd > pStart) {
+        return head.substring(pStart + 1, pEnd).trim();
+      }
+    }
+    return capability?.replaceAll('_', ' ').toUpperCase() ?? 'Siswa Magang';
+  }
+
   factory OpportunityApprovedCreatorModel.fromJson(Map<String, dynamic> json) {
+    List<Map<String, dynamic>> parsedDocs = const [];
+    if (json['submitted_documents'] is List) {
+      parsedDocs = (json['submitted_documents'] as List)
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
     return OpportunityApprovedCreatorModel(
       id: json['id']?.toString() ?? '',
       applicationId: json['application_id']?.toString(),
@@ -229,6 +287,10 @@ class OpportunityApprovedCreatorModel {
       dynamicTerms: json['dynamic_terms'] is List
           ? (json['dynamic_terms'] as List).map((e) => e.toString()).toList()
           : const [],
+      studentName: json['student_name']?.toString(),
+      studentMajor: json['student_major']?.toString(),
+      pitchMessage: json['pitch_message']?.toString(),
+      submittedDocuments: parsedDocs,
     );
   }
 
@@ -248,6 +310,10 @@ class OpportunityApprovedCreatorModel {
       'creator_signature': creatorSignature,
       'creator_signed_at': creatorSignedAt,
       'dynamic_terms': dynamicTerms,
+      'student_name': studentName,
+      'student_major': studentMajor,
+      'pitch_message': pitchMessage,
+      'submitted_documents': submittedDocuments,
     };
   }
 }
@@ -388,7 +454,10 @@ class OpportunityModel {
   bool get isLocation => type == 'location';
   bool get isProject => type == 'project';
   bool get isOngoing => status.toLowerCase() == 'in_progress' || status.toLowerCase() == 'ongoing';
-  bool get isClosed => status.toLowerCase() == 'closed' || status.toLowerCase() == 'completed';
+  bool get isClosed =>
+      status.toLowerCase() == 'closed' ||
+      status.toLowerCase() == 'completed' ||
+      (totalQuota > 0 && remainingQuota <= 0);
   bool get hasExternalRating => externalRating != null && externalRating! > 0;
   bool get isMeetingPending => meetingStatus.toLowerCase() == 'pending' || meetingStatus.toLowerCase() == 'pending_marketing_review';
   bool get isMeetingInProcess => meetingStatus.toLowerCase() == 'diproses' || meetingStatus.toLowerCase() == 'approved';
@@ -417,7 +486,7 @@ class OpportunityModel {
     return false;
   }
 
-  bool get canApply => status.toLowerCase() == 'open' && !isEventRunning;
+  bool get canApply => status.toLowerCase() == 'open' && !isEventRunning && !isClosed;
 
   bool get isMagang {
     final locCat = (locationCategory ?? '').toLowerCase();

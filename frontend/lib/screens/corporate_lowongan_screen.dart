@@ -135,24 +135,6 @@ class CorporateVacancyItem {
 
     final isMagang = opp.isMagang;
 
-    final statusText = isOpen
-        ? 'Pendaftaran Dibuka'
-        : (isOngoing
-            ? 'Sedang Berjalan'
-            : (isClosed ? 'Pendaftaran Ditutup' : 'Dalam Seleksi'));
-
-    final statusColor = isOpen
-        ? const Color(0xFF16A34A)
-        : (isOngoing
-            ? const Color(0xFF2563EB)
-            : const Color(0xFF64748B));
-
-    final statusBg = isOpen
-        ? const Color(0xFFDCFCE7)
-        : (isOngoing
-            ? const Color(0xFFDBEAFE)
-            : const Color(0xFFF1F5F9));
-
     final categoryColor = isMagang ? const Color(0xFF0284C7) : const Color(0xFF7E22CE);
     final categoryBg = isMagang ? const Color(0xFFE0F2FE) : const Color(0xFFF3E8FF);
 
@@ -217,13 +199,35 @@ class CorporateVacancyItem {
       }
     }
     final String calculatedQuotaText;
+    final bool isQuotaFull;
     if (totalQuota > 0) {
       final int filled = opp.approvedCreators.length;
       final int remaining = (totalQuota - filled).clamp(0, totalQuota);
+      isQuotaFull = remaining <= 0;
       calculatedQuotaText = '$remaining dari $totalQuota posisi';
     } else {
+      isQuotaFull = false;
       calculatedQuotaText = 'Terbuka';
     }
+
+    final bool effectiveClosed = isClosed || isQuotaFull || opp.isClosed;
+    final String resolvedStatusText = effectiveClosed
+        ? 'Pendaftaran Ditutup'
+        : (isOngoing
+            ? 'Sedang Berjalan'
+            : (isOpen ? 'Pendaftaran Dibuka' : 'Dalam Seleksi'));
+
+    final Color resolvedStatusColor = effectiveClosed
+        ? const Color(0xFF64748B)
+        : (isOngoing
+            ? const Color(0xFF2563EB)
+            : (isOpen ? const Color(0xFF16A34A) : const Color(0xFF64748B)));
+
+    final Color resolvedStatusBg = effectiveClosed
+        ? const Color(0xFFF1F5F9)
+        : (isOngoing
+            ? const Color(0xFFDBEAFE)
+            : (isOpen ? const Color(0xFFDCFCE7) : const Color(0xFFF1F5F9)));
 
     return CorporateVacancyItem(
       id: opp.id ?? 'opp_${DateTime.now().millisecondsSinceEpoch}',
@@ -233,10 +237,10 @@ class CorporateVacancyItem {
       categoryLabel: isMagang ? 'Magang' : 'Lowongan Kerja',
       categoryBadgeColor: categoryColor,
       categoryBadgeBg: categoryBg,
-      status: opp.status,
-      statusLabel: statusText,
-      statusBadgeColor: statusColor,
-      statusBadgeBg: statusBg,
+      status: effectiveClosed ? 'closed' : opp.status,
+      statusLabel: resolvedStatusText,
+      statusBadgeColor: resolvedStatusColor,
+      statusBadgeBg: resolvedStatusBg,
       registrationPeriod: regPeriod,
       quotaText: calculatedQuotaText,
       allowance: opp.budgetRange ?? (isMagang ? 'Rp 3.500.000 / bulan' : 'Budget Fleksibel'),

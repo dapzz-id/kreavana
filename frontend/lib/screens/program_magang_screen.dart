@@ -43,6 +43,7 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
   List<OpportunityModel> _schoolMyItems = [];
   List<OpportunityModel> _schoolPartnerItems = [];
   List<OpportunityModel> _schoolAllItems = [];
+  Map<String, List<SchoolMagangStudent>> _closedOppActiveStudents = {};
   List<Map<String, dynamic>> _partnerCorporates = [];
   int _currentPage = 1;
   static const int _pageSize = 6;
@@ -175,15 +176,67 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
           myMap.putIfAbsent(key, () => opp);
         }
       }
-      final myItems = myMap.values.toList()..sort(_compareByCreatedDesc);
 
-      // 2. Semua Lowongan Magang Corporate (strictly from DB)
+      final Map<String, List<SchoolMagangStudent>> closedOppStudents = {};
+      final List<OpportunityModel> validMyItems = [];
+
+      for (final opp in myMap.values) {
+        final oppId = opp.id ?? opp.title;
+        final isClosed = opp.isClosed || (opp.totalQuota > 0 && opp.remainingQuota <= 0);
+
+        if (!isClosed) {
+          validMyItems.add(opp);
+        } else {
+          List<SchoolMagangStudent> accepted = [];
+
+          if (opp.approvedCreators.isNotEmpty) {
+            final matching = currentUserId.isNotEmpty
+                ? opp.approvedCreators.where((c) => c.id == currentUserId).toList()
+                : opp.approvedCreators;
+            final targetList = matching.isNotEmpty ? matching : opp.approvedCreators;
+            accepted = targetList.map((c) => SchoolMagangStudent(
+              id: c.applicationId ?? c.id,
+              name: c.studentDisplayName,
+              majorClass: c.studentMajorDisplay,
+              role: c.capability?.replaceAll('_', ' ').toUpperCase() ?? 'MAGANG',
+              appliedDate: '-',
+              status: 'Diterima',
+            )).toList();
+          }
+
+          if (accepted.isEmpty && opp.id != null && !opp.id!.startsWith('test_')) {
+            try {
+              final apps = await OpportunityService.getOpportunityApplications(opp.id!);
+              final schoolApps = currentUserId.isNotEmpty
+                  ? apps.where((a) => a.creatorId == currentUserId || a.rawCreatorId == currentUserId).toList()
+                  : apps;
+              accepted = schoolApps
+                  .where((a) => a.status.toLowerCase() == 'approved')
+                  .map((a) => SchoolMagangStudent.fromApplication(a, schoolHasApprovedStudent: true, isSchoolApproved: true))
+                  .toList();
+            } catch (_) {}
+          }
+
+          // If there are accepted students, keep opp to display its Rekapan; otherwise, completely hide
+          if (accepted.isNotEmpty) {
+            closedOppStudents[oppId] = accepted;
+            validMyItems.add(opp);
+          }
+        }
+      }
+      validMyItems.sort(_compareByCreatedDesc);
+
+      // 2. Semua Lowongan Magang Corporate (strictly from DB, exclude closed & full quota)
       final allItems = allOpportunities
-          .where((opp) => _isMagangOpportunity(opp) && opp.postedBy != currentUserId)
+          .where((opp) =>
+              _isMagangOpportunity(opp) &&
+              opp.postedBy != currentUserId &&
+              !opp.isClosed &&
+              opp.remainingQuota > 0)
           .toList()
         ..sort(_compareByCreatedDesc);
 
-      // 3. Magang Corporate Mitra (lowongan magang milik Corporate mitra terdaftar di DB)
+      // 3. Magang Corporate Mitra (lowongan magang milik Corporate mitra terdaftar di DB, exclude closed & full quota)
       final partnerItems = allItems
           .where((opp) => _isPartnerCorporateOpportunity(opp, loadedPartners))
           .toList()
@@ -192,7 +245,8 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
       if (mounted) {
         setState(() {
           _partnerCorporates = loadedPartners;
-          _schoolMyItems = myItems;
+          _closedOppActiveStudents = closedOppStudents;
+          _schoolMyItems = validMyItems;
           _schoolPartnerItems = partnerItems;
           _schoolAllItems = allItems;
           _errorMessage = null;
@@ -902,6 +956,307 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
     );
   }
 
+  bool _isRecapItem(OpportunityModel opp) {
+    if (_schoolTab != SchoolMagangTab.myApplications) return false;
+    return opp.isClosed || (opp.totalQuota > 0 && opp.remainingQuota <= 0);
+  }
+
+  List<SchoolMagangStudent> _getActiveStudentsForOpp(OpportunityModel opp) {
+    final key = opp.id ?? opp.title;
+    if (_closedOppActiveStudents.containsKey(key) && _closedOppActiveStudents[key]!.isNotEmpty) {
+      return _closedOppActiveStudents[key]!;
+    }
+    if (opp.approvedCreators.isNotEmpty) {
+      final currentUserId = _currentUser?.id ?? '';
+      final matching = currentUserId.isNotEmpty
+          ? opp.approvedCreators.where((c) => c.id == currentUserId).toList()
+          : opp.approvedCreators;
+      final target = matching.isNotEmpty ? matching : opp.approvedCreators;
+      return target.map((c) => SchoolMagangStudent(
+        id: c.applicationId ?? c.id,
+        name: c.studentDisplayName,
+        majorClass: c.studentMajorDisplay,
+        role: c.capability?.replaceAll('_', ' ').toUpperCase() ?? 'MAGANG',
+        appliedDate: '-',
+        status: 'Diterima',
+      )).toList();
+    }
+    return const [];
+  }
+
+  Widget _buildActiveInternshipRecapCard(
+    OpportunityModel opp,
+    List<SchoolMagangStudent> students,
+    bool isDark,
+    Color accentColor,
+  ) {
+    final corporateName = opp.poster?.name.isNotEmpty == true
+        ? opp.poster!.name
+        : (opp.title.contains(' - ') ? opp.title.split(' - ').first.trim() : 'Mitra Industri Corporate');
+
+    return Container(
+      key: ValueKey('active_recap_${opp.id ?? opp.title}'),
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header Card
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              border: Border(
+                bottom: BorderSide(
+                  color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                ),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFECFDF5),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFA7F3D0)),
+                  ),
+                  child: const Icon(
+                    Icons.school_rounded,
+                    color: Color(0xFF059669),
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              opp.title,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFCBD5E1)),
+                            ),
+                            child: const Text(
+                              'Pendaftaran Ditutup',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF64748B),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 8,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.business_rounded,
+                                size: 14,
+                                color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                corporateName,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark ? Colors.white70 : const Color(0xFF475569),
+                                ),
+                              ),
+                            ],
+                          ),
+                          Container(
+                            width: 4,
+                            height: 4,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF94A3B8),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          Text(
+                            '${students.length} Siswa Diterima & Aktif Magang',
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF059669),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Content: Student list
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Rekapan Siswa Institusi yang Diterima & Sedang Aktif:',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? Colors.white70 : const Color(0xFF334155),
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: () => _openOpportunityDetail(opp),
+                      icon: const Icon(Icons.arrow_forward_rounded, size: 14),
+                      label: const Text('Detail Program', style: TextStyle(fontSize: 12)),
+                      style: TextButton.styleFrom(
+                        foregroundColor: accentColor,
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                ...students.map((student) {
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF0F172A).withValues(alpha: 0.5) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 18,
+                          backgroundColor: const Color(0xFFEEF2FF),
+                          child: Text(
+                            student.name.isNotEmpty ? student.name[0].toUpperCase() : 'S',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF4F46E5),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                student.name,
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                student.majorClass,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFFBFDBFE)),
+                          ),
+                          child: Text(
+                            student.role,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1D4ED8),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFDCFCE7),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFFA7F3D0)),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.check_circle_rounded, size: 13, color: Color(0xFF16A34A)),
+                              SizedBox(width: 4),
+                              Text(
+                                'Diterima Magang',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF15803D),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── Grid of Cards ──────────────────────────────────────────────────────────
   Widget _buildOpportunityGrid(
     List<OpportunityModel> items,
@@ -923,14 +1278,34 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isTwoColumn = constraints.maxWidth > 820;
-        if (isTwoColumn) {
-          final rows = <Widget>[];
-          for (int i = 0; i < items.length; i += 2) {
-            final first = items[i];
-            final second = i + 1 < items.length ? items[i + 1] : null;
-            rows.add(
+        final widgets = <Widget>[];
+        int i = 0;
+
+        while (i < items.length) {
+          final item = items[i];
+          if (_isRecapItem(item)) {
+            // Render full-width recap card
+            widgets.add(
+              _buildActiveInternshipRecapCard(
+                item,
+                _getActiveStudentsForOpp(item),
+                isDark,
+                accentColor,
+              ),
+            );
+            i++;
+          } else if (isTwoColumn) {
+            final first = item;
+            OpportunityModel? second;
+            if (i + 1 < items.length && !_isRecapItem(items[i + 1])) {
+              second = items[i + 1];
+              i += 2;
+            } else {
+              i += 1;
+            }
+            widgets.add(
               Padding(
-                padding: EdgeInsets.only(bottom: i + 2 < items.length ? 16 : 0),
+                padding: const EdgeInsets.only(bottom: 16),
                 child: IntrinsicHeight(
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -945,36 +1320,42 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
                       ),
                       const SizedBox(width: 16),
                       Expanded(
-                        child: second != null
-                            ? ProgramMagangCard.fromOpportunity(
-                                second,
-                                buttonLabel: getOpportunityButtonLabel(second),
-                                onTap: () => _openOpportunityDetail(second),
-                                onDetailPressed: () => _openOpportunityDetail(second),
-                              )
-                            : const SizedBox.shrink(),
+                        child: () {
+                          final sec = second;
+                          return sec != null
+                              ? ProgramMagangCard.fromOpportunity(
+                                  sec,
+                                  buttonLabel: getOpportunityButtonLabel(sec),
+                                  onTap: () => _openOpportunityDetail(sec),
+                                  onDetailPressed: () => _openOpportunityDetail(sec),
+                                )
+                              : const SizedBox.shrink();
+                        }(),
                       ),
                     ],
                   ),
                 ),
               ),
             );
+          } else {
+            widgets.add(
+              Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: ProgramMagangCard.fromOpportunity(
+                  item,
+                  buttonLabel: getOpportunityButtonLabel(item),
+                  onTap: () => _openOpportunityDetail(item),
+                  onDetailPressed: () => _openOpportunityDetail(item),
+                ),
+              ),
+            );
+            i++;
           }
-          return Column(children: rows);
         }
 
         return Column(
-          children: items.map((opp) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 14),
-              child: ProgramMagangCard.fromOpportunity(
-                opp,
-                buttonLabel: getOpportunityButtonLabel(opp),
-                onTap: () => _openOpportunityDetail(opp),
-                onDetailPressed: () => _openOpportunityDetail(opp),
-              ),
-            );
-          }).toList(),
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: widgets,
         );
       },
     );

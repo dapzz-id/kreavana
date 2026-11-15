@@ -273,6 +273,31 @@ class OpportunityService extends BaseService
                 abort(400, 'Peluang proyek ini sudah ditutup atau tidak menerima lamaran baru.');
             }
 
+            // Guard: check if opportunity capacity / quota is already fulfilled
+            $requirements = OpportunityRequirement::where('opportunity_id', $opportunityId)->get();
+            $totalCapacity = 0;
+            foreach ($requirements as $req) {
+                $q = (int) $req->quantity;
+                if ($q <= 0 && !empty($req->notes)) {
+                    if (preg_match('/\((\d+)\s+kuota\)/i', $req->notes, $matches)) {
+                        $q = (int) $matches[1];
+                    }
+                }
+                $totalCapacity += max(0, $q);
+            }
+            if ($totalCapacity > 0) {
+                $totalApproved = OpportunityApplication::where('opportunity_id', $opportunityId)
+                    ->where('status', 'approved')
+                    ->count();
+                if ($totalApproved >= $totalCapacity) {
+                    if ($opp->status !== 'closed') {
+                        $opp->status = 'closed';
+                        $opp->save();
+                    }
+                    abort(400, 'Pendaftaran untuk program ini telah ditutup karena kuota posisi telah terpenuhi.');
+                }
+            }
+
             // Guard: if event is already running or past start date, cannot apply
             $eventDate = $opp->event_start_date ?? $opp->event_date;
             $isEventStarted = false;
@@ -2092,6 +2117,28 @@ class OpportunityService extends BaseService
                 }
                 $application->save();
 
+                // Auto-close opportunity if all position quotas are now fulfilled
+                $allReqs = OpportunityRequirement::where('opportunity_id', $opp->id)->get();
+                $totalOppCapacity = 0;
+                foreach ($allReqs as $r) {
+                    $q = (int) $r->quantity;
+                    if ($q <= 0 && !empty($r->notes)) {
+                        if (preg_match('/\((\d+)\s+kuota\)/i', $r->notes, $matches)) {
+                            $q = (int) $matches[1];
+                        }
+                    }
+                    $totalOppCapacity += max(0, $q);
+                }
+                if ($totalOppCapacity > 0) {
+                    $totalApprovedAfter = OpportunityApplication::where('opportunity_id', $opp->id)
+                        ->where('status', 'approved')
+                        ->count();
+                    if ($totalApprovedAfter >= $totalOppCapacity) {
+                        $opp->status = 'closed';
+                        $opp->save();
+                    }
+                }
+
                 // Notify creator
                 $priceInfo = $application->counter_offer_status === 'accepted' && $application->counter_offer_price
                     ? ' dengan kesepakatan dana Rp ' . number_format($application->counter_offer_price, 0, ',', '.')
@@ -2566,10 +2613,35 @@ class OpportunityService extends BaseService
                     ? $app->dynamic_terms
                     : self::buildIndividualDefaultTerms($opp, $app, $agreedPrice);
 
+                $studentName = '';
+                $major = '';
+                $docs = is_array($app->submitted_documents) ? $app->submitted_documents : [];
+                if (isset($docs[0]) && is_array($docs[0])) {
+                    $studentName = trim((string) ($docs[0]['student_name'] ?? $docs[0]['name'] ?? ''));
+                    $major = trim((string) ($docs[0]['major'] ?? $docs[0]['jurusan'] ?? ''));
+                } elseif (isset($docs['student_name']) || isset($docs['name'])) {
+                    $studentName = trim((string) ($docs['student_name'] ?? $docs['name'] ?? ''));
+                    $major = trim((string) ($docs['major'] ?? $docs['jurusan'] ?? ''));
+                }
+                if ($studentName === '' && !empty($app->pitch_message) && str_starts_with($app->pitch_message, 'Siswa:')) {
+                    $parts = array_map('trim', explode('|', $app->pitch_message));
+                    $head = trim(str_replace('Siswa:', '', $parts[0] ?? ''));
+                    if (preg_match('/^(.*?)\s*\((.*?)\)$/', $head, $pm)) {
+                        $studentName = trim($pm[1]);
+                        if ($major === '') $major = trim($pm[2]);
+                    } else {
+                        $studentName = $head;
+                    }
+                }
+
                 return [
                     'id' => $app->creator?->id,
                     'application_id' => $app->id,
                     'name' => $app->creator?->name,
+                    'student_name' => $studentName,
+                    'student_major' => $major,
+                    'submitted_documents' => $app->submitted_documents,
+                    'pitch_message' => $app->pitch_message,
                     'username' => $app->creator?->username,
                     'avatar_url' => $app->creator?->avatar_url,
                     'sub_role' => is_string($app->creator?->sub_role) ? $app->creator?->sub_role : $app->creator?->sub_role?->value,

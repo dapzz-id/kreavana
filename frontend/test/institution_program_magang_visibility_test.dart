@@ -519,5 +519,89 @@ void main() {
       // Filter chips should include Review instead of Pending
       expect(find.widgetWithText(ChoiceChip, 'Review'), findsOneWidget);
     });
+
+    test('OpportunityModel.isClosed returns true and CorporateVacancyItem shows "Pendaftaran Ditutup" when remaining quota is 0', () {
+      final oppFullQuota = OpportunityModel(
+        id: 'opp-full-1',
+        title: 'Program Magang 3D Modeler',
+        subRoleSlug: 'magang',
+        status: 'open',
+        requirements: [
+          OpportunityRequirementModel(
+            subRoleSlug: 'modeler',
+            quantity: 2,
+            notes: 'Spesialisasi 3D Modeler (2 kuota)',
+          ),
+        ],
+        approvedCreators: [
+          OpportunityApprovedCreatorModel(id: 'c1', name: 'Student 1', username: 's1'),
+          OpportunityApprovedCreatorModel(id: 'c2', name: 'Student 2', username: 's2'),
+        ],
+      );
+
+      expect(oppFullQuota.totalQuota, equals(2));
+      expect(oppFullQuota.remainingQuota, equals(0));
+      expect(oppFullQuota.isClosed, isTrue);
+      expect(oppFullQuota.canApply, isFalse);
+
+      final corporateItem = CorporateVacancyItem.fromOpportunity(oppFullQuota);
+      expect(corporateItem.statusLabel, equals('Pendaftaran Ditutup'));
+      expect(corporateItem.quotaText, equals('0 dari 2 posisi'));
+    });
+
+    testWidgets('ProgramMagangDetailScreen hides Tambah/Ajukan Siswa button and shows Pendaftaran Ditutup when quota is full', (tester) async {
+      final oppFullQuota = OpportunityModel(
+        id: 'test_opp_full_1',
+        title: 'Program Magang 3D Modeler',
+        subRoleSlug: 'magang',
+        status: 'open',
+        requirements: [
+          OpportunityRequirementModel(
+            subRoleSlug: 'modeler',
+            quantity: 1,
+            notes: 'Spesialisasi 3D Modeler (1 kuota)',
+          ),
+        ],
+        approvedCreators: [
+          OpportunityApprovedCreatorModel(id: 'c1', name: 'Student 1', username: 's1'),
+        ],
+      );
+
+      final institutionUser = UserModel(
+        id: 'inst-1',
+        name: 'Kreavana Demo Institution',
+        username: 'inst_demo',
+        email: 'inst@demo.id',
+        role: 'institution',
+        subRole: 'institution',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ProgramMagangDetailScreen(
+            opportunity: oppFullQuota,
+            user: institutionUser,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Top status badge should display 'Pendaftaran Ditutup'
+      expect(find.text('Pendaftaran Ditutup'), findsOneWidget);
+
+      // Tap Daftar Siswa tab
+      final daftarSiswaTab = find.textContaining('Daftar Siswa');
+      await tester.tap(daftarSiswaTab);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Ensure Tambah Siswa / Ajukan Siswa button does NOT exist
+      expect(find.text('Tambah Siswa'), findsNothing);
+      expect(find.text('Ajukan Siswa'), findsNothing);
+
+      // Closed info banner should be visible
+      expect(find.textContaining('Pendaftaran program ini telah ditutup karena kuota posisi telah terpenuhi'), findsOneWidget);
+    });
   });
 }

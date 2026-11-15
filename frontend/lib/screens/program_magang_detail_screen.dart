@@ -1144,8 +1144,11 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFDCFCE7),
+                      color: opp.isClosed ? const Color(0xFFF1F5F9) : const Color(0xFFDCFCE7),
                       borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: opp.isClosed ? const Color(0xFFCBD5E1) : const Color(0xFFA7F3D0),
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -1153,18 +1156,18 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                         Container(
                           width: 6,
                           height: 6,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF16A34A),
+                          decoration: BoxDecoration(
+                            color: opp.isClosed ? const Color(0xFF64748B) : const Color(0xFF16A34A),
                             shape: BoxShape.circle,
                           ),
                         ),
                         const SizedBox(width: 6),
                         Text(
                           opp.isClosed ? 'Pendaftaran Ditutup' : 'Pendaftaran Dibuka',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF16A34A),
+                            color: opp.isClosed ? const Color(0xFF64748B) : const Color(0xFF16A34A),
                           ),
                         ),
                       ],
@@ -1588,6 +1591,31 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
           ),
           const SizedBox(height: 16),
 
+          // Closed info banner
+          if (widget.opportunity.isClosed) ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFCBD5E1)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.lock_outline_rounded, size: 18, color: Color(0xFF64748B)),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Pendaftaran program ini telah ditutup karena kuota posisi telah terpenuhi atau periode pendaftaran telah berakhir. Penambahan siswa baru dinonaktifkan.',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF475569), fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
           // Search + filter + button
           LayoutBuilder(
             builder: (context, constraints) {
@@ -1603,36 +1631,41 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                   ),
                 ),
               );
-              final addButton = ElevatedButton.icon(
-                onPressed: () => _openSubmitStudentDialog(
-                  isAdditionalStudent: false,
-                ),
-                icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
-                label: Text(
-                  _schoolPartnershipStatus == 'approved'
-                      ? 'Tambah Siswa'
-                      : 'Ajukan Siswa',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: accentColor,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              );
+              final canAddStudent = !widget.opportunity.isClosed;
+              final addButton = canAddStudent
+                  ? ElevatedButton.icon(
+                      onPressed: () => _openSubmitStudentDialog(
+                        isAdditionalStudent: false,
+                      ),
+                      icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
+                      label: Text(
+                        _schoolPartnershipStatus == 'approved'
+                            ? 'Tambah Siswa'
+                            : 'Ajukan Siswa',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: accentColor,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    )
+                  : null;
 
               if (constraints.maxWidth < 560) {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     searchField,
-                    const SizedBox(height: 10),
-                    addButton,
+                    if (addButton != null) ...[
+                      const SizedBox(height: 10),
+                      addButton,
+                    ],
                   ],
                 );
               }
@@ -1640,8 +1673,10 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
               return Row(
                 children: [
                   Expanded(child: searchField),
-                  const SizedBox(width: 12),
-                  addButton,
+                  if (addButton != null) ...[
+                    const SizedBox(width: 12),
+                    addButton,
+                  ],
                 ],
               );
             },
