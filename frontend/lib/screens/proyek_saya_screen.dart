@@ -488,7 +488,10 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                   });
                 }
               }).catchError((_) {});
-            } else if (widget.initialTitle != null && widget.initialTitle!.isNotEmpty) {
+            } else if (!_isSchool &&
+                _currentUser?.isInstitution != true &&
+                widget.initialTitle != null &&
+                widget.initialTitle!.isNotEmpty) {
               final fallbackOpp = OpportunityModel(
                 id: widget.initialOpportunityId ?? 'opp_${DateTime.now().millisecondsSinceEpoch}',
                 title: widget.initialTitle!,
@@ -530,7 +533,10 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (mounted) _openContractOpportunity(item);
               });
-            } else if (widget.initialTitle != null && widget.initialTitle!.isNotEmpty) {
+            } else if (!_isSchool &&
+                _currentUser?.isInstitution != true &&
+                widget.initialTitle != null &&
+                widget.initialTitle!.isNotEmpty) {
               final dummyContract = JobContract(
                 id: widget.initialContractId ?? 'ctr_${DateTime.now().millisecondsSinceEpoch}',
                 title: widget.initialTitle!,

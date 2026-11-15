@@ -282,6 +282,7 @@ class OpportunityModel {
   final int gracePeriodDaysLeft;
   final bool isWetSignatureRequired;
   final bool isDynamicSignatureRequired;
+  final bool hasApplied;
 
   OpportunityModel({
     required this.id,
@@ -347,6 +348,7 @@ class OpportunityModel {
     this.gracePeriodDaysLeft = 0,
     this.isWetSignatureRequired = false,
     this.isDynamicSignatureRequired = true,
+    this.hasApplied = false,
   });
 
   bool get isLocation => type == 'location';
@@ -513,6 +515,7 @@ class OpportunityModel {
     int? gracePeriodDaysLeft,
     bool? isWetSignatureRequired,
     bool? isDynamicSignatureRequired,
+    bool? hasApplied,
   }) {
     return OpportunityModel(
       id: id ?? this.id,
@@ -578,6 +581,7 @@ class OpportunityModel {
       gracePeriodDaysLeft: gracePeriodDaysLeft ?? this.gracePeriodDaysLeft,
       isWetSignatureRequired: isWetSignatureRequired ?? this.isWetSignatureRequired,
       isDynamicSignatureRequired: isDynamicSignatureRequired ?? this.isDynamicSignatureRequired,
+      hasApplied: hasApplied ?? this.hasApplied,
     );
   }
 
@@ -705,6 +709,7 @@ class OpportunityModel {
       isWetSignatureRequired: json['is_wet_signature_required'] == true,
       isDynamicSignatureRequired: json['is_dynamic_signature_required'] == true ||
           json['signature_type'] == 'dynamic_electronic',
+      hasApplied: json['has_applied'] == true || json['has_applied'] == 1,
     );
   }
 
@@ -772,6 +777,7 @@ class OpportunityModel {
       'grace_period_days_left': gracePeriodDaysLeft,
       'is_wet_signature_required': isWetSignatureRequired,
       'is_dynamic_signature_required': isDynamicSignatureRequired,
+      'has_applied': hasApplied,
     };
   }
 

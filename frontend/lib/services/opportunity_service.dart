@@ -930,4 +930,37 @@ class OpportunityService {
       };
     }
   }
+
+  /// Mengajukan siswa magang dari akun institusi dengan metadata siswa terstruktur di database.
+  static Future<Map<String, dynamic>> applyInstitutionStudent({
+    required String opportunityId,
+    required String subRoleSlug,
+    required String pitchMessage,
+    required Map<String, dynamic> studentDocument,
+  }) async {
+    try {
+      final res = await ApiService.post('opportunities/$opportunityId/applications', {
+        'sub_role_slug': subRoleSlug,
+        'pitch_message': pitchMessage,
+        'bid_price': 0,
+        'submitted_documents': [studentDocument],
+      });
+
+      final ok = res['status'] == true;
+      if (ok) {
+        clearCache();
+      }
+      return {
+        'status': ok,
+        'message': res['message']?.toString() ??
+            (ok ? 'Pengajuan siswa berhasil disimpan.' : 'Gagal mengajukan siswa.'),
+        'data': res['data'],
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'message': e.toString().replaceAll('Exception: ', ''),
+      };
+    }
+  }
 }

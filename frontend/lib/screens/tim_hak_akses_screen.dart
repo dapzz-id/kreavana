@@ -4,6 +4,7 @@ import '../models/user_model.dart';
 import '../services/api_service.dart';
 import '../widgets/app_sweet_alert.dart';
 import '../widgets/desktop_sidebar_layout.dart';
+import '../widgets/app_pagination_bar.dart';
 
 class TimHakAksesScreen extends StatefulWidget {
   final UserModel? user;
@@ -19,6 +20,8 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
   List<Map<String, dynamic>> _tim = [];
   bool _isLoading = true;
   String _selectedRoleFilter = 'Semua';
+  int _currentPage = 1;
+  static const int _pageSize = 6;
   final TextEditingController _searchCtrl = TextEditingController();
 
   @override
@@ -26,7 +29,9 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
     super.initState();
     _fetchTeamMembers();
     _searchCtrl.addListener(() {
-      setState(() {});
+      setState(() {
+        _currentPage = 1;
+      });
     });
   }
 
@@ -38,11 +43,11 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
 
   String get _ownerName => widget.user?.name.trim().isNotEmpty == true
       ? widget.user!.name
-      : 'Kreavana Demo Institution';
+      : 'Institusi';
 
   String get _ownerEmail => widget.user?.email.trim().isNotEmpty == true
       ? widget.user!.email
-      : 'institution@kreavana.id';
+      : '';
 
   Map<String, dynamic> _getOwnerEntry() {
     return {
@@ -100,7 +105,8 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
         queryParams: {'type': 'members'},
       );
 
-      final List<Map<String, dynamic>> loadedList = [_getOwnerEntry()];
+      final List<Map<String, dynamic>> loadedList =
+          widget.user != null ? [_getOwnerEntry()] : [];
 
       if (response['status'] == true && response['data'] is List) {
         final List data = response['data'];
@@ -144,15 +150,14 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
       if (mounted) {
         setState(() {
           _tim = loadedList;
+          _currentPage = 1;
           _isLoading = false;
         });
       }
     } catch (_) {
       if (mounted) {
         setState(() {
-          if (_tim.isEmpty) {
-            _tim = [_getOwnerEntry()];
-          }
+          _currentPage = 1;
           _isLoading = false;
         });
       }
@@ -1459,7 +1464,10 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
                             AppTheme.primaryPurple,
                             isDark,
                             _selectedRoleFilter == 'Semua',
-                            () => setState(() => _selectedRoleFilter = 'Semua'),
+                            () => setState(() {
+                              _selectedRoleFilter = 'Semua';
+                              _currentPage = 1;
+                            }),
                           ),
                           Container(
                             width: 1,
@@ -1479,6 +1487,7 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
                                   _selectedRoleFilter == 'Admin'
                                       ? 'Semua'
                                       : 'Admin';
+                              _currentPage = 1;
                             }),
                           ),
                           Container(
@@ -1499,6 +1508,7 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
                                   _selectedRoleFilter == 'Karyawan / Staf'
                                       ? 'Semua'
                                       : 'Karyawan / Staf';
+                              _currentPage = 1;
                             }),
                           ),
                         ],
@@ -1581,12 +1591,55 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
                     Expanded(
                       child: filteredList.isEmpty
                           ? _buildEmptyState(isDark)
-                          : ListView.builder(
-                              padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
-                              itemCount: filteredList.length,
-                              itemBuilder: (context, index) {
-                                final member = filteredList[index];
-                                return _buildMemberCard(member, isDark);
+                          : Builder(
+                              builder: (context) {
+                                final safePage = AppPaginationBar.safePage(
+                                  _currentPage,
+                                  filteredList.length,
+                                  pageSize: _pageSize,
+                                );
+                                final pagedMembers = AppPaginationBar.slicePage(
+                                  filteredList,
+                                  safePage,
+                                  pageSize: _pageSize,
+                                );
+                                return Column(
+                                  children: [
+                                    Expanded(
+                                      child: ListView.builder(
+                                        padding: const EdgeInsets.fromLTRB(
+                                          16,
+                                          6,
+                                          16,
+                                          12,
+                                        ),
+                                        itemCount: pagedMembers.length,
+                                        itemBuilder: (context, index) {
+                                          final member = pagedMembers[index];
+                                          return _buildMemberCard(member, isDark);
+                                        },
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.fromLTRB(
+                                        16,
+                                        4,
+                                        16,
+                                        16,
+                                      ),
+                                      child: AppPaginationBar(
+                                        totalItems: filteredList.length,
+                                        currentPage: safePage,
+                                        pageSize: _pageSize,
+                                        accentColor: AppTheme.primaryPurple,
+                                        itemLabel: 'anggota',
+                                        onPageChanged: (page) => setState(
+                                          () => _currentPage = page,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
                               },
                             ),
                     ),
@@ -1665,6 +1718,7 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
       onTap: () {
         setState(() {
           _selectedRoleFilter = role;
+          _currentPage = 1;
         });
       },
       borderRadius: BorderRadius.circular(20),
@@ -2132,6 +2186,7 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
                         setState(() {
                           _searchCtrl.clear();
                           _selectedRoleFilter = 'Semua';
+                          _currentPage = 1;
                         });
                       },
                       icon: const Icon(Icons.refresh_rounded, size: 16),

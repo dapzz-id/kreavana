@@ -1,12 +1,12 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../app/theme.dart';
+import '../models/opportunity_application_model.dart';
 import '../models/opportunity_model.dart';
 import '../models/user_model.dart';
 import '../services/opportunity_service.dart';
 import '../services/user_store.dart';
 import '../widgets/app_breadcrumbs.dart';
+import '../widgets/app_pagination_bar.dart';
 import '../widgets/app_sweet_alert.dart';
 import '../widgets/desktop_sidebar_layout.dart';
 import '../widgets/program_magang_card.dart';
@@ -31,40 +31,91 @@ class SchoolMagangStudent {
     required this.role,
     required this.appliedDate,
     required this.status,
-    this.portfolioUrl = 'https://kreavana.id/portfolio',
+    this.portfolioUrl = '',
     this.note = '',
     this.isAdditional = false,
     this.isReplacement = false,
     this.replacedStudentName,
   });
 
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'majorClass': majorClass,
-        'role': role,
-        'appliedDate': appliedDate,
-        'status': status,
-        'portfolioUrl': portfolioUrl,
-        'note': note,
-        'isAdditional': isAdditional,
-        'isReplacement': isReplacement,
-        'replacedStudentName': replacedStudentName,
-      };
+  factory SchoolMagangStudent.fromApplication(
+    OpportunityApplicationModel app, {
+    required bool schoolHasApprovedStudent,
+  }) {
+    final s = app.status.toLowerCase();
+    String label = 'Pending';
+    if (s == 'approved') label = 'Diterima';
+    if (s == 'rejected') label = 'Ditolak';
+    if (s == 'interview' || s == 'under_consideration') label = 'Interview';
 
-  factory SchoolMagangStudent.fromJson(Map<String, dynamic> json) {
+    Map<String, dynamic> doc = {};
+    if (app.submittedDocuments.isNotEmpty) {
+      doc = app.submittedDocuments.first;
+    }
+
+    String studentName =
+        (doc['student_name'] ?? doc['name'] ?? '').toString().trim();
+    String majorClass = (doc['major_class'] ?? doc['student_class'] ?? doc['major'] ?? '').toString().trim();
+    String role = (doc['role'] ?? '').toString().trim();
+    String portfolioUrl = (doc['portfolio_url'] ?? doc['student_portfolio'] ?? '').toString().trim();
+    String note = (doc['note'] ?? '').toString().trim();
+    bool isAdditional = doc['is_additional'] == true || doc['submission_type'] == 'additional';
+    bool isReplacement = doc['is_replacement'] == true;
+    String? replacedName = doc['replaced_student_name']?.toString();
+
+    // Parse fallback from legacy pitch_message format when submitted_documents is absent
+    if (studentName.isEmpty && app.pitchMessage.startsWith('Siswa:')) {
+      final parts = app.pitchMessage.split('|').map((p) => p.trim()).toList();
+      final head = parts.first.replaceFirst('Siswa:', '').trim();
+      final parenStart = head.lastIndexOf('(');
+      final parenEnd = head.lastIndexOf(')');
+      if (parenStart > 0 && parenEnd > parenStart) {
+        studentName = head.substring(0, parenStart).trim();
+        if (majorClass.isEmpty) {
+          majorClass = head.substring(parenStart + 1, parenEnd).trim();
+        }
+      } else {
+        studentName = head;
+      }
+      for (final part in parts.skip(1)) {
+        if (part.startsWith('Portofolio:')) {
+          if (portfolioUrl.isEmpty) {
+            portfolioUrl = part.replaceFirst('Portofolio:', '').trim();
+          }
+        } else if (note.isEmpty) {
+          note = part;
+        }
+      }
+    }
+
+    if (studentName.isEmpty) {
+      studentName = app.creator?.name ?? 'Siswa Magang';
+    }
+    if (majorClass.isEmpty) {
+      majorClass = app.subRoleSlug.replaceAll('_', ' ');
+    }
+    if (role.isEmpty) {
+      role = app.subRoleSlug.replaceAll('_', ' ').toUpperCase();
+    }
+    if (note.isEmpty) {
+      note = app.pitchMessage;
+    }
+
     return SchoolMagangStudent(
-      id: (json['id'] ?? '').toString(),
-      name: (json['name'] ?? '').toString(),
-      majorClass: (json['majorClass'] ?? '').toString(),
-      role: (json['role'] ?? '').toString(),
-      appliedDate: (json['appliedDate'] ?? 'Hari ini').toString(),
-      status: (json['status'] ?? 'Pending').toString(),
-      portfolioUrl: (json['portfolioUrl'] ?? 'https://kreavana.id/portfolio').toString(),
-      note: (json['note'] ?? '').toString(),
-      isAdditional: json['isAdditional'] == true,
-      isReplacement: json['isReplacement'] == true,
-      replacedStudentName: json['replacedStudentName']?.toString(),
+      id: app.id,
+      name: studentName,
+      majorClass: majorClass,
+      role: role,
+      appliedDate: app.createdAt != null
+          ? ProgramMagangCard.formatDateDisplay(app.createdAt)
+          : '-',
+      status: label,
+      portfolioUrl: portfolioUrl,
+      note: note,
+      isAdditional: isAdditional ||
+          (schoolHasApprovedStudent && (s == 'pending' || s == 'submitted')),
+      isReplacement: isReplacement,
+      replacedStudentName: replacedName,
     );
   }
 }
@@ -107,14 +158,12 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
 
   UserModel? get _currentUser => widget.user ?? currentUserNotifier.value;
 
-  String get _storageKey => 'school_magang_detail_${widget.opportunity.id}';
-
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _initDefaultState();
-    _loadPersistedAndServerData();
+    _loadServerData();
   }
 
   @override
@@ -125,174 +174,84 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
   }
 
   void _initDefaultState() {
-    final oppId = widget.opportunity.id ?? '';
     final isApplied = widget.isAppliedPartnership ||
-        oppId.startsWith('sch_opp_magang_') ||
-        widget.opportunity.applicationsCount > 0 ||
+        widget.opportunity.hasApplied ||
         widget.opportunity.approvedCreators.isNotEmpty;
 
-    if (oppId == 'sch_opp_magang_1') {
-      _schoolPartnershipStatus = 'approved';
-      _corporateRequestsAdditional = true;
-      _corporateRequestedCount = 1;
-      _corporateRequestNote =
-          'Corporate meminta 1 siswa tambahan untuk posisi Junior 3D Modeler karena perluasan divisi produksi aset.';
-      _students = const [
-        SchoolMagangStudent(
-          id: 'std_1',
-          name: 'Dimas Aditya',
-          majorClass: 'XII Animasi 1',
-          role: 'Junior 3D Modeler',
-          appliedDate: '10 Feb 2026',
-          status: 'Diterima',
-          note: 'Portofolio hard-surface 3D modeling sangat rapi dan memenuhi standar studio.',
-        ),
-        SchoolMagangStudent(
-          id: 'std_2',
-          name: 'Siti Nurhaliza',
-          majorClass: 'XII Animasi 2',
-          role: '3D Texture & Shading',
-          appliedDate: '10 Feb 2026',
-          status: 'Diterima',
-          note: 'Lolos seleksi tahap akhir dan siap penempatan batch I.',
-        ),
-        SchoolMagangStudent(
-          id: 'std_3',
-          name: 'Raka Pratama',
-          majorClass: 'XII Multimedia 1',
-          role: 'Junior 3D Modeler',
-          appliedDate: '12 Feb 2026',
-          status: 'Ditolak',
-          note: 'Belum memenuhi kriteria portofolio UV mapping.',
-        ),
-      ];
-    } else if (oppId == 'sch_opp_magang_2') {
-      _schoolPartnershipStatus = 'approved';
-      _corporateRequestsAdditional = false;
-      _corporateRequestedCount = 0;
-      _corporateRequestNote = '';
-      _students = const [
-        SchoolMagangStudent(
-          id: 'std_21',
-          name: 'Nadia Putri',
-          majorClass: 'XII RPL 1',
-          role: 'UI/UX Designer Intern',
-          appliedDate: '14 Feb 2026',
-          status: 'Diterima',
-          note: 'Desain sistem Figma sangat terstruktur.',
-        ),
-        SchoolMagangStudent(
-          id: 'std_22',
-          name: 'Fajar Nugroho',
-          majorClass: 'XII DKV 2',
-          role: 'Product Design Intern',
-          appliedDate: '15 Feb 2026',
-          status: 'Interview',
-          note: 'Menunggu jadwal wawancara teknis bersama Lead Designer.',
-        ),
-      ];
-    } else if (isApplied) {
-      _schoolPartnershipStatus =
-          widget.opportunity.approvedCreators.isNotEmpty ? 'approved' : 'pending';
-      _corporateRequestsAdditional = false;
-      _students = [];
-    } else {
-      _schoolPartnershipStatus = 'not_applied';
-      _corporateRequestsAdditional = false;
-      _students = [];
-    }
+    _schoolPartnershipStatus = isApplied
+        ? (widget.opportunity.approvedCreators.isNotEmpty ? 'approved' : 'pending')
+        : 'not_applied';
+    _corporateRequestsAdditional = false;
+    _corporateRequestedCount = 0;
+    _corporateRequestNote = '';
+    _students = [];
   }
 
-  Future<void> _loadPersistedAndServerData() async {
+  Future<void> _loadServerData() async {
     setState(() => _isLoading = true);
 
     try {
-      // 1. Load locally persisted student additions / partnership state
-      final prefs = await SharedPreferences.getInstance();
-      final savedJson = prefs.getString(_storageKey);
-      if (savedJson != null && savedJson.isNotEmpty) {
-        final decoded = jsonDecode(savedJson) as Map<String, dynamic>;
-        if (decoded['schoolStatus'] is String) {
-          _schoolPartnershipStatus = decoded['schoolStatus'] as String;
-        }
-        if (decoded['students'] is List) {
-          final loadedStudents = (decoded['students'] as List)
-              .whereType<Map<String, dynamic>>()
-              .map((e) => SchoolMagangStudent.fromJson(e))
-              .toList();
-          if (loadedStudents.isNotEmpty) {
-            _students = loadedStudents;
-          }
-        }
-      }
-
-      // 2. Fetch real server applications if opportunity ID is a real backend ID
       final oppId = widget.opportunity.id ?? '';
-      if (oppId.isNotEmpty && !oppId.startsWith('sch_opp_')) {
-        final apps = await OpportunityService.getOpportunityApplications(oppId);
-        if (apps.isNotEmpty && mounted) {
-          final currentSchoolId = _currentUser?.id;
-          final schoolApps = currentSchoolId != null
-              ? apps.where((a) => a.creatorId == currentSchoolId).toList()
-              : apps;
+      if (oppId.isEmpty) return;
 
-          if (schoolApps.isNotEmpty) {
-            final hasApproved =
-                schoolApps.any((a) => a.status.toLowerCase() == 'approved');
-            if (hasApproved) {
-              _schoolPartnershipStatus = 'approved';
-            } else if (_schoolPartnershipStatus == 'not_applied') {
-              _schoolPartnershipStatus = 'pending';
-            }
+      final results = await Future.wait([
+        OpportunityService.getDetail(oppId).catchError((_) => null),
+        OpportunityService.getOpportunityApplications(oppId)
+            .catchError((_) => <OpportunityApplicationModel>[]),
+      ]);
 
-            final mapped = schoolApps.map((a) {
-              final s = a.status.toLowerCase();
-              String label = 'Pending';
-              if (s == 'approved') label = 'Diterima';
-              if (s == 'rejected') label = 'Ditolak';
-              if (s == 'interview') label = 'Interview';
+      if (!mounted) return;
 
-              return SchoolMagangStudent(
-                id: a.id,
-                name: a.creator?.name ?? 'Siswa Magang',
-                majorClass: a.subRoleSlug.replaceAll('_', ' '),
-                role: a.subRoleSlug.replaceAll('_', ' ').toUpperCase(),
-                appliedDate: a.createdAt != null
-                    ? ProgramMagangCard.formatDateDisplay(a.createdAt)
-                    : 'Hari ini',
-                status: label,
-                note: a.pitchMessage,
-                isAdditional: hasApproved && s == 'pending',
-              );
-            }).toList();
+      final freshOpp = results[0] as OpportunityModel?;
+      final apps = results[1] as List<OpportunityApplicationModel>;
+      final effectiveOpp = freshOpp ?? widget.opportunity;
 
-            // Merge server apps with any local pending additions
-            final serverIds = mapped.map((e) => e.id).toSet();
-            final localExtra =
-                _students.where((s) => !serverIds.contains(s.id) && s.isAdditional).toList();
-            _students = [...mapped, ...localExtra];
-          }
+      final currentSchoolId = _currentUser?.id;
+      final schoolApps = currentSchoolId != null && currentSchoolId.isNotEmpty
+          ? apps.where((a) => a.creatorId == currentSchoolId).toList()
+          : apps;
+
+      final hasApproved =
+          schoolApps.any((a) => a.status.toLowerCase() == 'approved');
+
+      // Check real DB terms or notes for explicit corporate additional student request
+      bool corporateRequestsAdditional = false;
+      String corporateNote = '';
+      for (final term in effectiveOpp.dynamicTerms) {
+        if (term.toLowerCase().contains('tambahan siswa') ||
+            term.toLowerCase().contains('request_additional')) {
+          corporateRequestsAdditional = true;
+          corporateNote = term;
+          break;
         }
       }
+
+      final mappedStudents = schoolApps
+          .map(
+            (a) => SchoolMagangStudent.fromApplication(
+              a,
+              schoolHasApprovedStudent: hasApproved,
+            ),
+          )
+          .toList();
+
+      setState(() {
+        if (hasApproved) {
+          _schoolPartnershipStatus = 'approved';
+        } else if (schoolApps.isNotEmpty || effectiveOpp.hasApplied) {
+          _schoolPartnershipStatus = 'pending';
+        } else {
+          _schoolPartnershipStatus = 'not_applied';
+        }
+        _corporateRequestsAdditional = corporateRequestsAdditional;
+        _corporateRequestedCount = corporateRequestsAdditional ? 1 : 0;
+        _corporateRequestNote = corporateNote;
+        _students = mappedStudents;
+      });
     } catch (e) {
       debugPrint('Error loading magang detail: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _saveLocalState() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(
-        _storageKey,
-        jsonEncode({
-          'schoolStatus': _schoolPartnershipStatus,
-          'students': _students.map((s) => s.toJson()).toList(),
-        }),
-      );
-    } catch (e) {
-      debugPrint('Error saving magang detail locally: $e');
     }
   }
 
@@ -325,212 +284,243 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
   }) async {
     final formKey = GlobalKey<FormState>();
     final nameCtrl = TextEditingController();
-    final majorCtrl = TextEditingController(text: 'XII RPL / Animasi');
+    final majorCtrl = TextEditingController();
     final roleCtrl = TextEditingController(
       text: replacedStudent?.role ??
           (widget.opportunity.requirements.isNotEmpty
               ? widget.opportunity.requirements.first.subRoleSlug.replaceAll('_', ' ').toUpperCase()
-              : 'Peserta Magang'),
+              : ''),
     );
-    final portfolioCtrl = TextEditingController(text: 'https://kreavana.id/portfolio');
+    final portfolioCtrl = TextEditingController();
     final noteCtrl = TextEditingController();
+    bool isSubmitting = false;
 
     await showDialog<void>(
       context: context,
       builder: (ctx) {
-        final isDark = Theme.of(ctx).brightness == Brightness.dark;
-        final title = replacedStudent != null
-            ? 'Ajukan Siswa Pengganti'
-            : (isAdditionalStudent
-                ? 'Ajukan Siswa Tambahan'
-                : 'Ajukan Lamaran Magang Sekolah');
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            final isDark = Theme.of(ctx).brightness == Brightness.dark;
+            final title = replacedStudent != null
+                ? 'Ajukan Siswa Pengganti'
+                : (isAdditionalStudent
+                    ? 'Ajukan Siswa Tambahan'
+                    : 'Ajukan Lamaran Magang Sekolah');
 
-        return AlertDialog(
-          backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF6366F1).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.person_add_alt_1_rounded, color: Color(0xFF6366F1), size: 20),
+            return AlertDialog(
+              backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6366F1).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.person_add_alt_1_rounded, color: Color(0xFF6366F1), size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-          content: SizedBox(
-            width: 460,
-            child: Form(
-              key: formKey,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (isAdditionalStudent && _schoolPartnershipStatus == 'approved')
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 14),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFEF3C7),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0xFFFDE68A)),
-                        ),
-                        child: const Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(Icons.info_outline_rounded, color: Color(0xFFD97706), size: 18),
-                            SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Status kemitraan sekolah Anda tetap Disetujui (Approved). Hanya siswa baru ini yang akan berstatus Pending menunggu persetujuan Corporate.',
-                                style: TextStyle(fontSize: 12, color: Color(0xFF92400E)),
-                              ),
+              content: SizedBox(
+                width: 460,
+                child: Form(
+                  key: formKey,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (isAdditionalStudent && _schoolPartnershipStatus == 'approved')
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 14),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF3C7),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFFFDE68A)),
                             ),
-                          ],
+                            child: const Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(Icons.info_outline_rounded, color: Color(0xFFD97706), size: 18),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Status kemitraan sekolah Anda tetap Disetujui (Approved). Hanya siswa baru ini yang akan berstatus Pending menunggu persetujuan Corporate.',
+                                    style: TextStyle(fontSize: 12, color: Color(0xFF92400E)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        TextFormField(
+                          controller: nameCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'Nama Lengkap Siswa *',
+                            hintText: 'Contoh: Ahmad Fauzan',
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (v) =>
+                              (v == null || v.trim().isEmpty) ? 'Nama siswa wajib diisi' : null,
                         ),
-                      ),
-                    TextFormField(
-                      controller: nameCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Nama Lengkap Siswa *',
-                        hintText: 'Contoh: Ahmad Fauzan',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'Nama siswa wajib diisi' : null,
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: majorCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'Kelas & Jurusan *',
+                            hintText: 'Contoh: XII Animasi 1',
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (v) =>
+                              (v == null || v.trim().isEmpty) ? 'Kelas/jurusan wajib diisi' : null,
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: roleCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'Posisi / Spesialisasi yang Dilamar *',
+                            hintText: 'Contoh: 3D Modeler / UI UX Intern',
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (v) =>
+                              (v == null || v.trim().isEmpty) ? 'Posisi wajib diisi' : null,
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: portfolioCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'Tautan Portofolio / CV',
+                            hintText: 'https://...',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: noteCtrl,
+                          maxLines: 3,
+                          decoration: const InputDecoration(
+                            labelText: 'Catatan Pengajuan untuk Corporate',
+                            hintText: 'Jelaskan kompetensi siswa atau keterangan tambahan...',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: majorCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Kelas & Jurusan *',
-                        hintText: 'Contoh: XII Animasi 1',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'Kelas/jurusan wajib diisi' : null,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: roleCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Posisi / Spesialisasi yang Dilamar *',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'Posisi wajib diisi' : null,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: portfolioCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Tautan Portofolio / CV',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: noteCtrl,
-                      maxLines: 3,
-                      decoration: const InputDecoration(
-                        labelText: 'Catatan Pengajuan untuk Corporate',
-                        hintText: 'Jelaskan kompetensi siswa atau keterangan tambahan...',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Batal'),
-            ),
-            FilledButton.icon(
-              onPressed: () async {
-                if (!(formKey.currentState?.validate() ?? false)) return;
+              actions: [
+                TextButton(
+                  onPressed: isSubmitting ? null : () => Navigator.of(ctx).pop(),
+                  child: const Text('Batal'),
+                ),
+                FilledButton.icon(
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          if (!(formKey.currentState?.validate() ?? false)) return;
 
-                final studentName = nameCtrl.text.trim();
-                final major = majorCtrl.text.trim();
-                final role = roleCtrl.text.trim();
-                final portfolio = portfolioCtrl.text.trim();
-                final note = noteCtrl.text.trim().isNotEmpty
-                    ? noteCtrl.text.trim()
-                    : (replacedStudent != null
-                        ? 'Siswa pengganti menggantikan ${replacedStudent.name}.'
-                        : 'Siswa diajukan oleh institusi untuk program magang.');
+                          final oppId = widget.opportunity.id ?? '';
+                          if (oppId.isEmpty) {
+                            AppSweetAlert.error(
+                              context,
+                              'ID lowongan magang tidak ditemukan di database.',
+                            );
+                            return;
+                          }
 
-                // Call backend API if real opportunity
-                final oppId = widget.opportunity.id ?? '';
-                if (oppId.isNotEmpty && !oppId.startsWith('sch_opp_')) {
-                  await OpportunityService.applyToOpportunity(
-                    opportunityId: oppId,
-                    subRoleSlug: role.toLowerCase().replaceAll(' ', '_'),
-                    pitchMessage:
-                        'Siswa: $studentName ($major) | Portofolio: $portfolio | $note',
-                  );
-                }
+                          final studentName = nameCtrl.text.trim();
+                          final major = majorCtrl.text.trim();
+                          final role = roleCtrl.text.trim();
+                          final portfolio = portfolioCtrl.text.trim();
+                          final note = noteCtrl.text.trim().isNotEmpty
+                              ? noteCtrl.text.trim()
+                              : (replacedStudent != null
+                                  ? 'Siswa pengganti menggantikan ${replacedStudent.name}.'
+                                  : 'Siswa diajukan oleh institusi untuk program magang.');
+                          final additionalFlag =
+                              isAdditionalStudent || _schoolPartnershipStatus == 'approved';
 
-                final newStudent = SchoolMagangStudent(
-                  id: 'std_${DateTime.now().millisecondsSinceEpoch}',
-                  name: studentName,
-                  majorClass: major,
-                  role: role,
-                  appliedDate: 'Hari ini',
-                  status: 'Pending',
-                  portfolioUrl: portfolio,
-                  note: note,
-                  isAdditional: isAdditionalStudent || _schoolPartnershipStatus == 'approved',
-                  isReplacement: replacedStudent != null,
-                  replacedStudentName: replacedStudent?.name,
-                );
+                          setDialogState(() => isSubmitting = true);
 
-                setState(() {
-                  _students.add(newStudent);
-                  _selectedStudentFilter = 'Semua';
-                  _searchController.clear();
-                  _studentPage =
-                      ((_students.length - 1) ~/ _studentPageSize) + 1;
-                  // IMPORTANT: Jika sekolah sudah approved, status sekolah TETAP approved!
-                  // Hanya jika sekolah belum melamar sama sekali, baru menjadi 'pending'.
-                  if (_schoolPartnershipStatus == 'not_applied') {
-                    _schoolPartnershipStatus = 'pending';
-                  }
-                });
+                          final res = await OpportunityService.applyInstitutionStudent(
+                            opportunityId: oppId,
+                            subRoleSlug: role.toLowerCase().replaceAll(' ', '_'),
+                            pitchMessage:
+                                'Siswa: $studentName ($major)${portfolio.isNotEmpty ? ' | Portofolio: $portfolio' : ''} | $note',
+                            studentDocument: {
+                              'student_name': studentName,
+                              'major_class': major,
+                              'role': role,
+                              'portfolio_url': portfolio,
+                              'note': note,
+                              'is_additional': additionalFlag,
+                              'is_replacement': replacedStudent != null,
+                              if (replacedStudent != null)
+                                'replaced_student_name': replacedStudent.name,
+                            },
+                          );
 
-                await _saveLocalState();
+                          if (ctx.mounted) {
+                            setDialogState(() => isSubmitting = false);
+                          }
 
-                if (ctx.mounted) Navigator.of(ctx).pop();
-                if (mounted) {
-                  AppSweetAlert.success(
-                    context,
-                    isAdditionalStudent && _schoolPartnershipStatus == 'approved'
-                        ? 'Siswa tambahan $studentName berhasil diajukan dengan status Pending. Status kemitraan sekolah tetap Disetujui.'
-                        : 'Lamaran siswa $studentName berhasil dikirim ke Corporate.',
-                    title: 'Pengajuan Berhasil',
-                  );
-                }
-              },
-              icon: const Icon(Icons.send_rounded, size: 16),
-              label: const Text('Kirim Pengajuan'),
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF6366F1),
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ],
+                          if (res['status'] != true) {
+                            if (mounted) {
+                              AppSweetAlert.error(
+                                context,
+                                res['message']?.toString() ??
+                                    'Gagal menyimpan pengajuan siswa ke database.',
+                              );
+                            }
+                            return;
+                          }
+
+                          if (ctx.mounted) Navigator.of(ctx).pop();
+                          await _loadServerData();
+
+                          if (mounted) {
+                            setState(() {
+                              _selectedStudentFilter = 'Semua';
+                              _searchController.clear();
+                              _studentPage = 1;
+                            });
+                            AppSweetAlert.success(
+                              context,
+                              additionalFlag
+                                  ? 'Siswa tambahan $studentName berhasil diajukan dengan status Pending. Status kemitraan sekolah tetap Disetujui.'
+                                  : 'Lamaran siswa $studentName berhasil dikirim ke Corporate.',
+                              title: 'Pengajuan Berhasil',
+                            );
+                          }
+                        },
+                  icon: isSubmitting
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.send_rounded, size: 16),
+                  label: Text(isSubmitting ? 'Mengirim...' : 'Kirim Pengajuan'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF6366F1),
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -831,20 +821,20 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  subText,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: isDark ? Colors.white70 : const Color(0xFF334155),
-                    height: 1.4,
+                  Text(
+                    subText,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: isDark ? Colors.white70 : const Color(0xFF334155),
+                      height: 1.4,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
   }
 
   Widget _buildCorporateRequestBanner(bool isDark, bool isDesktop) {
@@ -970,17 +960,19 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
   Widget _buildOverviewTab(bool isDark, bool isDesktop, Color accentColor) {
     final opp = widget.opportunity;
     final rawDate = opp.deadline ?? opp.eventDate ?? opp.eventStartDate;
-    final period = ProgramMagangCard.formatDateDisplay(rawDate, defaultFallback: '21 Sep 2026');
+    final period = ProgramMagangCard.formatDateDisplay(rawDate, defaultFallback: '-');
 
     int totalQuota = 0;
     for (final r in opp.requirements) {
       totalQuota += r.quantity;
     }
-    if (totalQuota <= 0) totalQuota = 10;
     final int filled = opp.approvedCreators.isNotEmpty
         ? opp.approvedCreators.length
         : _students.where((s) => s.status == 'Diterima').length;
-    final int remaining = (totalQuota - filled).clamp(0, totalQuota);
+    final int remaining = totalQuota > 0 ? (totalQuota - filled).clamp(0, totalQuota) : 0;
+    final String quotaLabel = totalQuota > 0
+        ? '$remaining dari $totalQuota posisi'
+        : 'Sesuai kuota Corporate';
 
     final reqs = <String>[];
     for (final r in opp.requirements) {
@@ -989,13 +981,6 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
       } else if (r.notes != null && r.notes!.trim().isNotEmpty) {
         reqs.add(r.notes!.trim());
       }
-    }
-    if (reqs.isEmpty) {
-      reqs.addAll([
-        'Siswa SMK / Mahasiswa jurusan terkait',
-        'Memiliki portofolio karya yang relevan',
-        'Disiplin dan komunikatif dalam kerja tim',
-      ]);
     }
 
     return Padding(
@@ -1009,8 +994,9 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
           ),
           const SizedBox(height: 8),
           Text(
-            opp.description ??
-                'Kerja sama penempatan siswa vokasi magang pada industri kreatif mitra.',
+            opp.description?.isNotEmpty == true
+                ? opp.description!
+                : 'Belum ada deskripsi tambahan untuk program magang ini.',
             style: TextStyle(
               fontSize: 13.5,
               height: 1.5,
@@ -1031,7 +1017,7 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
               _buildInfoTile(
                 icon: Icons.people_outline_rounded,
                 label: 'Sisa Kuota Posisi',
-                value: '$remaining dari $totalQuota posisi',
+                value: quotaLabel,
                 isDark: isDark,
               ),
               _buildInfoTile(
@@ -1039,38 +1025,40 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                 label: 'Uang Saku / Tunjangan',
                 value: opp.budgetRange?.isNotEmpty == true
                     ? opp.budgetRange!
-                    : 'Rp 3.000.000 / bulan',
+                    : 'Sesuai ketentuan Corporate',
                 isDark: isDark,
               ),
             ],
           ),
-          const SizedBox(height: 24),
-          const Text(
-            'Syarat & Kualifikasi',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
-          ...reqs.map(
-            (r) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.check_circle_rounded, size: 17, color: Color(0xFF10B981)),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      r,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: isDark ? Colors.white70 : const Color(0xFF334155),
+          if (reqs.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            const Text(
+              'Syarat & Kualifikasi',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            ...reqs.map(
+              (r) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.check_circle_rounded, size: 17, color: Color(0xFF10B981)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        r,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isDark ? Colors.white70 : const Color(0xFF334155),
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -1278,114 +1266,15 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
           else ...[
             ...pagedStudents.map((s) => _buildStudentCard(s, isDark)),
             const SizedBox(height: 12),
-            _buildStudentPaginationBar(
-              isDark: isDark,
-              accentColor: accentColor,
-              currentPage: safePage,
-              totalPages: totalPages,
-              startItem: startIdx + 1,
-              endItem: endIdx,
+            AppPaginationBar(
               totalItems: totalItems,
+              currentPage: safePage,
+              pageSize: _studentPageSize,
+              accentColor: accentColor,
+              itemLabel: 'siswa',
+              onPageChanged: (page) => setState(() => _studentPage = page),
             ),
           ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStudentPaginationBar({
-    required bool isDark,
-    required Color accentColor,
-    required int currentPage,
-    required int totalPages,
-    required int startItem,
-    required int endItem,
-    required int totalItems,
-  }) {
-    final textSecondary = isDark ? Colors.white60 : Colors.grey.shade600;
-    final cardBorder = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: cardBorder),
-      ),
-      child: Wrap(
-        spacing: 12,
-        runSpacing: 10,
-        alignment: WrapAlignment.spaceBetween,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          Text(
-            'Menampilkan $startItem–$endItem dari $totalItems siswa',
-            style: TextStyle(fontSize: 12.5, color: textSecondary),
-          ),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              OutlinedButton.icon(
-                onPressed: currentPage > 1
-                    ? () => setState(() => _studentPage = currentPage - 1)
-                    : null,
-                icon: const Icon(Icons.chevron_left_rounded, size: 16),
-                label: const Text('Sebelumnya', style: TextStyle(fontSize: 12)),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  side: BorderSide(color: cardBorder),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-              ...List.generate(totalPages, (idx) {
-                final page = idx + 1;
-                final isActive = page == currentPage;
-                return InkWell(
-                  onTap: () => setState(() => _studentPage = page),
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: isActive ? accentColor : Colors.transparent,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: isActive ? accentColor : cardBorder,
-                      ),
-                    ),
-                    child: Text(
-                      '$page',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: isActive
-                            ? Colors.white
-                            : (isDark ? Colors.white70 : const Color(0xFF334155)),
-                      ),
-                    ),
-                  ),
-                );
-              }),
-              OutlinedButton.icon(
-                onPressed: currentPage < totalPages
-                    ? () => setState(() => _studentPage = currentPage + 1)
-                    : null,
-                icon: const Icon(Icons.chevron_right_rounded, size: 16),
-                label: const Text('Berikutnya', style: TextStyle(fontSize: 12)),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  side: BorderSide(color: cardBorder),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-            ],
-          ),
         ],
       ),
     );

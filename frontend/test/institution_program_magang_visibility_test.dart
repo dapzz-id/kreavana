@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kreavana/models/opportunity_application_model.dart';
 import 'package:kreavana/models/opportunity_model.dart';
 import 'package:kreavana/models/user_model.dart';
 import 'package:kreavana/screens/corporate_lowongan_screen.dart';
+import 'package:kreavana/screens/program_magang_detail_screen.dart';
+import 'package:kreavana/screens/program_magang_screen.dart';
+import 'package:kreavana/widgets/app_pagination_bar.dart';
+import 'package:kreavana/widgets/program_magang_card.dart';
 
 void main() {
   group('Corporate Vacancy Card and Institution Visibility Tests', () {
@@ -246,6 +251,205 @@ void main() {
       expect(filteredForCorporate.first.id, equals('opp-corp-branding'));
       expect(filteredForCorporate.first.title, equals('Pengadaan Rebranding Brand & Visual Identity 2026'));
       expect(filteredForCorporate.any((o) => o.id == 'opp-magang-pv'), isFalse);
+    });
+  });
+
+  group('Institution DB-Only, 3-Tab Separation & Pagination Tests', () {
+    test('OpportunityModel.fromJson parses has_applied correctly', () {
+      final applied = OpportunityModel.fromJson({
+        'id': 'opp-1',
+        'title': 'Magang Animasi 3D',
+        'sub_role_slug': 'magang',
+        'status': 'open',
+        'has_applied': true,
+      });
+      final appliedInt = OpportunityModel.fromJson({
+        'id': 'opp-2',
+        'title': 'Magang UI/UX',
+        'sub_role_slug': 'magang',
+        'status': 'open',
+        'has_applied': 1,
+      });
+      final notApplied = OpportunityModel.fromJson({
+        'id': 'opp-3',
+        'title': 'Magang Desain Grafis',
+        'sub_role_slug': 'magang',
+        'status': 'open',
+      });
+
+      expect(applied.hasApplied, isTrue);
+      expect(appliedInt.hasApplied, isTrue);
+      expect(notApplied.hasApplied, isFalse);
+    });
+
+    test('ProgramMagangCard.fromMap and fromOpportunity do not inject mockup defaults', () {
+      final emptyCard = ProgramMagangCard.fromMap({
+        'id': 'db-1',
+        'title': 'Program Magang Studio Real',
+        'description': 'Deskripsi resmi dari database',
+        'status': 'open',
+      });
+      expect(emptyCard.quotaText, equals('-'));
+      expect(emptyCard.registrationPeriod, equals('-'));
+      expect(emptyCard.requirements, isEmpty);
+
+      final opp = OpportunityModel(
+        id: 'db-2',
+        title: 'Magang Developer Mobile',
+        description: 'Dibuka oleh Corporate Mitra',
+        subRoleSlug: 'magang',
+        status: 'open',
+      );
+      final oppCard = ProgramMagangCard.fromOpportunity(opp);
+      expect(oppCard.quotaText, equals('Terbuka'));
+      expect(oppCard.requirements, isEmpty);
+    });
+
+    test('SchoolMagangStudent.fromApplication keeps additional students Pending independently', () {
+      final approvedApp = OpportunityApplicationModel.fromJson({
+        'id': 'app-1',
+        'opportunity_id': 'opp-magang-1',
+        'sub_role_slug': 'animator',
+        'status': 'approved',
+        'created_at': '2026-11-10',
+        'submitted_documents': [
+          {
+            'student_name': 'Siti Nurhaliza',
+            'student_class': 'XII Animasi 1',
+            'student_portfolio': 'https://portfolio.example/siti',
+            'submission_type': 'initial',
+          },
+        ],
+      });
+
+      final additionalPendingApp = OpportunityApplicationModel.fromJson({
+        'id': 'app-2',
+        'opportunity_id': 'opp-magang-1',
+        'sub_role_slug': 'animator',
+        'status': 'submitted',
+        'created_at': '2026-11-15',
+        'submitted_documents': [
+          {
+            'student_name': 'Budi Santoso',
+            'student_class': 'XII Animasi 2',
+            'student_portfolio': 'https://portfolio.example/budi',
+            'submission_type': 'additional',
+          },
+        ],
+      });
+
+      final approvedStudent = SchoolMagangStudent.fromApplication(
+        approvedApp,
+        schoolHasApprovedStudent: true,
+      );
+      final additionalStudent = SchoolMagangStudent.fromApplication(
+        additionalPendingApp,
+        schoolHasApprovedStudent: true,
+      );
+
+      expect(approvedStudent.name, equals('Siti Nurhaliza'));
+      expect(approvedStudent.status, equals('Diterima'));
+      expect(additionalStudent.name, equals('Budi Santoso'));
+      expect(additionalStudent.status, equals('Pending'));
+      expect(additionalStudent.isAdditional, isTrue);
+    });
+
+    testWidgets('AppPaginationBar paginates max 6 items per page and supports Prev/Next cleanly', (tester) async {
+      final items = List.generate(14, (i) => 'Item ${i + 1}');
+      int currentPage = 1;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 320,
+                child: StatefulBuilder(
+                  builder: (context, setState) {
+                    final safePage = AppPaginationBar.safePage(
+                      currentPage,
+                      items.length,
+                      pageSize: 6,
+                    );
+                    final paged = AppPaginationBar.slicePage(
+                      items,
+                      safePage,
+                      pageSize: 6,
+                    );
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (final item in paged) Text(item),
+                        AppPaginationBar(
+                          totalItems: items.length,
+                          currentPage: safePage,
+                          pageSize: 6,
+                          accentColor: Colors.purple,
+                          itemLabel: 'data',
+                          onPageChanged: (page) =>
+                              setState(() => currentPage = page),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Item 1'), findsOneWidget);
+      expect(find.text('Item 6'), findsOneWidget);
+      expect(find.text('Item 7'), findsNothing);
+      expect(find.text('Menampilkan 1–6 dari 14 data'), findsOneWidget);
+
+      await tester.tap(find.text('Next'));
+      await tester.pump();
+      expect(find.text('Item 7'), findsOneWidget);
+      expect(find.text('Item 12'), findsOneWidget);
+      expect(find.text('Item 1'), findsNothing);
+      expect(find.text('Menampilkan 7–12 dari 14 data'), findsOneWidget);
+
+      await tester.tap(find.text('3'));
+      await tester.pump();
+      expect(find.text('Item 13'), findsOneWidget);
+      expect(find.text('Item 14'), findsOneWidget);
+      expect(find.text('Menampilkan 13–14 dari 14 data'), findsOneWidget);
+
+      await tester.tap(find.text('Prev'));
+      await tester.pump();
+      expect(find.text('Item 7'), findsOneWidget);
+      expect(find.text('Menampilkan 7–12 dari 14 data'), findsOneWidget);
+    });
+
+    testWidgets('ProgramMagangScreen displays 3 separated tabs and zero mockup data when server returns empty', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1280, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final institutionUser = UserModel(
+        id: 'inst-1',
+        name: 'SMKN 1 Test',
+        username: 'smkn1_test',
+        email: 'smkn1@test.id',
+        role: 'institution',
+        subRole: 'institution',
+        verificationType: 'institution',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ProgramMagangScreen(user: institutionUser),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.textContaining('Lamaran Magang Saya'), findsAtLeastNWidgets(1));
+      expect(find.textContaining('Magang Corporate Mitra'), findsAtLeastNWidgets(1));
+      expect(find.textContaining('Semua Lowongan Magang'), findsAtLeastNWidgets(1));
+      expect(find.text('Program Magang MBKM 3D Modeler Batch I 2026'), findsNothing);
+      expect(find.text('Riset Kolaborasi Preservasi Budaya Digital'), findsNothing);
     });
   });
 }

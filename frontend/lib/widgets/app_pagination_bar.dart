@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../app/theme.dart';
 
+/// Shared responsive pagination bar and slicing helpers for paginated data views.
 class AppPaginationBar extends StatelessWidget {
   final int currentPage;
   final int totalItems;
@@ -9,47 +10,74 @@ class AppPaginationBar extends StatelessWidget {
   final ValueChanged<int> onPageChanged;
   final String itemLabel;
   final Color? primaryColor;
+  final Color? accentColor;
   final EdgeInsetsGeometry? margin;
 
   const AppPaginationBar({
     super.key,
     required this.currentPage,
     required this.totalItems,
-    required this.pageSize,
+    this.pageSize = 6,
     required this.onPageChanged,
     this.itemLabel = 'data',
     this.primaryColor,
+    this.accentColor,
     this.margin,
   });
 
+  /// Returns a safely bounded page number within `1..totalPages(totalItems, pageSize)`.
+  static int safePage(int requestedPage, int totalItems, {int pageSize = 6}) {
+    final pages = totalPages(totalItems, pageSize: pageSize);
+    return requestedPage.clamp(1, pages);
+  }
+
+  /// Computes total page count (minimum 1).
+  static int totalPages(int totalItems, {int pageSize = 6}) {
+    if (totalItems <= 0 || pageSize <= 0) return 1;
+    return (totalItems / pageSize).ceil();
+  }
+
+  /// Slices `items` for `currentPage` (1-indexed) with at most `pageSize` entries.
+  static List<T> slicePage<T>(
+    List<T> items,
+    int currentPage, {
+    int pageSize = 6,
+  }) {
+    if (items.isEmpty) return <T>[];
+    final safe = safePage(currentPage, items.length, pageSize: pageSize);
+    final start = (safe - 1) * pageSize;
+    final end = (start + pageSize).clamp(0, items.length);
+    return items.sublist(start, end);
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (totalItems <= 0) return const SizedBox.shrink();
+
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final themePrimary = primaryColor ?? const Color(0xFF4F46E5);
+    final themePrimary = accentColor ?? primaryColor ?? const Color(0xFF4F46E5);
 
-    final totalPages = totalItems > 0 ? (totalItems / pageSize).ceil() : 1;
-    final effectivePage = currentPage.clamp(1, totalPages);
+    final totalPagesCount = totalPages(totalItems, pageSize: pageSize);
+    final effectivePage = safePage(currentPage, totalItems, pageSize: pageSize);
 
-    final start = totalItems == 0 ? 0 : (effectivePage - 1) * pageSize + 1;
-    final end = totalItems == 0 ? 0 : math.min(effectivePage * pageSize, totalItems);
-
-    final String infoText = totalItems == 0
-        ? 'Menampilkan 0 $itemLabel'
-        : 'Menampilkan $start \u2013 $end dari $totalItems $itemLabel';
+    final start = (effectivePage - 1) * pageSize + 1;
+    final end = math.min(effectivePage * pageSize, totalItems);
+    final String infoText = 'Menampilkan $start–$end dari $totalItems $itemLabel';
 
     final canPrev = effectivePage > 1;
-    final canNext = effectivePage < totalPages;
+    final canNext = effectivePage < totalPagesCount;
+    final borderColor =
+        isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0);
+    final textSecondary = isDark ? Colors.white70 : const Color(0xFF64748B);
 
     return Container(
-      margin: margin ?? const EdgeInsets.only(top: 24, bottom: 20),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      width: double.infinity,
+      margin: margin ?? const EdgeInsets.only(top: 16, bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
-          width: 1,
-        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: borderColor, width: 1),
         boxShadow: isDark
             ? null
             : [
@@ -60,96 +88,62 @@ class AppPaginationBar extends StatelessWidget {
                 ),
               ],
       ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final isNarrow = constraints.maxWidth < 440;
-
-          final paginationControls = Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Previous button (<)
-              Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: canPrev ? () => onPageChanged(effectivePage - 1) : null,
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    alignment: Alignment.center,
-                    child: Icon(
-                      Icons.chevron_left_rounded,
-                      size: 22,
-                      color: canPrev
-                          ? (isDark ? Colors.white70 : const Color(0xFF64748B))
-                          : (isDark ? Colors.white24 : const Color(0xFFCBD5E1)),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 4),
-
-              // Page numbers
-              ..._buildPagePills(
-                effectivePage: effectivePage,
-                totalPages: totalPages,
-                isDark: isDark,
-                themePrimary: themePrimary,
-              ),
-
-              const SizedBox(width: 4),
-              // Next button (>)
-              Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: canNext ? () => onPageChanged(effectivePage + 1) : null,
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    alignment: Alignment.center,
-                    child: Icon(
-                      Icons.chevron_right_rounded,
-                      size: 22,
-                      color: canNext
-                          ? (isDark ? Colors.white70 : const Color(0xFF64748B))
-                          : (isDark ? Colors.white24 : const Color(0xFFCBD5E1)),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          );
-
-          final labelWidget = Text(
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 12,
+        runSpacing: 10,
+        children: [
+          Text(
             infoText,
             style: TextStyle(
-              fontSize: 13.5,
+              fontSize: 13,
               fontWeight: FontWeight.w500,
-              color: isDark ? Colors.white70 : const Color(0xFF64748B),
+              color: textSecondary,
             ),
-          );
-
-          if (isNarrow) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                labelWidget,
-                const SizedBox(height: 12),
-                paginationControls,
-              ],
-            );
-          }
-
-          return Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
+          ),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              labelWidget,
-              paginationControls,
+              OutlinedButton.icon(
+                onPressed: canPrev ? () => onPageChanged(effectivePage - 1) : null,
+                icon: const Icon(Icons.chevron_left_rounded, size: 16),
+                label: const Text('Prev', style: TextStyle(fontSize: 12)),
+                style: OutlinedButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  side: BorderSide(color: borderColor),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+              ..._buildPagePills(
+                effectivePage: effectivePage,
+                totalPages: totalPagesCount,
+                isDark: isDark,
+                themePrimary: themePrimary,
+                borderColor: borderColor,
+              ),
+              OutlinedButton.icon(
+                onPressed: canNext ? () => onPageChanged(effectivePage + 1) : null,
+                icon: const Icon(Icons.chevron_right_rounded, size: 16),
+                iconAlignment: IconAlignment.end,
+                label: const Text('Next', style: TextStyle(fontSize: 12)),
+                style: OutlinedButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  side: BorderSide(color: borderColor),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
             ],
-          );
-        },
+          ),
+        ],
       ),
     );
   }
@@ -159,10 +153,10 @@ class AppPaginationBar extends StatelessWidget {
     required int totalPages,
     required bool isDark,
     required Color themePrimary,
+    required Color borderColor,
   }) {
     final List<Widget> pills = [];
 
-    // Simple display for <= 5 pages: render all page numbers
     if (totalPages <= 5) {
       for (int i = 1; i <= totalPages; i++) {
         pills.add(_buildSinglePagePill(
@@ -170,12 +164,12 @@ class AppPaginationBar extends StatelessWidget {
           isActive: i == effectivePage,
           isDark: isDark,
           themePrimary: themePrimary,
+          borderColor: borderColor,
         ));
       }
       return pills;
     }
 
-    // Truncated display for > 5 pages
     final Set<int> visiblePages = {1, totalPages, effectivePage};
     if (effectivePage > 1) visiblePages.add(effectivePage - 1);
     if (effectivePage < totalPages) visiblePages.add(effectivePage + 1);
@@ -204,6 +198,7 @@ class AppPaginationBar extends StatelessWidget {
         isActive: page == effectivePage,
         isDark: isDark,
         themePrimary: themePrimary,
+        borderColor: borderColor,
       ));
       lastPage = page;
     }
@@ -216,32 +211,32 @@ class AppPaginationBar extends StatelessWidget {
     required bool isActive,
     required bool isDark,
     required Color themePrimary,
+    required Color borderColor,
   }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 2),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: isActive ? null : () => onPageChanged(page),
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            constraints: const BoxConstraints(minWidth: 36),
-            height: 36,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: isActive ? themePrimary : Colors.transparent,
-              borderRadius: BorderRadius.circular(8),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: isActive ? null : () => onPageChanged(page),
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isActive ? themePrimary : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isActive ? themePrimary : borderColor,
             ),
-            child: Text(
-              '$page',
-              style: TextStyle(
-                color: isActive
-                    ? Colors.white
-                    : (isDark ? Colors.white70 : const Color(0xFF475569)),
-                fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-                fontSize: 13,
-              ),
+          ),
+          child: Text(
+            '$page',
+            style: TextStyle(
+              color: isActive
+                  ? Colors.white
+                  : (isDark ? Colors.white70 : const Color(0xFF475569)),
+              fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+              fontSize: 12.5,
             ),
           ),
         ),

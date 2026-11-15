@@ -310,9 +310,8 @@ class InstitutionResourceController extends Controller
                 \Database\Seeders\CorporateDummySeeder::seedForUser($user);
             } elseif ($isGovernment && InstitutionResource::where('user_id', $ownerId)->count() === 0) {
                 \Database\Seeders\GovernmentDummySeeder::seedForUser($user);
-            } elseif ($isSchool && InstitutionResource::where('user_id', $ownerId)->count() === 0) {
-                \Database\Seeders\SchoolDummySeeder::seedForUser($user);
             }
+            // Institution role uses strict database records only (no dummy auto-seeding).
 
             if ($isSchool && $type === 'tenders') {
                 return $this->errorResponse('Fitur Pengadaan & Vendor hanya tersedia untuk akun Corporate / Perusahaan.', 403);

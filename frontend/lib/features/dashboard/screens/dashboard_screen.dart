@@ -32,6 +32,7 @@ import '../../../services/chat_service.dart';
 import '../../../app/app_animations.dart';
 import '../../../widgets/app_sweet_alert.dart';
 import '../../../screens/explore_screen.dart';
+import '../../../widgets/app_pagination_bar.dart';
 class _RoleDashboardConfig {
   final String badge;
   final String greeting;
@@ -92,6 +93,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   List<Map<String, dynamic>> _activityFeed = [];
   List<JobContract> _contracts = [];
   List<Map<String, String>> _stats = [];
+  int _recommendationPage = 1;
+  int _activityPage = 1;
 
   late AnimationController _statsAnimController;
   late List<Animation<double>> _statsAnims;
@@ -233,8 +236,24 @@ class _DashboardScreenState extends State<DashboardScreen>
 
         setState(() {
           _contracts = contracts;
-          _stats = stats;
           final data = res['data'] ?? {};
+          final rawInstStats = data['institution_stats'];
+          if (stats.isEmpty && rawInstStats is List && rawInstStats.isNotEmpty) {
+            _stats = rawInstStats
+                .whereType<Map>()
+                .map(
+                  (item) => {
+                    'label': (item['label'] ?? item['stat_label'] ?? '').toString(),
+                    'value': (item['value'] ?? item['stat_value'] ?? '').toString(),
+                    'icon': (item['icon'] ?? item['stat_icon'] ?? '').toString(),
+                  },
+                )
+                .toList();
+          } else {
+            _stats = stats;
+          }
+          _recommendationPage = 1;
+          _activityPage = 1;
           if ((res['success'] == true || res['status'] == true) && res['data'] != null) {
             final summary = data['summary'] ?? {};
             _overviewSummary = {
@@ -242,6 +261,9 @@ class _DashboardScreenState extends State<DashboardScreen>
               'proposals_count': summary['proposals_count']?.toString() ?? '0',
               'running_projects':
                   summary['running_projects']?.toString() ?? '0',
+              'partners_count': summary['partners_count']?.toString() ?? '0',
+              'events_count': summary['events_count']?.toString() ?? '0',
+              'showcases_count': summary['showcases_count']?.toString() ?? '0',
               'estimated_expenses':
                   summary['estimated_expenses']?.toString() ?? 'Rp 0',
               'monthly_income': summary['monthly_income']?.toString() ?? 'Rp 0',
@@ -251,6 +273,9 @@ class _DashboardScreenState extends State<DashboardScreen>
               'active_needs': '0',
               'proposals_count': '0',
               'running_projects': '0',
+              'partners_count': '0',
+              'events_count': '0',
+              'showcases_count': '0',
               'estimated_expenses': 'Rp 0',
               'monthly_income': 'Rp 0',
             };
@@ -524,13 +549,32 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
 
     // 3. INSTITUSI PENDIDIKAN / SEKOLAH / KAMPUS
-    if (sub == 'school' ||
+    if (_isInstitution ||
+        sub == 'school' ||
         sub == 'education' ||
         sub == 'campus' ||
         sub == 'sekolah' ||
         sub == 'kampus' ||
         sub == 'institution' ||
         sub == 'institusi') {
+      final eventsVal =
+          findStatValue('event') ??
+          findStatValue('kegiatan') ??
+          _overviewSummary['active_needs']?.toString() ??
+          '0';
+      final internshipVal =
+          findStatValue('magang') ??
+          _overviewSummary['proposals_count']?.toString() ??
+          '0';
+      final partnersVal =
+          findStatValue('mitra') ??
+          _overviewSummary['partners_count']?.toString() ??
+          '0';
+      final showcasesVal =
+          findStatValue('karya') ??
+          _overviewSummary['showcases_count']?.toString() ??
+          '0';
+
       return _RoleDashboardConfig(
         badge: '✦ MODE INSTITUSI PENDIDIKAN',
         greeting: 'Halo, $name! 🎓',
@@ -544,39 +588,39 @@ class _DashboardScreenState extends State<DashboardScreen>
         recommendationRole: 'client',
         metrics: [
           {
-            'label': 'Siswa / Mahasiswa',
-            'value': '1.240',
-            'icon': Icons.school_outlined,
+            'label': 'Kegiatan & Event',
+            'value': eventsVal,
+            'icon': Icons.event_outlined,
             'color': const Color(0xFF6366F1),
-            'trend': 'Talenta kreatif terdaftar',
-            'breakdown': 'Total siswa dan mahasiswa aktif yang terdaftar dalam program kejuruan / kampus.',
+            'trend': 'Agenda resmi terdaftar',
+            'breakdown': 'Total agenda, pameran, dan kegiatan institusi yang tersimpan di database.',
             'action': 'Semua Proyek',
           },
           {
             'label': 'Program Magang',
-            'value': '18',
+            'value': internshipVal,
             'icon': Icons.work_outline,
             'color': const Color(0xFF10B981),
-            'trend': 'Kemitraan industri aktif',
-            'breakdown': 'Program magang kerja sama industri yang sedang berjalan untuk mahasiswa.',
+            'trend': 'Lamaran & kemitraan magang',
+            'breakdown': 'Total pengajuan dan penempatan program magang siswa ke mitra industri.',
             'action': 'Proyek Berjalan',
           },
           {
             'label': 'Mitra Industri',
-            'value': '32',
+            'value': partnersVal,
             'icon': Icons.business_outlined,
             'color': const Color(0xFF3B82F6),
             'trend': 'Perusahaan mitra terhubung',
-            'breakdown': 'Perusahaan dan studio kreatif yang telah menandatangani MoU kemitraan.',
+            'breakdown': 'Perusahaan dan studio kreatif mitra resmi yang tersimpan di database.',
             'action': 'Cari Mitra Industri',
           },
           {
-            'label': 'Karya Disetujui',
-            'value': '156',
+            'label': 'Karya Siswa',
+            'value': showcasesVal,
             'icon': Icons.verified_outlined,
             'color': const Color(0xFFF59E0B),
-            'trend': 'Portofolio terverifikasi',
-            'breakdown': 'Karya cipta dan portofolio siswa yang telah lulus kurasi standar industri.',
+            'trend': 'Portofolio terkurasi',
+            'breakdown': 'Karya cipta dan portofolio siswa dari database institusi.',
             'action': 'Review Karya',
           },
         ],
@@ -3123,13 +3167,13 @@ class _DashboardScreenState extends State<DashboardScreen>
       } else if (_vendorRecommendations.isNotEmpty) {
         recommendations = _vendorRecommendations;
       } else {
-        recommendations = _defaultOpportunities;
+        recommendations = _isInstitution ? const [] : _defaultOpportunities;
       }
     } else {
       if (_vendorRecommendations.isNotEmpty) {
         recommendations = _vendorRecommendations;
       } else {
-        recommendations = _defaultVendors;
+        recommendations = _isInstitution ? const [] : _defaultVendors;
       }
     }
 
@@ -3146,18 +3190,74 @@ class _DashboardScreenState extends State<DashboardScreen>
           role: config.recommendationRole,
           niche: config.recommendationNiche,
         ),
-        if (recommendations.isNotEmpty) ...[
+        if (_isInstitution && recommendations.isEmpty) ...[
           const SizedBox(height: 12),
-          SizedBox(
-            height: 270,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              clipBehavior: Clip.hardEdge,
-              itemCount: recommendations.length,
-              itemBuilder: (context, index) => isLookingForOpps
-                  ? _buildOpportunityCard(recommendations[index], isDark)
-                  : _buildCreatorCard(recommendations[index], isDark),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.cardDark : Colors.white,
+              borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+              border: Border.all(
+                color: isDark ? AppTheme.inputBorder : AppTheme.inputBorderLight,
+              ),
             ),
+            child: Text(
+              'Belum ada rekomendasi dari database untuk saat ini.',
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+              ),
+            ),
+          ),
+        ] else if (recommendations.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Builder(
+            builder: (context) {
+              const recPageSize = 6;
+              final totalRecs = recommendations.length;
+              final safeRecPage = AppPaginationBar.safePage(
+                _recommendationPage,
+                totalRecs,
+                pageSize: recPageSize,
+              );
+              final pagedRecommendations = _isInstitution || totalRecs > recPageSize
+                  ? AppPaginationBar.slicePage(
+                      recommendations,
+                      safeRecPage,
+                      pageSize: recPageSize,
+                    )
+                  : recommendations;
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    height: 270,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      clipBehavior: Clip.hardEdge,
+                      itemCount: pagedRecommendations.length,
+                      itemBuilder: (context, index) => isLookingForOpps
+                          ? _buildOpportunityCard(pagedRecommendations[index], isDark)
+                          : _buildCreatorCard(pagedRecommendations[index], isDark),
+                    ),
+                  ),
+                  if (totalRecs > recPageSize || (_isInstitution && totalRecs > 0)) ...[
+                    const SizedBox(height: 12),
+                    AppPaginationBar(
+                      totalItems: totalRecs,
+                      currentPage: safeRecPage,
+                      pageSize: recPageSize,
+                      accentColor: _roleAccentColor,
+                      itemLabel: 'rekomendasi',
+                      onPageChanged: (page) =>
+                          setState(() => _recommendationPage = page),
+                    ),
+                  ],
+                ],
+              );
+            },
           ),
         ],
       ],
@@ -3974,29 +4074,8 @@ class _DashboardScreenState extends State<DashboardScreen>
         },
       ];
     }
-    if (sub == 'school' || sub == 'education' || sub == 'campus' || sub == 'sekolah' || sub == 'kampus') {
-      return [
-        {
-          'id': 'sch_need_1',
-          'title': 'Perekrutan Magang Siswa: 3D Modeler & Animator',
-          'description': 'Program magang industri 6 bulan bersama mitra studio kreatif',
-          'status': 'Aktif',
-          'status_color': '#06B6D4',
-          'budget': 'Uang Saku & Sertifikat',
-          'deadline': '15 Nov 2026',
-          'image_url': 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=200&q=80',
-        },
-        {
-          'id': 'sch_need_2',
-          'title': 'Proyek Produksi Video Profil Sekolah Kejuruan',
-          'description': 'Kolaborasi karya siswa multimedia dengan supervisi industri',
-          'status': 'Berjalan',
-          'status_color': '#10B981',
-          'budget': 'Dana BOS & Industri',
-          'deadline': '20 Nov 2026',
-          'image_url': 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=200&q=80',
-        },
-      ];
+    if (_isInstitution) {
+      return const [];
     }
     return [
       {
@@ -4035,6 +4114,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   List<Map<String, dynamic>> _getEffectiveIncomingProposals() {
     if (widget.user.isGuest) return const [];
     if (_incomingProposals.isNotEmpty) return _incomingProposals;
+    if (_isInstitution) return const [];
     final sub = CreatorSidebarMenus.normalizeSubRole(widget.user.subRole);
     if (sub == 'event_organizer' || sub == 'eo' || sub == 'wedding_organizer' || sub == 'wo') {
       return [
@@ -4107,6 +4187,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   List<Map<String, dynamic>> _getEffectiveRunningContracts() {
     if (widget.user.isGuest) return const [];
     if (_runningContracts.isNotEmpty) return _runningContracts;
+    if (_isInstitution) return const [];
     final sub = CreatorSidebarMenus.normalizeSubRole(widget.user.subRole);
     if (sub == 'event_organizer' || sub == 'eo' || sub == 'wedding_organizer' || sub == 'wo') {
       return [
@@ -4174,6 +4255,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   List<Map<String, dynamic>> _getEffectiveAgenda() {
     if (widget.user.isGuest) return const [];
     if (_agenda.isNotEmpty) return _agenda;
+    if (_isInstitution) return const [];
     if (_isVendorOrMitra) {
       return [
         {
@@ -4270,6 +4352,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   List<Map<String, dynamic>> _getEffectiveProjectAssets() {
     if (widget.user.isGuest) return const [];
     if (_projectAssets.isNotEmpty) return _projectAssets;
+    if (_isInstitution) return const [];
     if (_isTalentAndPerformer) {
       return [
         {
@@ -7940,49 +8023,51 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
 
     final List<Map<String, dynamic>> topCreators = _vendorRecommendations.isNotEmpty
-        ? _vendorRecommendations.take(3).map((v) => {
+        ? _vendorRecommendations.take(5).map((v) => {
             'id': v['id']?.toString(),
             'user_id': v['user_id']?.toString() ?? v['id']?.toString(),
             'username': v['username']?.toString(),
             'name': v['name']?.toString() ?? 'Kreator',
             'role': v['category']?.toString() ?? 'Kreator Spesialis',
-            'rating': '${v['rating'] ?? '5.0'} (${v['review_count'] ?? '20'})',
+            'rating': '${v['rating'] ?? '0'} (${v['review_count'] ?? '0'})',
             'avatar': 'camera',
             'avatar_url': v['avatar_url']?.toString(),
-            'phone': v['phone']?.toString() ?? '081298765432',
+            'phone': v['phone']?.toString() ?? '',
           }).toList()
-        : [
-            {
-              'id': 'videographer_demo',
-              'user_id': 'videographer_demo',
-              'name': 'Kreavana Demo Videographer',
-              'username': 'videographer_demo',
-              'role': 'Videographer',
-              'rating': '5.0 (0)',
-              'avatar': 'videocam',
-              'phone': '081298765432',
-            },
-            {
-              'id': 'community_demo',
-              'user_id': 'community_demo',
-              'name': 'Kreavana Demo Community',
-              'username': 'community_demo',
-              'role': 'Community',
-              'rating': '5.0 (0)',
-              'avatar': 'camera',
-              'phone': '081387654321',
-            },
-            {
-              'id': 'eo_demo',
-              'user_id': 'eo_demo',
-              'name': 'Kreavana Demo Event Organizer',
-              'username': 'eo_demo',
-              'role': 'Event Organizer',
-              'rating': '5.0 (0)',
-              'avatar': 'palette',
-              'phone': '081901234567',
-            },
-          ];
+        : (_isInstitution
+            ? const []
+            : [
+                {
+                  'id': 'videographer_demo',
+                  'user_id': 'videographer_demo',
+                  'name': 'Kreavana Demo Videographer',
+                  'username': 'videographer_demo',
+                  'role': 'Videographer',
+                  'rating': '5.0 (0)',
+                  'avatar': 'videocam',
+                  'phone': '081298765432',
+                },
+                {
+                  'id': 'community_demo',
+                  'user_id': 'community_demo',
+                  'name': 'Kreavana Demo Community',
+                  'username': 'community_demo',
+                  'role': 'Community',
+                  'rating': '5.0 (0)',
+                  'avatar': 'camera',
+                  'phone': '081387654321',
+                },
+                {
+                  'id': 'eo_demo',
+                  'user_id': 'eo_demo',
+                  'name': 'Kreavana Demo Event Organizer',
+                  'username': 'eo_demo',
+                  'role': 'Event Organizer',
+                  'rating': '5.0 (0)',
+                  'avatar': 'palette',
+                  'phone': '081901234567',
+                },
+              ]);
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -8046,7 +8131,21 @@ class _DashboardScreenState extends State<DashboardScreen>
             ],
           ),
           const SizedBox(height: 14),
-          ...topCreators.map((c) {
+          if (topCreators.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Text(
+                  'Belum ada mitra/kreator rekomendasi.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                  ),
+                ),
+              ),
+            )
+          else
+            ...topCreators.map((c) {
             IconData icon = Icons.person;
             if (c['avatar'] == 'videocam') icon = Icons.videocam_rounded;
             if (c['avatar'] == 'camera') icon = Icons.camera_alt_rounded;
@@ -8322,8 +8421,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ),
               ),
             )
-          else
-            ...activities.map((a) {
+          else ...[
+            ...AppPaginationBar.slicePage(
+              activities,
+              AppPaginationBar.safePage(_activityPage, activities.length, pageSize: 5),
+              pageSize: 5,
+            ).map((a) {
             final color = a['color'] as Color;
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
@@ -8375,6 +8478,23 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
             );
           }),
+            if (activities.length > 5)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: AppPaginationBar(
+                  totalItems: activities.length,
+                  currentPage: AppPaginationBar.safePage(
+                    _activityPage,
+                    activities.length,
+                    pageSize: 5,
+                  ),
+                  pageSize: 5,
+                  accentColor: _roleAccentColor,
+                  itemLabel: 'aktivitas',
+                  onPageChanged: (p) => setState(() => _activityPage = p),
+                ),
+              ),
+          ],
         ],
       ),
     );

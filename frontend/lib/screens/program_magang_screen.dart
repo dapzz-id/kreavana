@@ -2,16 +2,19 @@ import 'package:flutter/material.dart';
 import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../models/opportunity_model.dart';
+import '../services/api_service.dart';
 import '../services/opportunity_service.dart';
 import '../services/user_store.dart';
 import '../widgets/app_breadcrumbs.dart';
+import '../widgets/app_pagination_bar.dart';
 import '../widgets/desktop_sidebar_layout.dart';
 import '../widgets/program_magang_card.dart';
 import 'program_magang_detail_screen.dart';
 
 enum SchoolMagangTab {
   myApplications,
-  exploreVacancies,
+  partnerVacancies,
+  allVacancies,
 }
 
 class ProgramMagangScreen extends StatefulWidget {
@@ -38,79 +41,13 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
 
   SchoolMagangTab _schoolTab = SchoolMagangTab.myApplications;
   List<OpportunityModel> _schoolMyItems = [];
-  List<OpportunityModel> _schoolExploreItems = [];
+  List<OpportunityModel> _schoolPartnerItems = [];
+  List<OpportunityModel> _schoolAllItems = [];
+  List<Map<String, dynamic>> _partnerCorporates = [];
   int _currentPage = 1;
   static const int _pageSize = 6;
 
   UserModel? get _currentUser => widget.user ?? currentUserNotifier.value;
-
-  List<OpportunityModel> _getSampleMagangOpportunities() {
-    return [
-      OpportunityModel(
-        id: 'sch_opp_magang_1',
-        title: 'Program Magang MBKM 3D Modeler Batch I 2026',
-        description:
-            'Kerja sama penempatan 10 siswa vokasi magang pada produksi serial animasi nusantara berstandar industri internasional.',
-        subRoleSlug: 'animator',
-        type: 'project',
-        status: 'open',
-        eventStartDate: '2027-01-14',
-        eventEndDate: '2027-02-14',
-        budgetRange: 'Rp 3.500.000 / bulan',
-        deadline: '14 Jan 2027',
-        requirements: [
-          OpportunityRequirementModel(
-            subRoleSlug: 'animator',
-            quantity: 10,
-            notes:
-                'Siswa SMK jurusan terkait, Menguasai dasar 3D Modeling, Memiliki portofolio karya',
-          ),
-        ],
-      ),
-      OpportunityModel(
-        id: 'sch_opp_magang_2',
-        title: 'Program Magang MBKM UI/UX & Digital Product Design',
-        description:
-            'Kerja sama penempatan 8 siswa vokasi magang pada perancangan produk digital kreatif aplikasi mobile.',
-        subRoleSlug: 'desainer',
-        type: 'project',
-        status: 'open',
-        eventStartDate: '2027-02-01',
-        eventEndDate: '2027-03-01',
-        budgetRange: 'Rp 3.000.000 / bulan',
-        deadline: '01 Feb 2027',
-        requirements: [
-          OpportunityRequirementModel(
-            subRoleSlug: 'desainer',
-            quantity: 8,
-            notes:
-                'Siswa SMK / Mahasiswa DKV & RPL, Menguasai Figma & Design System, Memiliki portofolio studi kasus',
-          ),
-        ],
-      ),
-      OpportunityModel(
-        id: 'sch_opp_magang_3',
-        title: 'Program Magang Post-Production & Motion Graphics',
-        description:
-            'Kerja sama penempatan 6 siswa magang post-production video komersial dan animasi nusantara.',
-        subRoleSlug: 'editor',
-        type: 'project',
-        status: 'open',
-        eventStartDate: '2027-02-15',
-        eventEndDate: '2027-03-15',
-        budgetRange: 'Rp 3.200.000 / bulan',
-        deadline: '15 Feb 2027',
-        requirements: [
-          OpportunityRequirementModel(
-            subRoleSlug: 'editor',
-            quantity: 6,
-            notes:
-                'Siswa SMK Multimedia / Animasi, Mahir Premiere Pro & After Effects, Menyertakan showreel karya video',
-          ),
-        ],
-      ),
-    ];
-  }
 
   @override
   void initState() {
@@ -153,6 +90,56 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
     return isExplicitMagang || isCorporatePoster;
   }
 
+  bool _isPartnerCorporateOpportunity(
+    OpportunityModel opp,
+    List<Map<String, dynamic>> partners,
+  ) {
+    if (partners.isEmpty) return false;
+    final posterId = (opp.postedBy ?? opp.poster?.id ?? '').trim();
+    final posterUsername = (opp.poster?.username ?? '').trim().toLowerCase();
+    final posterName = (opp.poster?.name ?? '').trim().toLowerCase();
+
+    for (final partner in partners) {
+      final status = (partner['status'] ?? '').toString().toLowerCase();
+      if (status == 'rejected' || status == 'inactive' || status == 'closed') {
+        continue;
+      }
+      final meta = partner['metadata'] is Map
+          ? Map<String, dynamic>.from(partner['metadata'] as Map)
+          : <String, dynamic>{};
+      final corpUserId = (meta['corporate_user_id'] ?? '').toString().trim();
+      final corpUsername =
+          (meta['corporate_username'] ?? '').toString().trim().toLowerCase();
+      final partnerTitle = (partner['title'] ?? '').toString().trim().toLowerCase();
+
+      if (corpUserId.isNotEmpty && posterId.isNotEmpty && corpUserId == posterId) {
+        return true;
+      }
+      if (corpUsername.isNotEmpty &&
+          posterUsername.isNotEmpty &&
+          corpUsername == posterUsername) {
+        return true;
+      }
+      if (partnerTitle.isNotEmpty &&
+          posterName.isNotEmpty &&
+          (posterName == partnerTitle ||
+              posterName.contains(partnerTitle) ||
+              partnerTitle.contains(posterName))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  int _compareByCreatedDesc(OpportunityModel a, OpportunityModel b) {
+    final aDate = a.createdAt != null ? DateTime.tryParse(a.createdAt!) : null;
+    final bDate = b.createdAt != null ? DateTime.tryParse(b.createdAt!) : null;
+    if (aDate == null && bDate == null) return 0;
+    if (aDate == null) return 1;
+    if (bDate == null) return -1;
+    return bDate.compareTo(aDate);
+  }
+
   Future<void> _fetchRealtimeData({bool forceRefresh = false}) async {
     if (!mounted) return;
     setState(() {
@@ -162,56 +149,71 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
 
     try {
       final results = await Future.wait([
-        OpportunityService.getMyOpportunities(forceRefresh: forceRefresh).catchError((e) {
+        OpportunityService.getMyOpportunities(forceRefresh: forceRefresh)
+            .catchError((e) {
           debugPrint('Error fetching my opportunities: $e');
           return <OpportunityModel>[];
         }),
-        OpportunityService.getOpportunities(limit: 50, forceRefresh: forceRefresh).catchError((e) {
-          debugPrint('Error fetching explore opportunities: $e');
+        OpportunityService.getOpportunities(limit: 100, forceRefresh: forceRefresh)
+            .catchError((e) {
+          debugPrint('Error fetching all opportunities: $e');
           return <OpportunityModel>[];
         }),
+        ApiService.get(
+          'institution/resources',
+          queryParams: {'type': 'partners'},
+        ).catchError((_) => <String, dynamic>{}),
       ]);
 
-      final myOpportunities = List<OpportunityModel>.from(results[0]);
-      final exploreOpportunities = List<OpportunityModel>.from(results[1]);
+      final myOpportunities = List<OpportunityModel>.from(results[0] as List);
+      final allOpportunities = List<OpportunityModel>.from(results[1] as List);
+      final partnersRes = results[2] as Map<String, dynamic>;
+      final loadedPartners = partnersRes['status'] == true &&
+              partnersRes['data'] is List
+          ? (partnersRes['data'] as List)
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList()
+          : <Map<String, dynamic>>[];
 
-      // 1. Data lamaran/kemitraan magang sekolah (exclude non-magang events/projects)
-      final myItems = myOpportunities.where(_isMagangOpportunity).toList();
-      if (myItems.isEmpty) {
-        myItems.addAll(_getSampleMagangOpportunities());
-      }
-      myItems.sort((a, b) {
-        final aDate = a.createdAt != null ? DateTime.tryParse(a.createdAt!) : null;
-        final bDate = b.createdAt != null ? DateTime.tryParse(b.createdAt!) : null;
-        if (aDate == null && bDate == null) return 0;
-        if (aDate == null) return 1;
-        if (bDate == null) return -1;
-        return bDate.compareTo(aDate);
-      });
+      final currentUserId = _currentUser?.id ?? '';
 
-      // 2. Data cari lowongan magang corporate
-      final filteredExplore = exploreOpportunities.where(_isMagangOpportunity).toList();
+      // 1. Lamaran Magang Saya (strictly internships applied by this institution from DB)
+      final Map<String, OpportunityModel> myMap = {};
+      for (final opp in myOpportunities) {
+        final key = opp.id ?? opp.title;
+        if (_isMagangOpportunity(opp) && opp.postedBy != currentUserId) {
+          myMap[key] = opp;
+        }
+      }
+      for (final opp in allOpportunities) {
+        final key = opp.id ?? opp.title;
+        if (opp.hasApplied &&
+            _isMagangOpportunity(opp) &&
+            opp.postedBy != currentUserId) {
+          myMap.putIfAbsent(key, () => opp);
+        }
+      }
+      final myItems = myMap.values.toList()..sort(_compareByCreatedDesc);
 
-      final exploreItems = <OpportunityModel>[];
-      for (final opp in filteredExplore) {
-        exploreItems.add(opp);
-      }
-      if (exploreItems.isEmpty) {
-        exploreItems.addAll(_getSampleMagangOpportunities());
-      }
-      exploreItems.sort((a, b) {
-        final aDate = a.createdAt != null ? DateTime.tryParse(a.createdAt!) : null;
-        final bDate = b.createdAt != null ? DateTime.tryParse(b.createdAt!) : null;
-        if (aDate == null && bDate == null) return 0;
-        if (aDate == null) return 1;
-        if (bDate == null) return -1;
-        return bDate.compareTo(aDate);
-      });
+      // 2. Semua Lowongan Magang Corporate (strictly from DB)
+      final allItems = allOpportunities
+          .where((opp) => _isMagangOpportunity(opp) && opp.postedBy != currentUserId)
+          .toList()
+        ..sort(_compareByCreatedDesc);
+
+      // 3. Magang Corporate Mitra (lowongan magang milik Corporate mitra terdaftar di DB)
+      final partnerItems = allItems
+          .where((opp) => _isPartnerCorporateOpportunity(opp, loadedPartners))
+          .toList()
+        ..sort(_compareByCreatedDesc);
 
       if (mounted) {
         setState(() {
+          _partnerCorporates = loadedPartners;
           _schoolMyItems = myItems;
-          _schoolExploreItems = exploreItems;
+          _schoolPartnerItems = partnerItems;
+          _schoolAllItems = allItems;
           _errorMessage = null;
         });
       }
@@ -231,8 +233,16 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
     }
   }
 
-  List<OpportunityModel> get _activeItems =>
-      _schoolTab == SchoolMagangTab.myApplications ? _schoolMyItems : _schoolExploreItems;
+  List<OpportunityModel> get _activeItems {
+    switch (_schoolTab) {
+      case SchoolMagangTab.myApplications:
+        return _schoolMyItems;
+      case SchoolMagangTab.partnerVacancies:
+        return _schoolPartnerItems;
+      case SchoolMagangTab.allVacancies:
+        return _schoolAllItems;
+    }
+  }
 
   List<OpportunityModel> get _filteredItems {
     var items = List<OpportunityModel>.from(_activeItems);
@@ -266,18 +276,36 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
     return items;
   }
 
-  void _openOpportunityDetail(OpportunityModel opp) {
-    Navigator.push(
+  Future<void> _openOpportunityDetail(OpportunityModel opp) async {
+    final isApplied = opp.hasApplied ||
+        _schoolTab == SchoolMagangTab.myApplications ||
+        _schoolMyItems.any((item) => item.id != null && item.id == opp.id);
+
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => ProgramMagangDetailScreen(
           opportunity: opp,
           user: _currentUser,
           onUserUpdated: widget.onUserUpdated,
-          isAppliedPartnership: _schoolTab == SchoolMagangTab.myApplications,
+          isAppliedPartnership: isApplied,
         ),
       ),
     );
+    if (mounted) {
+      _fetchRealtimeData(forceRefresh: true);
+    }
+  }
+
+  void _onPageSelected(int page) {
+    setState(() => _currentPage = page);
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
   @override
@@ -289,11 +317,16 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
     final effectiveUser = _currentUser ?? UserModel.guest();
 
     final filtered = _filteredItems;
-    final totalPages = (filtered.length / _pageSize).ceil();
-    final effectiveTotalPages = totalPages > 0 ? totalPages : 1;
-    final validPage = _currentPage.clamp(1, effectiveTotalPages);
-    final startIndex = (validPage - 1) * _pageSize;
-    final pagedItems = filtered.skip(startIndex).take(_pageSize).toList();
+    final validPage = AppPaginationBar.safePage(
+      _currentPage,
+      filtered.length,
+      pageSize: _pageSize,
+    );
+    final pagedItems = AppPaginationBar.slicePage(
+      filtered,
+      validPage,
+      pageSize: _pageSize,
+    );
 
     final content = Scaffold(
       backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFF8FAFC),
@@ -354,14 +387,13 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
                 else ...[
                   _buildOpportunityGrid(pagedItems, isDesktop, isDark, accentColor),
                   const SizedBox(height: 24),
-                  _buildPaginationBar(
+                  AppPaginationBar(
                     totalItems: filtered.length,
                     currentPage: validPage,
-                    totalPages: effectiveTotalPages,
-                    startIndex: startIndex,
-                    endIndex: (startIndex + pagedItems.length),
-                    isDark: isDark,
+                    pageSize: _pageSize,
                     accentColor: accentColor,
+                    itemLabel: 'program',
+                    onPageChanged: _onPageSelected,
                   ),
                 ],
               ],
@@ -374,23 +406,23 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
               heroTag: 'program_magang_fab_mobile',
               onPressed: () {
                 setState(() {
-                  _schoolTab = _schoolTab == SchoolMagangTab.myApplications
-                      ? SchoolMagangTab.exploreVacancies
-                      : SchoolMagangTab.myApplications;
+                  _schoolTab = _schoolTab == SchoolMagangTab.allVacancies
+                      ? SchoolMagangTab.myApplications
+                      : SchoolMagangTab.allVacancies;
                   _currentPage = 1;
                 });
               },
               backgroundColor: accentColor,
               icon: Icon(
-                _schoolTab == SchoolMagangTab.myApplications
-                    ? Icons.search_rounded
-                    : Icons.assignment_turned_in_rounded,
+                _schoolTab == SchoolMagangTab.allVacancies
+                    ? Icons.assignment_turned_in_rounded
+                    : Icons.search_rounded,
                 color: Colors.white,
               ),
               label: Text(
-                _schoolTab == SchoolMagangTab.myApplications
-                    ? 'Cari Lowongan Magang'
-                    : 'Lamaran Magang Saya',
+                _schoolTab == SchoolMagangTab.allVacancies
+                    ? 'Lamaran Magang Saya'
+                    : 'Semua Lowongan Magang',
                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
               ),
             )
@@ -452,23 +484,23 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
           ElevatedButton.icon(
             onPressed: () {
               setState(() {
-                _schoolTab = _schoolTab == SchoolMagangTab.myApplications
-                    ? SchoolMagangTab.exploreVacancies
-                    : SchoolMagangTab.myApplications;
+                _schoolTab = _schoolTab == SchoolMagangTab.allVacancies
+                    ? SchoolMagangTab.myApplications
+                    : SchoolMagangTab.allVacancies;
                 _currentPage = 1;
               });
             },
             icon: Icon(
-              _schoolTab == SchoolMagangTab.myApplications
-                  ? Icons.search_rounded
-                  : Icons.assignment_turned_in_rounded,
+              _schoolTab == SchoolMagangTab.allVacancies
+                  ? Icons.assignment_turned_in_rounded
+                  : Icons.search_rounded,
               size: 18,
               color: Colors.white,
             ),
             label: Text(
-              _schoolTab == SchoolMagangTab.myApplications
-                  ? 'Cari Lowongan Magang'
-                  : 'Lihat Lamaran Magang Saya',
+              _schoolTab == SchoolMagangTab.allVacancies
+                  ? 'Lamaran Magang Saya'
+                  : 'Semua Lowongan Magang',
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
@@ -488,53 +520,65 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
 
   // ── Tab Selector ───────────────────────────────────────────────────────────
   Widget _buildSchoolTabSelector(bool isDark, Color accentColor) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Container(
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFEEF2FF),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isDark ? const Color(0xFF334155) : const Color(0xFFE0E7FF),
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFEEF2FF),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFE0E7FF),
+        ),
+      ),
+      child: Wrap(
+        spacing: 4,
+        runSpacing: 4,
+        children: [
+          _buildTabChip(
+            label: 'Lamaran Magang Saya',
+            count: _schoolMyItems.length,
+            isSelected: _schoolTab == SchoolMagangTab.myApplications,
+            isDark: isDark,
+            accentColor: accentColor,
+            onTap: () {
+              if (_schoolTab != SchoolMagangTab.myApplications) {
+                setState(() {
+                  _schoolTab = SchoolMagangTab.myApplications;
+                  _currentPage = 1;
+                });
+              }
+            },
           ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildTabChip(
-              label: 'Lamaran & Kemitraan Magang',
-              count: _schoolMyItems.length,
-              isSelected: _schoolTab == SchoolMagangTab.myApplications,
-              isDark: isDark,
-              accentColor: accentColor,
-              onTap: () {
-                if (_schoolTab != SchoolMagangTab.myApplications) {
-                  setState(() {
-                    _schoolTab = SchoolMagangTab.myApplications;
-                    _currentPage = 1;
-                  });
-                }
-              },
-            ),
-            const SizedBox(width: 4),
-            _buildTabChip(
-              label: 'Cari Lowongan Magang',
-              count: _schoolExploreItems.length,
-              isSelected: _schoolTab == SchoolMagangTab.exploreVacancies,
-              isDark: isDark,
-              accentColor: accentColor,
-              onTap: () {
-                if (_schoolTab != SchoolMagangTab.exploreVacancies) {
-                  setState(() {
-                    _schoolTab = SchoolMagangTab.exploreVacancies;
-                    _currentPage = 1;
-                  });
-                }
-              },
-            ),
-          ],
-        ),
+          _buildTabChip(
+            label: 'Magang Corporate Mitra',
+            count: _schoolPartnerItems.length,
+            isSelected: _schoolTab == SchoolMagangTab.partnerVacancies,
+            isDark: isDark,
+            accentColor: accentColor,
+            onTap: () {
+              if (_schoolTab != SchoolMagangTab.partnerVacancies) {
+                setState(() {
+                  _schoolTab = SchoolMagangTab.partnerVacancies;
+                  _currentPage = 1;
+                });
+              }
+            },
+          ),
+          _buildTabChip(
+            label: 'Semua Lowongan Magang',
+            count: _schoolAllItems.length,
+            isSelected: _schoolTab == SchoolMagangTab.allVacancies,
+            isDark: isDark,
+            accentColor: accentColor,
+            onTap: () {
+              if (_schoolTab != SchoolMagangTab.allVacancies) {
+                setState(() {
+                  _schoolTab = SchoolMagangTab.allVacancies;
+                  _currentPage = 1;
+                });
+              }
+            },
+          ),
+        ],
       ),
     );
   }
@@ -886,9 +930,13 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
     bool isDark,
     Color accentColor,
   ) {
-    final isExplore = _schoolTab == SchoolMagangTab.exploreVacancies;
-    final buttonText =
-        isExplore ? 'Detail & Lamar Magang →' : 'Lihat Detail Program →';
+    final isMyApps = _schoolTab == SchoolMagangTab.myApplications;
+    String resolveButtonLabel(OpportunityModel opp) {
+      if (isMyApps || opp.hasApplied) {
+        return 'Lihat Status & Siswa →';
+      }
+      return 'Detail & Lamar Magang →';
+    }
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -908,7 +956,7 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
                       Expanded(
                         child: ProgramMagangCard.fromOpportunity(
                           first,
-                          buttonLabel: buttonText,
+                          buttonLabel: resolveButtonLabel(first),
                           onTap: () => _openOpportunityDetail(first),
                           onDetailPressed: () => _openOpportunityDetail(first),
                         ),
@@ -918,7 +966,7 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
                         child: second != null
                             ? ProgramMagangCard.fromOpportunity(
                                 second,
-                                buttonLabel: buttonText,
+                                buttonLabel: resolveButtonLabel(second),
                                 onTap: () => _openOpportunityDetail(second),
                                 onDetailPressed: () => _openOpportunityDetail(second),
                               )
@@ -939,7 +987,7 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
               padding: const EdgeInsets.only(bottom: 14),
               child: ProgramMagangCard.fromOpportunity(
                 opp,
-                buttonLabel: buttonText,
+                buttonLabel: resolveButtonLabel(opp),
                 onTap: () => _openOpportunityDetail(opp),
                 onDetailPressed: () => _openOpportunityDetail(opp),
               ),
@@ -950,179 +998,33 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
     );
   }
 
-  // ── Pagination Bar ─────────────────────────────────────────────────────────
-  Widget _buildPaginationBar({
-    required int totalItems,
-    required int currentPage,
-    required int totalPages,
-    required int startIndex,
-    required int endIndex,
-    required bool isDark,
-    required Color accentColor,
-  }) {
-    final displayStart = totalItems == 0 ? 0 : startIndex + 1;
-    final displayEnd = endIndex > totalItems ? totalItems : endIndex;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-        ),
-      ),
-      child: Wrap(
-        alignment: WrapAlignment.spaceBetween,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: 12,
-        runSpacing: 10,
-        children: [
-          Text(
-            'Menampilkan $displayStart – $displayEnd dari $totalItems program',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: isDark ? Colors.white60 : Colors.grey.shade600,
-            ),
-          ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                tooltip: 'Halaman Sebelumnya',
-                icon: const Icon(Icons.chevron_left_rounded, size: 20),
-                onPressed: currentPage > 1
-                    ? () {
-                        setState(() => _currentPage = currentPage - 1);
-                        _scrollController.animateTo(
-                          0,
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeOut,
-                        );
-                      }
-                    : null,
-              ),
-              const SizedBox(width: 4),
-              ..._buildPageNumbers(currentPage, totalPages, isDark, accentColor),
-              const SizedBox(width: 4),
-              IconButton(
-                tooltip: 'Halaman Berikutnya',
-                icon: const Icon(Icons.chevron_right_rounded, size: 20),
-                onPressed: currentPage < totalPages
-                    ? () {
-                        setState(() => _currentPage = currentPage + 1);
-                        _scrollController.animateTo(
-                          0,
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeOut,
-                        );
-                      }
-                    : null,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  List<Widget> _buildPageNumbers(
-    int currentPage,
-    int totalPages,
-    bool isDark,
-    Color accentColor,
-  ) {
-    final List<Widget> widgets = [];
-    final List<int> pages = [];
-
-    if (totalPages <= 5) {
-      for (int i = 1; i <= totalPages; i++) {
-        pages.add(i);
-      }
-    } else {
-      pages.add(1);
-      if (currentPage > 3) pages.add(-1);
-      final start = (currentPage - 1).clamp(2, totalPages - 1);
-      final end = (currentPage + 1).clamp(2, totalPages - 1);
-      for (int i = start; i <= end; i++) {
-        if (!pages.contains(i)) pages.add(i);
-      }
-      if (currentPage < totalPages - 2) pages.add(-2);
-      if (!pages.contains(totalPages)) pages.add(totalPages);
-    }
-
-    for (final p in pages) {
-      if (p < 0) {
-        widgets.add(
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Text(
-              '...',
-              style: TextStyle(
-                color: isDark ? Colors.white38 : Colors.grey.shade500,
-              ),
-            ),
-          ),
-        );
-      } else {
-        widgets.add(_buildPageNumberButton(p, currentPage == p, isDark, accentColor));
-      }
-    }
-
-    return widgets;
-  }
-
-  Widget _buildPageNumberButton(
-    int page,
-    bool isSelected,
-    bool isDark,
-    Color accentColor,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 2),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: () {
-          setState(() => _currentPage = page);
-          _scrollController.animateTo(
-            0,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        },
-        child: Container(
-          width: 32,
-          height: 32,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: isSelected ? accentColor : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isSelected
-                  ? accentColor
-                  : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
-            ),
-          ),
-          child: Text(
-            '$page',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-              color: isSelected
-                  ? Colors.white
-                  : (isDark ? Colors.white70 : const Color(0xFF0F172A)),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  // ── Pagination uses shared AppPaginationBar widget ──────────────────────
 
   // ── Empty & Error States ───────────────────────────────────────────────────
   Widget _buildEmptyState(bool isDark) {
-    final isExplore = _schoolTab == SchoolMagangTab.exploreVacancies;
+    final String title;
+    final String subtitle;
+    switch (_schoolTab) {
+      case SchoolMagangTab.myApplications:
+        title = 'Belum Ada Lamaran Magang';
+        subtitle =
+            'Institusi Anda belum mengajukan lamaran magang ke Corporate mana pun. Buka tab Magang Corporate Mitra atau Semua Lowongan Magang untuk mendaftarkan siswa.';
+        break;
+      case SchoolMagangTab.partnerVacancies:
+        title = _partnerCorporates.isEmpty
+            ? 'Belum Ada Corporate Mitra Terdaftar'
+            : 'Belum Ada Lowongan dari Corporate Mitra';
+        subtitle = _partnerCorporates.isEmpty
+            ? 'Tambahkan mitra Corporate terlebih dahulu di menu Mitra Industri & Sanggar, atau lihat Semua Lowongan Magang yang tersedia.'
+            : 'Mitra Corporate Anda saat ini belum membuka lowongan magang baru yang sesuai filter.';
+        break;
+      case SchoolMagangTab.allVacancies:
+        title = 'Belum Ada Lowongan Magang Tersedia';
+        subtitle =
+            'Saat ini belum ada lowongan magang corporate di database yang sesuai kriteria pencarian.';
+        break;
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
@@ -1150,9 +1052,7 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            isExplore
-                ? 'Belum Ada Lowongan Magang Tersedia'
-                : 'Belum Ada Data Lamaran Magang',
+            title,
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -1160,27 +1060,25 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            isExplore
-                ? 'Saat ini belum ada lowongan magang corporate yang sesuai kriteria pencarian.'
-                : 'Belum ada data lamaran magang aktif ke mitra industri. Anda dapat mengeksplorasi dan melamar lowongan magang corporate yang sedang buka.',
+            subtitle,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,
               color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
             ),
           ),
-          if (!isExplore) ...[
+          if (_schoolTab != SchoolMagangTab.allVacancies) ...[
             const SizedBox(height: 20),
             ElevatedButton.icon(
               onPressed: () {
                 setState(() {
-                  _schoolTab = SchoolMagangTab.exploreVacancies;
+                  _schoolTab = SchoolMagangTab.allVacancies;
                   _currentPage = 1;
                 });
               },
               icon: const Icon(Icons.search_rounded, size: 18, color: Colors.white),
               label: const Text(
-                'Cari Lowongan Magang Industri',
+                'Lihat Semua Lowongan Magang',
                 style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
               ),
               style: ElevatedButton.styleFrom(

@@ -15,6 +15,7 @@ use App\Models\WalletTransaction;
 use App\Enums\RoleType;
 use App\Enums\ContractStatus;
 use App\Enums\WorkStatus;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -33,25 +34,46 @@ class OpportunityService extends BaseService
         $this->notificationRepo = $notificationRepo;
     }
 
+    private function resolveAppliedOpportunityLookup(?string $userId, $opportunities): ?array
+    {
+        if (empty($userId) || $opportunities->isEmpty()) {
+            return $userId ? [] : null;
+        }
+
+        $oppIds = $opportunities->pluck('id')->filter()->values()->all();
+        if (empty($oppIds)) {
+            return [];
+        }
+
+        return OpportunityApplication::where('creator_id', $userId)
+            ->whereIn('opportunity_id', $oppIds)
+            ->pluck('opportunity_id')
+            ->flip()
+            ->all();
+    }
+
     public function getList(string|array $subRole = 'all', ?string $type = null, int $limit = 50, ?string $search = null)
     {
         $opportunities = $this->opportunityRepo->getList($subRole, $type, $limit, $search);
-        
-        return $opportunities->map(fn ($opp) => $this->formatOpportunity($opp, false));
+        $appliedLookup = $this->resolveAppliedOpportunityLookup(Auth::guard('api')->id(), $opportunities);
+
+        return $opportunities->map(fn ($opp) => $this->formatOpportunity($opp, false, $appliedLookup));
     }
 
     public function getUserOpportunities(string $userId, int $limit = 50)
     {
         $opportunities = $this->opportunityRepo->getMyOpportunities($userId, $limit);
+        $appliedLookup = $this->resolveAppliedOpportunityLookup($userId, $opportunities);
 
-        return $opportunities->map(fn ($opp) => $this->formatOpportunity($opp, false));
+        return $opportunities->map(fn ($opp) => $this->formatOpportunity($opp, false, $appliedLookup));
     }
 
     public function getMapLocations(string|array $subRole = 'all', ?float $lat = null, ?float $lng = null, ?float $radiusKm = null)
     {
         $locations = $this->opportunityRepo->getMapLocations($subRole, $lat, $lng, $radiusKm);
-        
-        return $locations->map(fn ($opp) => $this->formatOpportunity($opp, false));
+        $appliedLookup = $this->resolveAppliedOpportunityLookup(Auth::guard('api')->id(), $locations);
+
+        return $locations->map(fn ($opp) => $this->formatOpportunity($opp, false, $appliedLookup));
     }
 
     public function findById(string $id)
@@ -59,8 +81,11 @@ class OpportunityService extends BaseService
         $opp = $this->opportunityRepo->findWithUser($id);
         
         if (!$opp) return null;
-        
-        return $this->formatOpportunity($opp, true);
+
+        $authId = Auth::guard('api')->id();
+        $appliedLookup = $this->resolveAppliedOpportunityLookup($authId, collect([$opp]));
+
+        return $this->formatOpportunity($opp, true, $appliedLookup);
     }
 
     public function createOpportunity(string $userId, array $data, $posterFile = null)
@@ -222,11 +247,28 @@ class OpportunityService extends BaseService
     {
         return DB::transaction(function () use ($creatorId, $opportunityId, $data) {
             $creator = User::where('id', $creatorId)->firstOrFail();
-            if ($creator->role !== RoleType::Creator && $creator->role !== RoleType::Admin) {
+            $isInstitution = $creator->isInstitution();
+            if ($creator->role !== RoleType::Creator && $creator->role !== RoleType::Admin && !$isInstitution) {
                 abort(403, 'Hanya kreator terverifikasi yang dapat melamar proyek.');
             }
 
-            $opp = Opportunity::where('id', $opportunityId)->lockForUpdate()->firstOrFail();
+            $opp = Opportunity::with(['user:id,role,sub_role', 'requirements'])
+                ->where('id', $opportunityId)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($isInstitution && $creator->role !== RoleType::Creator && $creator->role !== RoleType::Admin) {
+                $isInternshipTarget = ($opp->user?->isCorporate() ?? false)
+                    || str_contains(strtolower((string) $opp->sub_role_slug), 'magang')
+                    || str_contains(strtolower((string) $opp->title), 'magang')
+                    || str_contains(strtolower((string) $opp->title), 'intern')
+                    || str_contains(strtolower((string) $opp->description), 'magang')
+                    || str_contains(strtolower((string) $opp->description), 'intern');
+                if (!$isInternshipTarget) {
+                    abort(403, 'Akun institusi hanya dapat melamar pada program atau lowongan magang corporate.');
+                }
+            }
+
             if ($opp->status !== 'open') {
                 abort(400, 'Peluang proyek ini sudah ditutup atau tidak menerima lamaran baru.');
             }
@@ -249,23 +291,57 @@ class OpportunityService extends BaseService
             }
 
             $subRoleSlug = $data['sub_role_slug'] ?? $opp->sub_role_slug;
+            $submittedDocuments = $data['submitted_documents'] ?? null;
 
-            // Concurrency check: prevent duplicate application
-            $existing = OpportunityApplication::where('opportunity_id', $opportunityId)
-                ->where('creator_id', $creatorId)
-                ->where('sub_role_slug', $subRoleSlug)
-                ->first();
+            if ($isInstitution) {
+                $studentName = '';
+                if (is_array($submittedDocuments)) {
+                    if (isset($submittedDocuments[0]) && is_array($submittedDocuments[0])) {
+                        $studentName = trim((string) ($submittedDocuments[0]['student_name'] ?? $submittedDocuments[0]['name'] ?? ''));
+                    } else {
+                        $studentName = trim((string) ($submittedDocuments['student_name'] ?? $submittedDocuments['name'] ?? ''));
+                    }
+                }
 
-            if ($existing) {
-                if ($existing->status === 'pending') {
-                    abort(409, 'Anda sudah mengajukan lamaran untuk keahlian ini dan sedang menunggu persetujuan.');
-                } elseif ($existing->status === 'approved') {
-                    abort(409, 'Lamaran Anda sudah disetujui untuk proyek ini.');
+                if ($studentName !== '') {
+                    $normalizedCandidate = mb_strtolower($studentName);
+                    $existingApps = OpportunityApplication::where('opportunity_id', $opportunityId)
+                        ->where('creator_id', $creatorId)
+                        ->whereIn('status', ['pending', 'approved'])
+                        ->get();
+
+                    foreach ($existingApps as $existingApp) {
+                        $docs = is_array($existingApp->submitted_documents) ? $existingApp->submitted_documents : [];
+                        $existingName = '';
+                        if (isset($docs[0]) && is_array($docs[0])) {
+                            $existingName = trim((string) ($docs[0]['student_name'] ?? $docs[0]['name'] ?? ''));
+                        } elseif (isset($docs['student_name']) || isset($docs['name'])) {
+                            $existingName = trim((string) ($docs['student_name'] ?? $docs['name'] ?? ''));
+                        }
+                        if ($existingName !== '' && mb_strtolower($existingName) === $normalizedCandidate) {
+                            abort(409, "Siswa {$studentName} sudah terdaftar pada program magang ini.");
+                        }
+                    }
+                }
+            } else {
+                // Concurrency check: prevent duplicate application for non-institution applicants
+                $existing = OpportunityApplication::where('opportunity_id', $opportunityId)
+                    ->where('creator_id', $creatorId)
+                    ->where('sub_role_slug', $subRoleSlug)
+                    ->first();
+
+                if ($existing) {
+                    if ($existing->status === 'pending') {
+                        abort(409, 'Anda sudah mengajukan lamaran untuk keahlian ini dan sedang menunggu persetujuan.');
+                    } elseif ($existing->status === 'approved') {
+                        abort(409, 'Lamaran Anda sudah disetujui untuk proyek ini.');
+                    }
                 }
             }
 
-            // Pelamar kerja WAJIB mengisi pengajuan tarif / nego fee
-            if (empty($data['bid_price']) || (float) $data['bid_price'] <= 0) {
+            // Pelamar kerja non-institusi WAJIB mengisi pengajuan tarif / nego fee
+            $bidPrice = isset($data['bid_price']) ? (float) $data['bid_price'] : 0.0;
+            if (!$isInstitution && $bidPrice <= 0) {
                 abort(422, 'Pengajuan penawaran tarif / nego fee wajib diisi oleh pelamar kerja.');
             }
 
@@ -283,7 +359,8 @@ class OpportunityService extends BaseService
                 'sub_role_slug' => $subRoleSlug,
                 'pitch_message' => $data['pitch_message'],
                 'questions_notes' => $data['questions_notes'] ?? null,
-                'bid_price' => (float) $data['bid_price'],
+                'submitted_documents' => $submittedDocuments,
+                'bid_price' => $bidPrice,
                 'payment_scheme' => $paymentScheme,
                 'payment_terms' => $paymentTerms,
                 'paid_amount' => 0.00,
@@ -314,6 +391,7 @@ class OpportunityService extends BaseService
                 'sub_role_slug' => $application->sub_role_slug,
                 'pitch_message' => $application->pitch_message,
                 'questions_notes' => $application->questions_notes,
+                'submitted_documents' => $application->submitted_documents ?? [],
                 'bid_price' => $application->bid_price,
                 'status' => $application->status,
                 'created_at' => $application->created_at?->toIso8601String(),
@@ -1717,11 +1795,22 @@ class OpportunityService extends BaseService
                     ->lockForUpdate()
                     ->first();
 
-                $maxCapacity = $requirement ? (int) $requirement->quantity : 1;
-                $approvedCount = OpportunityApplication::where('opportunity_id', $opp->id)
-                    ->where('sub_role_slug', $application->sub_role_slug)
-                    ->where('status', 'approved')
-                    ->count();
+                if ($requirement) {
+                    $maxCapacity = (int) $requirement->quantity;
+                    $approvedCount = OpportunityApplication::where('opportunity_id', $opp->id)
+                        ->where('sub_role_slug', $application->sub_role_slug)
+                        ->where('status', 'approved')
+                        ->count();
+                } else {
+                    $totalRequirementQuota = (int) OpportunityRequirement::where('opportunity_id', $opp->id)->sum('quantity');
+                    $maxCapacity = $totalRequirementQuota > 0 ? $totalRequirementQuota : 1;
+                    $approvedCount = $totalRequirementQuota > 0
+                        ? OpportunityApplication::where('opportunity_id', $opp->id)->where('status', 'approved')->count()
+                        : OpportunityApplication::where('opportunity_id', $opp->id)
+                            ->where('sub_role_slug', $application->sub_role_slug)
+                            ->where('status', 'approved')
+                            ->count();
+                }
 
                 if ($approvedCount >= $maxCapacity) {
                     abort(422, "Kapasitas kebutuhan untuk posisi " . ucwords(str_replace('_', ' ', $application->sub_role_slug)) . " sudah terpenuhi ({$approvedCount}/{$maxCapacity}).");
@@ -2010,12 +2099,13 @@ class OpportunityService extends BaseService
         return $this->reportRepo->create($data);
     }
 
-    private function formatOpportunity($opp, bool $includeFull = false): array
+    private function formatOpportunity($opp, bool $includeFull = false, ?array $appliedLookup = null): array
     {
         $isAbove100Jt = self::isBudgetAbove100Jt($opp->budget_range, (float) ($opp->escrow_amount ?? 0));
 
         $data = [
             'id' => $opp->id,
+            'has_applied' => $appliedLookup !== null ? isset($appliedLookup[$opp->id]) : false,
             'title' => $opp->title,
             'description' => $opp->description,
             'poster_url' => $opp->poster_url,

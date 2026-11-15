@@ -33,7 +33,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
   String _selectedFilter = 'Semua';
   String _searchQuery = '';
   int _currentPage = 1;
-  static const int _pageSize = 5;
+  static const int _pageSize = 6;
 
   bool get _isSchool {
     final sub = (widget.user?.subRole ?? '').toLowerCase();
@@ -195,6 +195,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
       if (mounted) {
         setState(() {
           _agendaList = list;
+          _currentPage = 1;
         });
       }
     } catch (_) {

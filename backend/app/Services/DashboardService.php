@@ -8,6 +8,11 @@ use App\Repositories\WalletTransactionRepository;
 use App\Repositories\FollowRepository;
 use App\Repositories\UserRepository;
 use App\Repositories\NotificationRepository;
+use App\Models\InstitutionResource;
+use App\Models\Opportunity;
+use App\Models\OpportunityApplication;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 
 use App\Contracts\DashboardServiceInterface;
@@ -37,8 +42,53 @@ class DashboardService extends BaseService implements DashboardServiceInterface
         $this->notificationRepo = $notificationRepo;
     }
 
+    private function isInstitutionSlug(string $subRoleSlug): bool
+    {
+        $slug = strtolower(str_replace(['-', ' '], '_', trim($subRoleSlug)));
+        return in_array($slug, [
+            'institution', 'institusi', 'school', 'sekolah',
+            'kampus', 'campus', 'education', 'universitas', 'smk',
+        ], true);
+    }
+
+    private function buildInstitutionStatsFromDatabase(?string $userId): array
+    {
+        if (empty($userId)) {
+            return [
+                ['stat_label' => 'Mitra Industri', 'stat_value' => '0', 'stat_icon' => 'handshake'],
+                ['stat_label' => 'Lamaran Magang', 'stat_value' => '0', 'stat_icon' => 'work'],
+                ['stat_label' => 'Kegiatan & Event', 'stat_value' => '0', 'stat_icon' => 'event'],
+                ['stat_label' => 'Karya Siswa', 'stat_value' => '0', 'stat_icon' => 'palette'],
+            ];
+        }
+
+        $partnersCount = InstitutionResource::where('user_id', $userId)
+            ->where('resource_type', 'partners')
+            ->count();
+        $eventsCount = InstitutionResource::where('user_id', $userId)
+            ->whereIn('resource_type', ['events', 'programs'])
+            ->count();
+        $showcasesCount = InstitutionResource::where('user_id', $userId)
+            ->where('resource_type', 'showcases')
+            ->count();
+        $internshipsCount = OpportunityApplication::where('creator_id', $userId)
+            ->distinct('opportunity_id')
+            ->count('opportunity_id');
+
+        return [
+            ['stat_label' => 'Mitra Industri', 'stat_value' => (string) $partnersCount, 'stat_icon' => 'handshake'],
+            ['stat_label' => 'Lamaran Magang', 'stat_value' => (string) $internshipsCount, 'stat_icon' => 'work'],
+            ['stat_label' => 'Kegiatan & Event', 'stat_value' => (string) $eventsCount, 'stat_icon' => 'event'],
+            ['stat_label' => 'Karya Siswa', 'stat_value' => (string) $showcasesCount, 'stat_icon' => 'palette'],
+        ];
+    }
+
     public function getStats(string $subRoleSlug, string $roleType): array
     {
+        if ($this->isInstitutionSlug($subRoleSlug)) {
+            return $this->buildInstitutionStatsFromDatabase(Auth::guard('api')->id());
+        }
+
         $version = Cache::get('dashboard_stats_version', 1);
         $cacheKey = "dashboard_stats_{$subRoleSlug}_{$roleType}_v{$version}";
 
@@ -56,13 +106,18 @@ class DashboardService extends BaseService implements DashboardServiceInterface
     public function getClientDashboardOverview(string $userId, string $roleType): array
     {
         $isGuest = empty($userId) || $userId === 'guest';
+        $userModel = !$isGuest ? User::find($userId) : null;
+        $isInstitution = $userModel?->isInstitution() ?? false;
 
         $recommendedOpps = $this->opportunityRepo->getList('all', null, 6);
 
         return [
-            'summary' => $isGuest ? $this->getGuestOverviewSummary() : $this->getOverviewSummary($userId, $roleType),
+            'summary' => $isGuest
+                ? $this->getGuestOverviewSummary()
+                : $this->getOverviewSummary($userId, $roleType, $isInstitution),
+            'institution_stats' => $isInstitution ? $this->buildInstitutionStatsFromDatabase($userId) : [],
             'client_types' => $this->getClientTypes(),
-            'activity_feed' => $isGuest ? [] : $this->getActivityFeed($userId),
+            'activity_feed' => $isGuest ? [] : $this->getActivityFeed($userId, $isInstitution),
             'vendor_recommendations' => $this->formatVendorRecommendations($this->userRepo->getRecommendedCreators(8)),
             'recommended_opportunities' => $recommendedOpps->map(fn($opp) => [
                 'id' => $opp->id,
@@ -97,8 +152,44 @@ class DashboardService extends BaseService implements DashboardServiceInterface
         ];
     }
 
-    protected function getOverviewSummary(string $userId, string $roleType): array
+    protected function getOverviewSummary(string $userId, string $roleType, bool $isInstitution = false): array
     {
+        if ($isInstitution) {
+            $partnersCount = InstitutionResource::where('user_id', $userId)
+                ->where('resource_type', 'partners')
+                ->count();
+            $eventsCount = InstitutionResource::where('user_id', $userId)
+                ->whereIn('resource_type', ['events', 'programs'])
+                ->count();
+            $internshipsCount = OpportunityApplication::where('creator_id', $userId)
+                ->distinct('opportunity_id')
+                ->count('opportunity_id');
+            $showcasesCount = InstitutionResource::where('user_id', $userId)
+                ->where('resource_type', 'showcases')
+                ->count();
+            $totalProjects = $this->opportunityRepo->countByUser($userId);
+            $activeProjects = $this->opportunityRepo->countActiveByUser($userId);
+            $completedPayments = $this->walletTransactionRepo->sumAmountByUserAndStatus($userId, 'completed');
+            $pendingPayments = $this->walletTransactionRepo->sumAmountByUserAndStatus($userId, 'pending');
+            $favorites = $this->followRepo->getFollowingCount($userId);
+
+            return [
+                'active_needs' => $activeProjects,
+                'proposals_count' => $internshipsCount,
+                'running_projects' => $internshipsCount,
+                'partners_count' => $partnersCount,
+                'events_count' => $eventsCount,
+                'showcases_count' => $showcasesCount,
+                'estimated_expenses' => 'Rp ' . number_format($completedPayments + $pendingPayments, 0, ',', '.'),
+                'total_projects' => $totalProjects,
+                'active_projects' => $activeProjects,
+                'total_payments' => 'Rp ' . number_format($completedPayments, 0, ',', '.'),
+                'pending_payments' => 'Rp ' . number_format($pendingPayments, 0, ',', '.'),
+                'favorites' => $favorites,
+                'role_type' => $roleType,
+            ];
+        }
+
         $isCreator = $roleType === 'creator';
         if ($isCreator) {
             $totalProjects = \App\Models\JobContract::where('creator_id', $userId)->count();
@@ -300,17 +391,17 @@ class DashboardService extends BaseService implements DashboardServiceInterface
         ];
     }
 
-    protected function getActivityFeed(string $userId): array
+    protected function getActivityFeed(string $userId, bool $isInstitution = false): array
     {
         $notifications = $this->notificationRepo->getRecentByUser($userId, 6);
         if ($notifications->isNotEmpty()) {
             return $this->formatActivityFeed($notifications);
         }
 
-        return $this->buildFallbackActivityFeed($userId);
+        return $this->buildFallbackActivityFeed($userId, $isInstitution);
     }
 
-    protected function buildFallbackActivityFeed(string $userId): array
+    protected function buildFallbackActivityFeed(string $userId, bool $isInstitution = false): array
     {
         $contracts = \App\Models\JobContract::query()
             ->where('creator_id', $userId)
@@ -339,6 +430,10 @@ class DashboardService extends BaseService implements DashboardServiceInterface
                     'timestamp' => $c->updated_at?->toIso8601String() ?? now()->toIso8601String(),
                 ];
             })->toArray();
+        }
+
+        if ($isInstitution) {
+            return [];
         }
 
         return [
@@ -454,16 +549,16 @@ class DashboardService extends BaseService implements DashboardServiceInterface
             ],
             'sekolah' => [
                 'user' => [
-                    ['stat_label' => 'Alumni Terdaftar', 'stat_value' => '1.240', 'stat_icon' => 'school'],
-                    ['stat_label' => 'Lulusan Terserap', 'stat_value' => '68%', 'stat_icon' => 'trending_up'],
-                    ['stat_label' => 'Magang & PKL', 'stat_value' => '45', 'stat_icon' => 'work'],
-                    ['stat_label' => 'Kegiatan', 'stat_value' => '8', 'stat_icon' => 'event'],
+                    ['stat_label' => 'Mitra Industri', 'stat_value' => '0', 'stat_icon' => 'handshake'],
+                    ['stat_label' => 'Lamaran Magang', 'stat_value' => '0', 'stat_icon' => 'work'],
+                    ['stat_label' => 'Kegiatan & Event', 'stat_value' => '0', 'stat_icon' => 'event'],
+                    ['stat_label' => 'Karya Siswa', 'stat_value' => '0', 'stat_icon' => 'palette'],
                 ],
                 'creator' => [
-                    ['stat_label' => 'Peluang Magang', 'stat_value' => '12', 'stat_icon' => 'work'],
-                    ['stat_label' => 'Proyek Kampus', 'stat_value' => '5', 'stat_icon' => 'assignment'],
-                    ['stat_label' => 'Selesai', 'stat_value' => '15', 'stat_icon' => 'done_all'],
-                    ['stat_label' => 'Rating', 'stat_value' => '4.6', 'stat_icon' => 'star'],
+                    ['stat_label' => 'Mitra Industri', 'stat_value' => '0', 'stat_icon' => 'handshake'],
+                    ['stat_label' => 'Lamaran Magang', 'stat_value' => '0', 'stat_icon' => 'work'],
+                    ['stat_label' => 'Kegiatan & Event', 'stat_value' => '0', 'stat_icon' => 'event'],
+                    ['stat_label' => 'Karya Siswa', 'stat_value' => '0', 'stat_icon' => 'palette'],
                 ]
             ],
             'umkm' => [

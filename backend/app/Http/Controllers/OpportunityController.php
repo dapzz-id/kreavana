@@ -164,7 +164,8 @@ class OpportunityController extends Controller
             'sub_role_slug' => 'required|string|max:50',
             'pitch_message' => 'required|string|min:10|max:2000',
             'questions_notes' => 'nullable|string|max:1000',
-            'bid_price' => 'required|numeric|min:1',
+            'bid_price' => 'nullable|numeric|min:0',
+            'submitted_documents' => 'nullable|array',
         ]);
 
         try {

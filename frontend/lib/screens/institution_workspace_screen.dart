@@ -515,6 +515,7 @@ class _InstitutionWorkspaceScreenState
           ? List<Map<String, dynamic>>.from(response['data'])
           : [];
       _records = records;
+      _currentPage = 1;
       _loadError = succeeded
           ? null
           : response['message']?.toString() ?? 'Data gagal dimuat dari server.';
@@ -1310,22 +1311,30 @@ class _InstitutionWorkspaceScreenState
         break;
       case 'partners':
         final activeCount = records.where((r) => r['status'] == 'active').length;
-        final categories = records.map((r) => _metadata(r)['category']?.toString() ?? '').where((c) => c.isNotEmpty).toSet().length;
+        final categories = records
+            .map((r) => (_metadata(r)['category']?.toString() ?? '').trim())
+            .where((c) => c.isNotEmpty)
+            .toSet()
+            .length;
+        final activePartnerPct =
+            records.isEmpty ? 0 : ((activeCount / records.length) * 100).round();
         kpis = [
           {'title': 'Total Rekanan', 'value': records.length.toString(), 'icon': Icons.business_center_outlined},
           {'title': 'Mitra Aktif', 'value': activeCount.toString(), 'icon': Icons.check_circle_outline},
-          {'title': 'Sektor Bidang', 'value': '${categories > 0 ? categories : 1} Bidang', 'icon': Icons.category_outlined},
-          {'title': 'Standar SLA', 'value': 'Terverifikasi', 'icon': Icons.verified_user_outlined},
+          {'title': 'Sektor Bidang', 'value': '$categories Bidang', 'icon': Icons.category_outlined},
+          {'title': 'Rasio Kemitraan Aktif', 'value': '$activePartnerPct%', 'icon': Icons.verified_user_outlined},
         ];
         break;
       case 'documents':
         final publishedCount = records.where((r) => r['status'] == 'published').length;
         final draftCount = records.where((r) => r['status'] == 'draft').length;
+        final validatedPct =
+            records.isEmpty ? 0 : ((publishedCount / records.length) * 100).round();
         kpis = [
           {'title': 'Total Dokumen', 'value': records.length.toString(), 'icon': Icons.folder_copy_outlined},
           {'title': 'Tervalidasi Digital', 'value': publishedCount.toString(), 'icon': Icons.verified_outlined},
           {'title': 'Menunggu Otorisasi', 'value': draftCount.toString(), 'icon': Icons.pending_actions_outlined},
-          {'title': 'Status Legalitas', 'value': 'Tervalidasi Legal', 'icon': Icons.shield_outlined},
+          {'title': 'Rasio Tervalidasi', 'value': '$validatedPct%', 'icon': Icons.shield_outlined},
         ];
         break;
       case 'budgets':
@@ -1347,11 +1356,13 @@ class _InstitutionWorkspaceScreenState
         break;
       case 'reports':
         final pubCount = records.where((r) => r['status'] == 'published' || r['status'] == 'active').length;
+        final pubPct =
+            records.isEmpty ? 0 : ((pubCount / records.length) * 100).round();
         kpis = [
           {'title': 'Total Laporan', 'value': records.length.toString(), 'icon': Icons.summarize_outlined},
           {'title': 'Laporan Terbit', 'value': pubCount.toString(), 'icon': Icons.task_alt_rounded},
           {'title': 'Draf Evaluasi', 'value': (records.length - pubCount).toString(), 'icon': Icons.edit_note_rounded},
-          {'title': 'Evaluasi Akuntabilitas', 'value': 'Tercapai', 'icon': Icons.insights_rounded},
+          {'title': 'Rasio Laporan Terbit', 'value': '$pubPct%', 'icon': Icons.insights_rounded},
         ];
         break;
       case 'monitoring':
@@ -1378,15 +1389,17 @@ class _InstitutionWorkspaceScreenState
       case 'showcases':
         final pubCount = records.where((r) => r['status'] == 'published' || r['status'] == 'active').length;
         final majors = records
-            .map((r) => _metadata(r)['category']?.toString() ?? '')
+            .map((r) => (_metadata(r)['category']?.toString() ?? '').trim())
             .where((c) => c.isNotEmpty)
             .toSet()
             .length;
+        final verifiedPct =
+            records.isEmpty ? 0 : ((pubCount / records.length) * 100).round();
         kpis = [
           {'title': 'Total Karya Siswa', 'value': records.length.toString(), 'icon': Icons.palette_outlined},
           {'title': 'Karya Tervalidasi', 'value': pubCount.toString(), 'icon': Icons.verified_rounded},
-          {'title': 'Bidang Keahlian', 'value': '${majors > 0 ? majors : 3} Bidang', 'icon': Icons.school_outlined},
-          {'title': 'Kesiapan Industri', 'value': 'Terkurasi', 'icon': Icons.workspace_premium_outlined},
+          {'title': 'Bidang Keahlian', 'value': '$majors Bidang', 'icon': Icons.school_outlined},
+          {'title': 'Rasio Tervalidasi', 'value': '$verifiedPct%', 'icon': Icons.workspace_premium_outlined},
         ];
         break;
       default:
@@ -1949,105 +1962,53 @@ class _InstitutionWorkspaceScreenState
     var desc = record['description']?.toString() ?? '';
     final accentColor = _resolvedAccentColor;
 
-    // Smart fallback if description is trivial or placeholder like "google boss"
-    if (desc.trim().toLowerCase() == 'google boss' || desc.trim().length <= 15) {
-      if (title.toLowerCase().contains('google')) {
-        desc = 'Mitra korporasi global penyedia program talenta digital vokasi, sertifikasi industri Google Cloud & AI, serta fasilitas magang mahasiswa/siswa kejuruan.';
-      } else if (title.toLowerCase().contains('animasi') || title.toLowerCase().contains('nusantara')) {
-        desc = 'Studio animasi 3D spesialis feature film dan serial animasi internasional. Mitra strategis penyedia tempat magang PKL dan kurikulum vokasi.';
-      } else if (desc.trim().isEmpty) {
-        desc = 'Mitra industri terdaftar untuk kerjasama program vokasi, penempatan magang PKL kejuruan, dan penyelarasan kurikulum keahlian.';
-      }
+    if (desc.trim().isEmpty) {
+      desc = '-';
     }
 
-    // Smart category fallback
-    var category = meta['category']?.toString() ?? '';
-    if (category.isEmpty) {
-      if (title.toLowerCase().contains('google')) {
-        category = 'Teknologi Cloud & AI';
-      } else if (title.toLowerCase().contains('animasi') || title.toLowerCase().contains('nusantara')) {
-        category = 'Studio Animasi & Game';
-      } else {
-        category = 'Mitra Industri Kreatif & Vokasi';
-      }
-    }
+    final category =
+        (meta['category']?.toString() ?? meta['bidang']?.toString() ?? '')
+            .trim();
+    final contact =
+        (meta['contact']?.toString() ?? meta['email']?.toString() ?? '').trim();
 
-    // Smart contact fallback
-    var contact = meta['contact']?.toString() ?? meta['email']?.toString() ?? '';
-    if (contact.isEmpty) {
-      if (title.toLowerCase().contains('google')) {
-        contact = 'kemitraan.id@google.com';
-      } else if (title.toLowerCase().contains('animasi') || title.toLowerCase().contains('nusantara')) {
-        contact = 'kemitraan@animasinusantara.id';
-      }
-    }
-
-    // Smart PIC fallback
-    var picName = meta['pic_name']?.toString() ?? '';
-    var picRole = meta['pic_role']?.toString() ?? '';
-    if (picName.isEmpty) {
-      if (title.toLowerCase().contains('google')) {
-        picName = 'Jessica Wijaya';
-        if (picRole.isEmpty) picRole = 'Education & Ecosystem Lead';
-      } else if (title.toLowerCase().contains('animasi') || title.toLowerCase().contains('nusantara')) {
-        picName = 'Hendra Gunawan, S.Sn.';
-        if (picRole.isEmpty) picRole = 'Studio Director';
-      }
-    }
+    final picName =
+        (meta['pic_name']?.toString() ?? meta['pic']?.toString() ?? '').trim();
+    final picRole =
+        (meta['pic_role']?.toString() ?? meta['jabatan']?.toString() ?? '')
+            .trim();
     final picDisplay = picName.isNotEmpty
         ? (picRole.isNotEmpty ? '$picName ($picRole)' : picName)
-        : (contact.isNotEmpty ? contact : 'Tim Kemitraan Industri');
+        : (contact.isNotEmpty ? contact : '-');
 
-    // Phone info
-    var phone = meta['phone']?.toString() ?? '';
-    if (phone.isEmpty) {
-      if (title.toLowerCase().contains('google')) {
-        phone = '+62 21-5085-8000';
-      } else if (title.toLowerCase().contains('animasi') || title.toLowerCase().contains('nusantara')) {
-        phone = '+62 812-3456-7890';
-      }
-    }
+    final phone =
+        (meta['phone']?.toString() ?? meta['telepon']?.toString() ?? '').trim();
 
-    // MoU info
-    var mouNumber = meta['mou_number']?.toString() ?? '';
-    var mouPeriod = meta['mou_period']?.toString() ?? '';
-    if (mouNumber.isEmpty) {
-      if (title.toLowerCase().contains('google')) {
-        mouNumber = '012/MoU-ISRK/I/2026';
-        if (mouPeriod.isEmpty) mouPeriod = '2026 - 2029 (Aktif)';
-      } else if (title.toLowerCase().contains('animasi') || title.toLowerCase().contains('nusantara')) {
-        mouNumber = '042/MoU-ISRK/IV/2025';
-        if (mouPeriod.isEmpty) mouPeriod = '2025 - 2028 (Aktif)';
-      }
-    }
+    final mouNumber =
+        (meta['mou_number']?.toString() ?? meta['nomor_mou']?.toString() ?? '')
+            .trim();
+    final mouPeriod = (meta['mou_period']?.toString() ??
+            meta['masa_berlaku']?.toString() ??
+            '')
+        .trim();
     final mouDisplay = mouNumber.isNotEmpty
         ? (mouPeriod.isNotEmpty ? '$mouNumber • $mouPeriod' : mouNumber)
-        : (status == 'active' || status == 'published' ? 'MoU Kerjasama DUDI Aktif' : 'Tahap Inisiasi Dokumen MoU');
+        : (mouPeriod.isNotEmpty ? mouPeriod : '-');
 
-    // Quota info
-    var quota = meta['internship_quota_yearly']?.toString() ?? '';
-    if (quota.isEmpty) {
-      if (title.toLowerCase().contains('google') || title.toLowerCase().contains('animasi') || title.toLowerCase().contains('nusantara')) {
-        quota = '15';
-      }
-    }
-    final quotaDisplay = quota.isNotEmpty ? '$quota Siswa/Tahun' : 'Tersedia Kuota PKL';
+    final quota = (meta['internship_quota_yearly']?.toString() ??
+            meta['quota']?.toString() ??
+            '')
+        .trim();
+    final quotaDisplay = quota.isNotEmpty ? '$quota Siswa/Tahun' : '-';
 
-    // Website info
-    var website = meta['website']?.toString() ?? '';
-    if (website.isEmpty) {
-      if (title.toLowerCase().contains('google')) {
-        website = 'https://about.google';
-      } else if (title.toLowerCase().contains('animasi') || title.toLowerCase().contains('nusantara')) {
-        website = 'https://animasinusantara.id';
-      }
-    }
+    final website =
+        (meta['website']?.toString() ?? meta['url']?.toString() ?? '').trim();
 
     final normalizedRecord = Map<String, dynamic>.from(record);
     final normalizedMeta = Map<String, dynamic>.from(meta);
-    normalizedMeta['category'] = category;
-    normalizedMeta['contact'] = contact;
-    normalizedMeta['pic_name'] = picName;
+    if (category.isNotEmpty) normalizedMeta['category'] = category;
+    if (contact.isNotEmpty) normalizedMeta['contact'] = contact;
+    if (picName.isNotEmpty) normalizedMeta['pic_name'] = picName;
     if (picRole.isNotEmpty) normalizedMeta['pic_role'] = picRole;
     if (phone.isNotEmpty) normalizedMeta['phone'] = phone;
     normalizedMeta['mou_number'] = mouNumber;
@@ -6121,138 +6082,66 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
     }
 
     if (widget.resourceType == 'partners' && existing != null) {
-      final t = (existing['title']?.toString() ?? '').toLowerCase();
+      final cat = meta['category']?.toString() ??
+          existing['category']?.toString() ??
+          meta['bidang']?.toString() ??
+          meta['spesialisasi']?.toString() ??
+          '';
+      if (cat.isNotEmpty) meta['category'] = cat;
 
-      // Description smart fallback
-      if (_descriptionController.text.trim().isEmpty ||
-          _descriptionController.text.trim().toLowerCase() == 'google boss' ||
-          _descriptionController.text.trim().length <= 15) {
-        if (t.contains('google')) {
-          _descriptionController.text =
-              'Mitra korporasi global penyedia program talenta digital vokasi, sertifikasi industri Google Cloud & AI, serta fasilitas magang mahasiswa/siswa kejuruan.';
-        } else if (t.contains('animasi') || t.contains('nusantara')) {
-          _descriptionController.text =
-              'Studio animasi 3D spesialis feature film dan serial animasi internasional. Mitra strategis penyedia tempat magang PKL dan kurikulum vokasi.';
-        } else {
-          _descriptionController.text =
-              'Mitra industri terdaftar untuk kerjasama program vokasi, penempatan magang PKL kejuruan, dan penyelarasan kurikulum keahlian.';
-        }
-      }
+      final cnt = meta['contact']?.toString() ??
+          meta['email']?.toString() ??
+          existing['contact']?.toString() ??
+          existing['email']?.toString() ??
+          '';
+      if (cnt.isNotEmpty) meta['contact'] = cnt;
 
-      // Category smart fallback
-      var cat = meta['category']?.toString() ?? existing['category']?.toString() ?? meta['bidang']?.toString() ?? meta['spesialisasi']?.toString() ?? '';
-      if (cat.isEmpty) {
-        if (t.contains('google')) {
-          cat = 'Teknologi Cloud & AI';
-        } else if (t.contains('animasi') || t.contains('nusantara')) {
-          cat = 'Studio Animasi & Game';
-        } else {
-          cat = 'Mitra Industri Kreatif & Vokasi';
-        }
-      }
-      meta['category'] = cat;
+      final pic = meta['pic_name']?.toString() ??
+          meta['pic']?.toString() ??
+          existing['pic_name']?.toString() ??
+          existing['pic']?.toString() ??
+          '';
+      if (pic.isNotEmpty) meta['pic_name'] = pic;
 
-      // Contact smart fallback
-      var cnt = meta['contact']?.toString() ?? meta['email']?.toString() ?? existing['contact']?.toString() ?? existing['email']?.toString() ?? '';
-      if (cnt.isEmpty) {
-        if (t.contains('google')) {
-          cnt = 'kemitraan.id@google.com';
-        } else if (t.contains('animasi') || t.contains('nusantara')) {
-          cnt = 'kemitraan@animasinusantara.id';
-        } else {
-          cnt = 'kemitraan@industri.id';
-        }
-      }
-      meta['contact'] = cnt;
+      final role = meta['pic_role']?.toString() ??
+          meta['jabatan']?.toString() ??
+          existing['pic_role']?.toString() ??
+          existing['jabatan']?.toString() ??
+          '';
+      if (role.isNotEmpty) meta['pic_role'] = role;
 
-      // PIC name smart fallback
-      var pic = meta['pic_name']?.toString() ?? meta['pic']?.toString() ?? existing['pic_name']?.toString() ?? existing['pic']?.toString() ?? '';
-      if (pic.isEmpty) {
-        if (t.contains('google')) {
-          pic = 'Jessica Wijaya';
-        } else if (t.contains('animasi') || t.contains('nusantara')) {
-          pic = 'Hendra Gunawan, S.Sn.';
-        } else {
-          pic = 'Tim Kemitraan Industri';
-        }
-      }
-      meta['pic_name'] = pic;
+      final ph = meta['phone']?.toString() ??
+          meta['telepon']?.toString() ??
+          meta['whatsapp']?.toString() ??
+          existing['phone']?.toString() ??
+          '';
+      if (ph.isNotEmpty) meta['phone'] = ph;
 
-      // PIC role smart fallback
-      var role = meta['pic_role']?.toString() ?? meta['jabatan']?.toString() ?? existing['pic_role']?.toString() ?? existing['jabatan']?.toString() ?? '';
-      if (role.isEmpty) {
-        if (t.contains('google')) {
-          role = 'Education & Ecosystem Lead';
-        } else if (t.contains('animasi') || t.contains('nusantara')) {
-          role = 'Studio Director';
-        } else {
-          role = 'Koordinator Kemitraan';
-        }
-      }
-      meta['pic_role'] = role;
+      final mouN = meta['mou_number']?.toString() ??
+          meta['nomor_mou']?.toString() ??
+          existing['mou_number']?.toString() ??
+          '';
+      if (mouN.isNotEmpty) meta['mou_number'] = mouN;
 
-      // Phone smart fallback
-      var ph = meta['phone']?.toString() ?? meta['telepon']?.toString() ?? meta['whatsapp']?.toString() ?? existing['phone']?.toString() ?? '';
-      if (ph.isEmpty) {
-        if (t.contains('google')) {
-          ph = '+62 21-5085-8000';
-        } else if (t.contains('animasi') || t.contains('nusantara')) {
-          ph = '+62 812-3456-7890';
-        } else {
-          ph = '+62 812-9876-5432';
-        }
-      }
-      meta['phone'] = ph;
+      final mouP = meta['mou_period']?.toString() ??
+          meta['masa_berlaku']?.toString() ??
+          existing['mou_period']?.toString() ??
+          '';
+      if (mouP.isNotEmpty) meta['mou_period'] = mouP;
 
-      // MoU number smart fallback
-      var mouN = meta['mou_number']?.toString() ?? meta['nomor_mou']?.toString() ?? existing['mou_number']?.toString() ?? '';
-      if (mouN.isEmpty) {
-        if (t.contains('google')) {
-          mouN = '012/MoU-ISRK/I/2026';
-        } else if (t.contains('animasi') || t.contains('nusantara')) {
-          mouN = '042/MoU-ISRK/IV/2025';
-        } else {
-          mouN = '028/MoU-ISRK/VI/2025';
-        }
-      }
-      meta['mou_number'] = mouN;
+      final q = meta['internship_quota_yearly']?.toString() ??
+          meta['quota']?.toString() ??
+          meta['kuota']?.toString() ??
+          existing['internship_quota_yearly']?.toString() ??
+          '';
+      if (q.isNotEmpty) meta['internship_quota_yearly'] = q;
 
-      // MoU period smart fallback
-      var mouP = meta['mou_period']?.toString() ?? meta['masa_berlaku']?.toString() ?? existing['mou_period']?.toString() ?? '';
-      if (mouP.isEmpty) {
-        if (t.contains('google')) {
-          mouP = '2026 - 2029 (Aktif)';
-        } else if (t.contains('animasi') || t.contains('nusantara')) {
-          mouP = '2025 - 2028 (Aktif)';
-        } else {
-          mouP = '2025 - 2028 (Aktif)';
-        }
-      }
-      meta['mou_period'] = mouP;
-
-      // Quota smart fallback
-      var q = meta['internship_quota_yearly']?.toString() ?? meta['quota']?.toString() ?? meta['kuota']?.toString() ?? existing['internship_quota_yearly']?.toString() ?? '';
-      if (q.isEmpty) {
-        if (t.contains('google') || t.contains('animasi') || t.contains('nusantara')) {
-          q = '15';
-        } else {
-          q = '10';
-        }
-      }
-      meta['internship_quota_yearly'] = q;
-
-      // Website smart fallback
-      var web = meta['website']?.toString() ?? meta['web']?.toString() ?? meta['url']?.toString() ?? existing['website']?.toString() ?? '';
-      if (web.isEmpty) {
-        if (t.contains('google')) {
-          web = 'https://about.google';
-        } else if (t.contains('animasi') || t.contains('nusantara')) {
-          web = 'https://animasinusantara.id';
-        } else {
-          web = 'https://kreavana.id';
-        }
-      }
-      meta['website'] = web;
+      final web = meta['website']?.toString() ??
+          meta['web']?.toString() ??
+          meta['url']?.toString() ??
+          existing['website']?.toString() ??
+          '';
+      if (web.isNotEmpty) meta['website'] = web;
     }
 
     _controllers = {

@@ -110,19 +110,21 @@ class ProgramMagangCard extends StatelessWidget {
     final rawDate = opp.deadline ?? opp.eventDate ?? opp.eventStartDate;
     final period = formatDateDisplay(rawDate, defaultFallback: '21 Sep 2026');
 
-    // 4. Quota text
+    // 4. Quota text from database requirements & approvals
     int totalQuota = 0;
     for (final r in opp.requirements) {
       totalQuota += r.quantity;
     }
-    if (totalQuota <= 0) totalQuota = 10;
-    final int filled = opp.approvedCreators.isNotEmpty
-        ? opp.approvedCreators.length
-        : (opp.applicationsCount > 0 ? (opp.applicationsCount % totalQuota) : 6);
-    final int remaining = (totalQuota - filled).clamp(1, totalQuota);
-    final quotaString = '$remaining dari $totalQuota posisi';
+    final int filled = opp.approvedCreators.length;
+    final String quotaString;
+    if (totalQuota > 0) {
+      final int remaining = (totalQuota - filled).clamp(0, totalQuota);
+      quotaString = '$remaining dari $totalQuota posisi';
+    } else {
+      quotaString = 'Terbuka';
+    }
 
-    // 5. Requirements
+    // 5. Requirements from database only
     final List<String> reqs = [];
     for (final r in opp.requirements) {
       if (r.tags.isNotEmpty) {
@@ -134,20 +136,13 @@ class ProgramMagangCard extends StatelessWidget {
     if (reqs.isEmpty && opp.dynamicTerms.isNotEmpty) {
       reqs.addAll(opp.dynamicTerms.take(3));
     }
-    if (reqs.isEmpty) {
-      // Default matching standard internship requirements
-      reqs.addAll([
-        'Siswa SMK jurusan terkait',
-        'Menguasai dasar 3D Modeling',
-        'Memiliki portofolio karya',
-      ]);
-    }
 
     return ProgramMagangCard(
       key: key,
       title: opp.title,
-      description: opp.description ??
-          'Kerja sama penempatan siswa vokasi magang pada industri kreatif mitra.',
+      description: opp.description?.isNotEmpty == true
+          ? opp.description
+          : 'Program kolaborasi magang industri dari mitra Corporate.',
       categoryBadge: cat,
       statusBadge: statusText,
       statusBadgeColor: statusColor,
@@ -155,7 +150,8 @@ class ProgramMagangCard extends StatelessWidget {
       registrationPeriod: period,
       quotaText: quotaString,
       requirements: reqs.take(4).toList(),
-      requirementsCountLabel: '${reqs.length} Persyaratan',
+      requirementsCountLabel:
+          reqs.isNotEmpty ? '${reqs.length} Persyaratan' : 'Tidak ada syarat khusus',
       onTap: onTap,
       onDetailPressed: onDetailPressed ?? onTap,
       buttonLabel: buttonLabel,
@@ -193,35 +189,30 @@ class ProgramMagangCard extends StatelessWidget {
         meta['registration_period']?.toString() ??
         data['deadline']?.toString();
 
-    final period = formatDateDisplay(rawPeriod, defaultFallback: '21 Sep 2026');
+    final period = formatDateDisplay(rawPeriod, defaultFallback: '-');
 
     final quota = meta['quota_text']?.toString() ??
         meta['quota']?.toString() ??
-        '4 dari 10 posisi';
+        '-';
 
     List<String> reqs = [];
     if (meta['requirements'] is List) {
-      reqs = (meta['requirements'] as List).map((e) => e.toString()).toList();
-    }
-    if (reqs.isEmpty) {
-      reqs = [
-        'Siswa SMK jurusan terkait',
-        'Menguasai dasar 3D Modeling',
-        'Memiliki portofolio karya',
-      ];
+      reqs = (meta['requirements'] as List)
+          .map((e) => e.toString().trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
     }
 
     return ProgramMagangCard(
       key: key,
-      title: data['title']?.toString() ?? 'Program Magang MBKM 3D Modeler Batch I 2026',
-      description: data['description']?.toString() ??
-          'Kerja sama penempatan 10 siswa vokasi magang pada produksi serial animasi nusantara.',
+      title: data['title']?.toString() ?? 'Program Magang',
+      description: data['description']?.toString() ?? '-',
       categoryBadge: meta['category']?.toString() ?? 'Magang',
       statusBadge: statusText,
       statusBadgeColor: statusColor,
       statusBadgeBg: statusBg,
       registrationPeriod: period,
-      quotaText: quota.contains('posisi') ? quota : '$quota posisi',
+      quotaText: (quota == '-' || quota.contains('posisi')) ? quota : '$quota posisi',
       requirements: reqs,
       requirementsCountLabel: '${reqs.length} Persyaratan',
       onTap: onTap,
