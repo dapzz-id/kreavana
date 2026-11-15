@@ -21,11 +21,19 @@ enum SchoolMagangTab {
 class ProgramMagangScreen extends StatefulWidget {
   final UserModel? user;
   final ValueChanged<UserModel>? onUserUpdated;
+  final Future<List<OpportunityModel>> Function({bool forceRefresh})?
+      loadMyOpportunities;
+  final Future<List<OpportunityModel>> Function({bool forceRefresh})?
+      loadAllOpportunities;
+  final Future<Map<String, dynamic>> Function()? loadPartnerResources;
 
   const ProgramMagangScreen({
     super.key,
     this.user,
     this.onUserUpdated,
+    this.loadMyOpportunities,
+    this.loadAllOpportunities,
+    this.loadPartnerResources,
   });
 
   @override
@@ -45,9 +53,12 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
   List<OpportunityModel> _schoolPartnerItems = [];
   List<OpportunityModel> _schoolAllItems = [];
   Map<String, List<SchoolMagangStudent>> _closedOppActiveStudents = {};
+  final Map<String, bool> _recapExpandedByOpp = {};
+  final Map<String, int> _recapStudentPageByOpp = {};
   List<Map<String, dynamic>> _partnerCorporates = [];
   int _currentPage = 1;
   static const int _pageSize = 6;
+  static const int _recapStudentsPageSize = 5;
 
   UserModel? get _currentUser => widget.user ?? currentUserNotifier.value;
 
@@ -131,21 +142,31 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
     });
 
     try {
+      final fetchMyOpportunities = widget.loadMyOpportunities ??
+          ({bool forceRefresh = false}) => OpportunityService.getMyOpportunities(
+                forceRefresh: forceRefresh,
+              );
+      final fetchAllOpportunities = widget.loadAllOpportunities ??
+          ({bool forceRefresh = false}) => OpportunityService.getOpportunities(
+                limit: 100,
+                forceRefresh: forceRefresh,
+              );
+      final fetchPartnerResources = widget.loadPartnerResources ??
+          () => ApiService.get(
+                'institution/resources',
+                queryParams: {'type': 'partners'},
+              );
+
       final results = await Future.wait([
-        OpportunityService.getMyOpportunities(forceRefresh: forceRefresh)
-            .catchError((e) {
+        fetchMyOpportunities(forceRefresh: forceRefresh).catchError((e) {
           debugPrint('Error fetching my opportunities: $e');
           return <OpportunityModel>[];
         }),
-        OpportunityService.getOpportunities(limit: 100, forceRefresh: forceRefresh)
-            .catchError((e) {
+        fetchAllOpportunities(forceRefresh: forceRefresh).catchError((e) {
           debugPrint('Error fetching all opportunities: $e');
           return <OpportunityModel>[];
         }),
-        ApiService.get(
-          'institution/resources',
-          queryParams: {'type': 'partners'},
-        ).catchError((_) => <String, dynamic>{}),
+        fetchPartnerResources().catchError((_) => <String, dynamic>{}),
       ]);
 
       final myOpportunities = List<OpportunityModel>.from(results[0] as List);
@@ -647,14 +668,18 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                color: isSelected
-                    ? Colors.white
-                    : (isDark ? Colors.white70 : const Color(0xFF4338CA)),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                  color: isSelected
+                      ? Colors.white
+                      : (isDark ? Colors.white70 : const Color(0xFF4338CA)),
+                ),
               ),
             ),
             const SizedBox(width: 8),
@@ -991,12 +1016,26 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
     bool isDark,
     Color accentColor,
   ) {
+    final oppKey = opp.id ?? opp.title;
+    final isExpanded = _recapExpandedByOpp[oppKey] ?? true;
+    final requestedStudentPage = _recapStudentPageByOpp[oppKey] ?? 1;
+    final validStudentPage = AppPaginationBar.safePage(
+      requestedStudentPage,
+      students.length,
+      pageSize: _recapStudentsPageSize,
+    );
+    final pagedStudents = AppPaginationBar.slicePage(
+      students,
+      validStudentPage,
+      pageSize: _recapStudentsPageSize,
+    );
+
     final corporateName = opp.poster?.name.isNotEmpty == true
         ? opp.poster!.name
         : (opp.title.contains(' - ') ? opp.title.split(' - ').first.trim() : 'Mitra Industri Corporate');
 
     return Container(
-      key: ValueKey('active_recap_${opp.id ?? opp.title}'),
+      key: ValueKey('active_recap_$oppKey'),
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
@@ -1082,6 +1121,7 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
                       Wrap(
                         crossAxisAlignment: WrapCrossAlignment.center,
                         spacing: 8,
+                        runSpacing: 4,
                         children: [
                           Row(
                             mainAxisSize: MainAxisSize.min,
@@ -1092,12 +1132,16 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
                                 color: isDark ? Colors.white60 : const Color(0xFF64748B),
                               ),
                               const SizedBox(width: 4),
-                              Text(
-                                corporateName,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: isDark ? Colors.white70 : const Color(0xFF475569),
+                              Flexible(
+                                child: Text(
+                                  corporateName,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? Colors.white70 : const Color(0xFF475569),
+                                  ),
                                 ),
                               ),
                             ],
@@ -1127,24 +1171,79 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
             ),
           ),
 
-          // Content: Student list
+          // Content: Student list with collapsible dropdown & max 5 pagination
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Rekapan Peserta Institusi yang Diterima & Sedang Aktif:',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: isDark ? Colors.white70 : const Color(0xFF334155),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isNarrow = constraints.maxWidth < 560;
+
+                    final dropdownToggle = Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        key: Key('recap_students_toggle_$oppKey'),
+                        onTap: () {
+                          setState(() {
+                            _recapExpandedByOpp[oppKey] = !isExpanded;
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(10),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                          child: Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  'Rekapan Peserta Institusi yang Diterima & Sedang Aktif (${students.length}):',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: isDark ? Colors.white70 : const Color(0xFF334155),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: accentColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: accentColor.withValues(alpha: 0.25),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      isExpanded ? 'Tutup' : 'Buka',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: accentColor,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 2),
+                                    Icon(
+                                      isExpanded
+                                          ? Icons.keyboard_arrow_up_rounded
+                                          : Icons.keyboard_arrow_down_rounded,
+                                      size: 16,
+                                      color: accentColor,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                    TextButton.icon(
+                    );
+
+                    final detailButton = TextButton.icon(
                       onPressed: () => _openOpportunityDetail(opp),
                       icon: const Icon(Icons.arrow_forward_rounded, size: 14),
                       label: const Text('Detail Program', style: TextStyle(fontSize: 12)),
@@ -1153,103 +1252,60 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         visualDensity: VisualDensity.compact,
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                ...students.map((student) {
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF0F172A).withValues(alpha: 0.5) : const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-                      ),
-                    ),
-                    child: Row(
+                    );
+
+                    if (isNarrow) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          dropdownToggle,
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: detailButton,
+                          ),
+                        ],
+                      );
+                    }
+
+                    return Row(
                       children: [
-                        CircleAvatar(
-                          radius: 18,
-                          backgroundColor: const Color(0xFFEEF2FF),
-                          child: Text(
-                            student.name.isNotEmpty ? student.name[0].toUpperCase() : 'S',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF4F46E5),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                student.name,
-                                style: TextStyle(
-                                  fontSize: 13.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                student.majorClass,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: isDark ? Colors.white60 : const Color(0xFF64748B),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFEFF6FF),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: const Color(0xFFBFDBFE)),
-                          ),
-                          child: Text(
-                            student.role,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF1D4ED8),
-                            ),
-                          ),
-                        ),
+                        Expanded(child: dropdownToggle),
                         const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFDCFCE7),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: const Color(0xFFA7F3D0)),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.check_circle_rounded, size: 13, color: Color(0xFF16A34A)),
-                              SizedBox(width: 4),
-                              Text(
-                                'Diterima Magang',
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF15803D),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                        detailButton,
                       ],
-                    ),
-                  );
-                }),
+                    );
+                  },
+                ),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
+                  alignment: Alignment.topCenter,
+                  child: isExpanded
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const SizedBox(height: 10),
+                            ...pagedStudents.map(
+                              (student) => _buildRecapStudentTile(student, isDark),
+                            ),
+                            AppPaginationBar(
+                              key: Key('recap_students_pagination_$oppKey'),
+                              totalItems: students.length,
+                              currentPage: validStudentPage,
+                              pageSize: _recapStudentsPageSize,
+                              accentColor: const Color(0xFF059669),
+                              itemLabel: 'peserta',
+                              margin: const EdgeInsets.only(top: 6, bottom: 4),
+                              onPageChanged: (page) {
+                                setState(() {
+                                  _recapStudentPageByOpp[oppKey] = page;
+                                });
+                              },
+                            ),
+                          ],
+                        )
+                      : const SizedBox.shrink(),
+                ),
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -1345,6 +1401,126 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildRecapStudentTile(SchoolMagangStudent student, bool isDark) {
+    final roleBadge = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF6FF),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: const Color(0xFFBFDBFE)),
+      ),
+      child: Text(
+        student.role,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFF1D4ED8),
+        ),
+      ),
+    );
+
+    const acceptedBadge = DecoratedBox(
+      decoration: BoxDecoration(
+        color: Color(0xFFDCFCE7),
+        borderRadius: BorderRadius.all(Radius.circular(6)),
+        border: Border.fromBorderSide(BorderSide(color: Color(0xFFA7F3D0))),
+      ),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.check_circle_rounded, size: 13, color: Color(0xFF16A34A)),
+            SizedBox(width: 4),
+            Text(
+              'Diterima Magang',
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF15803D),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark
+            ? const Color(0xFF0F172A).withValues(alpha: 0.5)
+            : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+        ),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isCompact = constraints.maxWidth < 520;
+          final studentInfo = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                student.name,
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                student.majorClass,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                ),
+              ),
+              if (isCompact) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [roleBadge, acceptedBadge],
+                ),
+              ],
+            ],
+          );
+
+          return Row(
+            crossAxisAlignment:
+                isCompact ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: const Color(0xFFEEF2FF),
+                child: Text(
+                  student.name.isNotEmpty ? student.name[0].toUpperCase() : 'S',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF4F46E5),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(child: studentInfo),
+              if (!isCompact) ...[
+                const SizedBox(width: 8),
+                roleBadge,
+                const SizedBox(width: 8),
+                acceptedBadge,
+              ],
+            ],
+          );
+        },
       ),
     );
   }

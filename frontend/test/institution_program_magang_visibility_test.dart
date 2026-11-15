@@ -895,4 +895,220 @@ void main() {
       expect(activeBtn.onPressed, isNotNull);
     });
   });
+
+  group('Active Internship Recap Pagination & Dropdown Tests', () {
+    OpportunityModel buildRecapOpportunity({
+      required String id,
+      required int studentCount,
+    }) {
+      final creators = List.generate(studentCount, (index) {
+        final number = (index + 1).toString().padLeft(2, '0');
+        return OpportunityApprovedCreatorModel(
+          id: 'inst-1',
+          applicationId: 'app-$id-$number',
+          name: 'Kreavana Demo Institution',
+          username: 'inst_demo',
+          capability: 'videographer',
+          studentName: 'Peserta Magang $number',
+          studentMajor: 'RPL $number',
+        );
+      });
+
+      return OpportunityModel(
+        id: id,
+        title: 'Program Magang PV Electric Batch I 2027',
+        description: 'Program magang corporate untuk peserta vokasi.',
+        subRoleSlug: 'magang',
+        status: 'closed',
+        deadline: '2027-01-30',
+        postedBy: 'corp-1',
+        poster: OpportunityPoster(
+          id: 'corp-1',
+          name: 'PT Kreavana Nusantara Korporat',
+          username: 'corporate_demo',
+          role: 'user',
+          selectedSubRole: 'corporate',
+        ),
+        approvedCreators: creators,
+      );
+    }
+
+    UserModel buildInstitutionUser() {
+      return UserModel(
+        id: 'inst-1',
+        name: 'Kreavana Demo Institution',
+        username: 'inst_demo',
+        email: 'inst@demo.id',
+        role: 'institution',
+        subRole: 'institution',
+        verificationType: 'institution',
+      );
+    }
+
+    testWidgets(
+      'Recap card defaults expanded, caps visible accepted students at 5 per page, paginates, and toggles open/close cleanly',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(1280, 1200));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        final recapOpp = buildRecapOpportunity(
+          id: 'opp_recap_12',
+          studentCount: 12,
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: ProgramMagangScreen(
+              user: buildInstitutionUser(),
+              loadMyOpportunities: ({bool forceRefresh = false}) async => [
+                recapOpp,
+              ],
+              loadAllOpportunities: ({bool forceRefresh = false}) async =>
+                  const [],
+              loadPartnerResources: () async => {
+                'status': true,
+                'data': const [],
+              },
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Default expanded ('Tutup' action visible) with max 5 students shown
+        expect(find.text('12 Peserta Diterima & Aktif Magang'), findsOneWidget);
+        expect(
+          find.text(
+            'Rekapan Peserta Institusi yang Diterima & Sedang Aktif (12):',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Tutup'), findsOneWidget);
+        expect(find.text('Buka'), findsNothing);
+
+        for (var i = 1; i <= 5; i++) {
+          final numStr = i.toString().padLeft(2, '0');
+          expect(find.text('Peserta Magang $numStr'), findsOneWidget);
+        }
+        for (var i = 6; i <= 12; i++) {
+          final numStr = i.toString().padLeft(2, '0');
+          expect(find.text('Peserta Magang $numStr'), findsNothing);
+        }
+
+        final paginationFinder = find.byKey(
+          const Key('recap_students_pagination_opp_recap_12'),
+        );
+        expect(paginationFinder, findsOneWidget);
+        expect(find.text('Menampilkan 1–5 dari 12 peserta'), findsOneWidget);
+
+        // Navigate to page 2 -> shows students 06..10
+        final nextBtn = find.descendant(
+          of: paginationFinder,
+          matching: find.text('Next'),
+        );
+        await tester.ensureVisible(nextBtn);
+        await tester.tap(nextBtn);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Peserta Magang 01'), findsNothing);
+        expect(find.text('Peserta Magang 05'), findsNothing);
+        for (var i = 6; i <= 10; i++) {
+          final numStr = i.toString().padLeft(2, '0');
+          expect(find.text('Peserta Magang $numStr'), findsOneWidget);
+        }
+        expect(find.text('Peserta Magang 11'), findsNothing);
+        expect(find.text('Menampilkan 6–10 dari 12 peserta'), findsOneWidget);
+
+        // Navigate to page 3 -> shows remaining students 11..12
+        final page3Btn = find.descendant(
+          of: paginationFinder,
+          matching: find.text('3'),
+        );
+        await tester.ensureVisible(page3Btn);
+        await tester.tap(page3Btn);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Peserta Magang 10'), findsNothing);
+        expect(find.text('Peserta Magang 11'), findsOneWidget);
+        expect(find.text('Peserta Magang 12'), findsOneWidget);
+        expect(find.text('Menampilkan 11–12 dari 12 peserta'), findsOneWidget);
+
+        // Collapse dropdown -> hides student tiles and pagination bar while keeping card header & official letter box
+        final toggleFinder = find.byKey(
+          const Key('recap_students_toggle_opp_recap_12'),
+        );
+        await tester.ensureVisible(toggleFinder);
+        await tester.tap(toggleFinder);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Buka'), findsOneWidget);
+        expect(find.text('Tutup'), findsNothing);
+        expect(find.text('Peserta Magang 11'), findsNothing);
+        expect(find.text('Peserta Magang 12'), findsNothing);
+        expect(paginationFinder, findsNothing);
+        expect(
+          find.text('Program Magang PV Electric Batch I 2027'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('Surat Resmi Penerimaan Belum Diunggah'),
+          findsOneWidget,
+        );
+
+        // Expand dropdown again -> preserves page 3 state and displays students 11..12
+        await tester.tap(toggleFinder);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Tutup'), findsOneWidget);
+        expect(find.text('Peserta Magang 11'), findsOneWidget);
+        expect(find.text('Peserta Magang 12'), findsOneWidget);
+        expect(paginationFinder, findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Recap card dropdown and max-5 pagination render cleanly on mobile viewport',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(390, 900));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        final recapOpp = buildRecapOpportunity(
+          id: 'opp_recap_mobile_7',
+          studentCount: 7,
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: ProgramMagangScreen(
+              user: buildInstitutionUser(),
+              loadMyOpportunities: ({bool forceRefresh = false}) async => [
+                recapOpp,
+              ],
+              loadAllOpportunities: ({bool forceRefresh = false}) async =>
+                  const [],
+              loadPartnerResources: () async => {
+                'status': true,
+                'data': const [],
+              },
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Peserta Magang 01'), findsOneWidget);
+        expect(find.text('Peserta Magang 05'), findsOneWidget);
+        expect(find.text('Peserta Magang 06'), findsNothing);
+        expect(find.text('Menampilkan 1–5 dari 7 peserta'), findsOneWidget);
+
+        final toggleFinder = find.byKey(
+          const Key('recap_students_toggle_opp_recap_mobile_7'),
+        );
+        await tester.ensureVisible(toggleFinder);
+        await tester.tap(toggleFinder);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Buka'), findsOneWidget);
+        expect(find.text('Peserta Magang 01'), findsNothing);
+      },
+    );
+  });
 }
