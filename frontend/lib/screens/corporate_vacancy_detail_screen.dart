@@ -1786,7 +1786,6 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
                   },
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   itemBuilder: (ctx) => [
-                    const PopupMenuItem(value: 'Menunggu Review', child: Text('Menunggu Review')),
                     const PopupMenuItem(value: 'Interview', child: Text('Jadwalkan Interview')),
                     PopupMenuItem(
                       value: 'Diterima',

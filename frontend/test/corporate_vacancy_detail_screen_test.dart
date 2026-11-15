@@ -487,7 +487,20 @@ void main() {
       expect(find.byKey(const ValueKey('popup_status_Achmad Bilzan')), findsNothing);
 
       // 3. Verify pending student (Rian Pratama) still HAS the Ubah Status dropdown
-      expect(find.byKey(const ValueKey('popup_status_Rian Pratama')), findsOneWidget);
+      final rianPopup = find.byKey(const ValueKey('popup_status_Rian Pratama'));
+      expect(rianPopup, findsOneWidget);
+      await tester.tap(rianPopup);
+      await tester.pumpAndSettle();
+
+      // Ensure dropdown options contain Jadwalkan Interview, Terima Magang, Tolak Berkas, but NO Menunggu Review
+      expect(find.text('Jadwalkan Interview'), findsOneWidget);
+      expect(find.text('Terima Magang'), findsOneWidget);
+      expect(find.text('Tolak Berkas'), findsOneWidget);
+      expect(find.widgetWithText(PopupMenuItem<String>, 'Menunggu Review'), findsNothing);
+
+      // Close the popup by tapping outside / back
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
 
       // 4. Verify rejected student (Kadavi Raditya) has Ubah Status dropdown HIDDEN and does NOT show Ajukan Siswa Pengganti
       expect(find.byKey(const ValueKey('popup_status_Kadavi Raditya')), findsNothing);
