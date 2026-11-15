@@ -313,7 +313,7 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
     );
 
     final effectiveUser = widget.user;
-    if (isDesktop && effectiveUser != null) {
+    if (effectiveUser != null) {
       return DesktopSidebarLayout(
         user: effectiveUser,
         activeRoute: 'reputasi',

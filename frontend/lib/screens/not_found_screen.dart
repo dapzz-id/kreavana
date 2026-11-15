@@ -27,7 +27,6 @@ class NotFoundScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final effectiveUser = user ?? currentUserNotifier.value;
-    final isDesktop = MediaQuery.of(context).size.width > 900;
 
     final body = Center(
       child: SingleChildScrollView(
@@ -188,7 +187,7 @@ class NotFoundScreen extends StatelessWidget {
       ),
     );
 
-    if (isDesktop && effectiveUser != null && !effectiveUser.isGuest) {
+    if (effectiveUser != null && !effectiveUser.isGuest) {
       return DesktopSidebarLayout(
         user: effectiveUser,
         activeRoute: 'not_found',

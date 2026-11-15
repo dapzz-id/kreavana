@@ -419,7 +419,7 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
             ),
     );
 
-    if (isDesktop && widget.showSidebar && _activeServiceKey != null) {
+    if (widget.showSidebar && _activeServiceKey != null) {
       return DesktopSidebarLayout(
         user: widget.user,
         activeRoute: _activeServiceKey!,

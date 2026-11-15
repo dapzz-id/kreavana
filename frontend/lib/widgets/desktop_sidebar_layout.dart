@@ -19,6 +19,9 @@ import 'app_sweet_alert.dart';
 import '../services/system_settings_service.dart';
 import '../services/sidebar_scroll_manager.dart';
 import 'sidebar_hover_tile.dart';
+import '../services/badge_service.dart';
+import 'custom_bottom_nav_bar.dart';
+import 'role_navigation_helper.dart';
 
 class DesktopSidebarLayout extends StatefulWidget {
   final Widget child;
@@ -42,7 +45,9 @@ class DesktopSidebarLayout extends StatefulWidget {
 
 class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
   bool _isSidebarCollapsed = false;
+  bool _isMobileDrawerOpen = false;
   late final ScrollController _sidebarScrollController;
+  final GlobalKey<ScaffoldState> _mobileScaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
@@ -577,6 +582,12 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
 
     // Routes that are in MainNavigation's IndexedStack — go to index instead
     switch (route) {
+      case 'beranda':
+        _goToMain(0);
+        break;
+      case 'peluang_proyek':
+        _goToMain(12);
+        break;
       case 'notifikasi':
       case 'notifications':
         _goToMain(10);
@@ -1232,6 +1243,165 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
     );
   }
 
+  void _handleMobileNavigation(
+    BuildContext context,
+    UserModel effectiveUser, {
+    required String routeKey,
+    int? mainNavIndex,
+    String? routePath,
+    String? guestActionLabel,
+  }) {
+    if (!RoleNavigationHelper.checkGuestGuard(
+      context,
+      effectiveUser,
+      mainNavIndex: mainNavIndex,
+      guestActionLabel: guestActionLabel,
+    )) {
+      return;
+    }
+
+    if (effectiveUser.isAdmin && routePath != null) {
+      _navigateToRoute(routePath);
+      return;
+    }
+
+    if (routeKey == 'beranda') {
+      _goToMain(0);
+      return;
+    }
+
+    if (routeKey == 'peluang_proyek') {
+      _goToMain(12);
+      return;
+    }
+
+    _pushLink(routeKey);
+  }
+
+  Widget _buildMobileShell(
+    BuildContext context,
+    UserModel effectiveUser,
+    bool isDark,
+  ) {
+    final bool hasPageFab =
+        RoleNavigationHelper.routeHasPageFab(effectiveUser, widget.activeRoute);
+    final Color accentColor = RoleNavigationHelper.accentColorFor(effectiveUser);
+
+    return KreavanaShellScope(
+      onOpenDrawer: () => _mobileScaffoldKey.currentState?.openDrawer(),
+      child: ListenableBuilder(
+        listenable: Listenable.merge([
+          BadgeService(),
+          SystemSettingsService.moduleStatuses,
+        ]),
+        builder: (context, _) {
+          final badges = BadgeService();
+          final dests = RoleNavigationHelper.getMobileBottomNavDestinations(
+            effectiveUser,
+            unreadMessages: badges.unreadMessages,
+            unreadNotifications: badges.unreadNotifications,
+          );
+          final currentNavIndex = RoleNavigationHelper.resolveActiveBottomNavIndex(
+            dests,
+            widget.activeRoute,
+          );
+
+          final scaffold = Scaffold(
+            key: _mobileScaffoldKey,
+            backgroundColor: isDark
+                ? AppTheme.surfaceDark
+                : const Color(0xFFF8F9FC),
+            onDrawerChanged: (isOpen) {
+              setState(() {
+                _isMobileDrawerOpen = isOpen;
+              });
+            },
+            drawer: RoleNavigationHelper.buildMobileDrawer(
+              context: context,
+              user: effectiveUser,
+              activeRoute: widget.activeRoute,
+              unreadMessages: badges.unreadMessages,
+              unreadNotifications: badges.unreadNotifications,
+              onSelectEntry: (entry) {
+                if (entry.isAiAction) {
+                  if (!RoleNavigationHelper.checkGuestGuard(
+                    context,
+                    effectiveUser,
+                    mainNavIndex: 14,
+                    guestActionLabel: entry.guestActionLabel,
+                  )) {
+                    return;
+                  }
+                  _goToMain(14);
+                  return;
+                }
+                final creatorEntry = entry.creatorServiceEntry;
+                if (creatorEntry != null) {
+                  if (creatorEntry.serviceKey != null) {
+                    _pushService(creatorEntry.serviceKey!);
+                  } else if (creatorEntry.route != null) {
+                    _pushLink(creatorEntry.route!);
+                  }
+                  return;
+                }
+                _handleMobileNavigation(
+                  context,
+                  effectiveUser,
+                  routeKey: entry.routeKey,
+                  mainNavIndex: entry.mainNavIndex,
+                  routePath: entry.routePath,
+                  guestActionLabel: entry.guestActionLabel,
+                );
+              },
+              onOpenUpgrade: () =>
+                  UpgradePlanModal.show(context, user: effectiveUser),
+              onOpenProfile: () => _pushLink(
+                (_isSchool || _isGovernment) ? 'profil_instansi' : 'profil',
+              ),
+              onLogout: _showLogoutDialog,
+            ),
+            body: SafeArea(
+              bottom: false,
+              child: widget.child,
+            ),
+            bottomNavigationBar: CustomBottomNavBar(
+              currentIndex: currentNavIndex,
+              onTap: (navIndex) {
+                if (navIndex < 0 || navIndex >= dests.length) return;
+                final dest = dests[navIndex];
+                if (dest.isMenuTrigger) {
+                  _mobileScaffoldKey.currentState?.openDrawer();
+                  return;
+                }
+                _handleMobileNavigation(
+                  context,
+                  effectiveUser,
+                  routeKey: dest.routeKey,
+                  mainNavIndex: dest.mainNavIndex,
+                  routePath: dest.routePath,
+                );
+              },
+              items: dests.map((d) => d.toBottomNavItem()).toList(),
+            ),
+          );
+
+          return Stack(
+            children: [
+              scaffold,
+              if (!_isMobileDrawerOpen &&
+                  !widget.activeRoute.startsWith('eo_') &&
+                  (SystemSettingsService.isAiEnabled || effectiveUser.isAdmin))
+                KreavanaAiFloatingWidget(
+                  hasPageFab: hasPageFab,
+                  accentColor: _isCompany ? accentColor : null,
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -1242,10 +1412,19 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
 
     final hasAncestorSidebar =
         context.findAncestorWidgetOfExactType<DesktopSidebarLayout>() != null ||
-        (isDesktop && context.findAncestorWidgetOfExactType<MainNavigation>() != null);
+        context.findAncestorWidgetOfExactType<MainNavigation>() != null;
 
-    if (!isDesktop || hasAncestorSidebar) {
+    if (hasAncestorSidebar) {
       return widget.child;
+    }
+
+    if (!isDesktop) {
+      final currentRoute = ModalRoute.of(context);
+      final isPushedSubPage = currentRoute != null && !currentRoute.isFirst;
+      if (isPushedSubPage) {
+        return widget.child;
+      }
+      return _buildMobileShell(context, effectiveUser, isDark);
     }
 
     final sidebarWidth = _isSidebarCollapsed ? 78.0 : 260.0;
@@ -1431,7 +1610,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isCollapsed: collapsed,
                             activeColor: _isCompany ? const Color(0xFF2563EB) : const Color(0xFF8B5CF6),
                           ),
-                        if ((_isCreatorUser || _isCompany) && !_isGovernment && !_isSchool)
+                        if (_isCreatorUser && !_isGovernment && !_isSchool && !_isCompany)
                           _buildNavRow(
                             icon: Icons.explore_outlined,
                             label: 'Rekomendasi Peluang',
@@ -1928,7 +2107,10 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         if ((SystemSettingsService.isAiEnabled || widget.user.isAdmin) &&
             !widget.activeRoute.startsWith('eo_'))
           KreavanaAiFloatingWidget(
-            hasPageFab: false,
+            hasPageFab: RoleNavigationHelper.routeHasPageFab(
+              effectiveUser,
+              widget.activeRoute,
+            ),
             accentColor: _isCompany ? const Color(0xFF2563EB) : null,
           ),
       ],

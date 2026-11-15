@@ -551,21 +551,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         actions: [
           if (_isSchool)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 8),
-              child: OutlinedButton.icon(
+            if (MediaQuery.of(context).size.width < 600)
+              IconButton(
                 onPressed: _openPublicProfilePreview,
-                icon: const Icon(Icons.visibility_outlined, size: 16),
-                label: const Text('Lihat Profil Publik'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF6366F1),
-                  side: const BorderSide(color: Color(0xFF6366F1)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                icon: const Icon(
+                  Icons.visibility_outlined,
+                  color: Color(0xFF6366F1),
+                ),
+                tooltip: 'Lihat Profil Publik',
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 8),
+                child: OutlinedButton.icon(
+                  onPressed: _openPublicProfilePreview,
+                  icon: const Icon(Icons.visibility_outlined, size: 16),
+                  label: const Text('Lihat Profil Publik'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF6366F1),
+                    side: const BorderSide(color: Color(0xFF6366F1)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
               ),
-            ),
           IconButton(
             icon: const Icon(Icons.logout_rounded, color: Colors.red),
             onPressed: () {
@@ -750,7 +760,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               'institusi',
             ].contains(_currentUser.subRole?.toLowerCase().trim()));
 
-    if (isDesktop && widget.showSidebar && !_currentUser.isAdmin) {
+    if (widget.showSidebar && !_currentUser.isAdmin) {
       return DesktopSidebarLayout(
         user: _currentUser,
         activeRoute: isGovOrSchool

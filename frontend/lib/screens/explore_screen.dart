@@ -694,14 +694,10 @@ class _ExploreScreenState extends State<ExploreScreen>
   ),
 );
 
-    if (isDesktop) {
-      return DesktopSidebarLayout(
-        user: widget.user,
-        activeRoute: 'explore',
-        child: scaffold,
-      );
-    }
-
-    return scaffold;
+    return DesktopSidebarLayout(
+      user: widget.user,
+      activeRoute: 'explore',
+      child: scaffold,
+    );
   }
 }

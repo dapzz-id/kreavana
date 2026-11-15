@@ -34,7 +34,19 @@ class KreavanaAiFloatingWidget extends StatefulWidget {
 
 class _KreavanaAiFloatingWidgetState extends State<KreavanaAiFloatingWidget> {
   static Offset? _savedPosition;
+  static bool _hasCustomSavedPosition = false;
   Offset? _position;
+  bool? _lastHasPageFab;
+  double? _lastScreenHeight;
+  double? _lastScreenWidth;
+
+  @override
+  void didUpdateWidget(covariant KreavanaAiFloatingWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.hasPageFab != widget.hasPageFab && !_hasCustomSavedPosition) {
+      _position = null;
+    }
+  }
   bool _isDragging = false;
   bool _isHovered = false;
   bool _hasDragged = false;
@@ -51,7 +63,6 @@ class _KreavanaAiFloatingWidgetState extends State<KreavanaAiFloatingWidget> {
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
-    final isDesktop = screenSize.width >= 768;
 
     final maxLeft = (screenSize.width - _buttonWidth - 12.0).clamp(
       12.0,
@@ -63,15 +74,24 @@ class _KreavanaAiFloatingWidgetState extends State<KreavanaAiFloatingWidget> {
     );
 
     // Calculate or clamp position to viewport
-    if (_savedPosition != null) {
+    final sizeChanged = _lastScreenHeight != screenSize.height ||
+        _lastScreenWidth != screenSize.width;
+    final needsDefaultRecalc = !_hasCustomSavedPosition &&
+        (_position == null ||
+            _lastHasPageFab != widget.hasPageFab ||
+            sizeChanged);
+
+    if (_hasCustomSavedPosition && _savedPosition != null) {
       _position = Offset(
         _savedPosition!.dx.clamp(12.0, maxLeft),
         _savedPosition!.dy.clamp(12.0, maxTop),
       );
-    } else {
-      final initialBottomOffset = isDesktop
+    } else if (needsDefaultRecalc) {
+      final safeBottom = MediaQuery.of(context).padding.bottom;
+      final isWideShell = screenSize.width > 900;
+      final initialBottomOffset = isWideShell
           ? (widget.hasPageFab ? 96.0 : 32.0)
-          : (widget.hasPageFab ? 84.0 : 56.0);
+          : (widget.hasPageFab ? 158.0 + safeBottom : 94.0 + safeBottom);
       _position = Offset(
         (screenSize.width - _buttonWidth - 24.0).clamp(12.0, maxLeft),
         (screenSize.height - _buttonHeight - initialBottomOffset).clamp(
@@ -79,6 +99,9 @@ class _KreavanaAiFloatingWidgetState extends State<KreavanaAiFloatingWidget> {
           maxTop,
         ),
       );
+      _lastHasPageFab = widget.hasPageFab;
+      _lastScreenHeight = screenSize.height;
+      _lastScreenWidth = screenSize.width;
     }
 
     return Positioned(
@@ -114,6 +137,7 @@ class _KreavanaAiFloatingWidgetState extends State<KreavanaAiFloatingWidget> {
             setState(() {
               _position = Offset(nextX, nextY);
               _savedPosition = _position;
+              _hasCustomSavedPosition = true;
             });
           },
           onPanEnd: (details) {

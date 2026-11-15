@@ -515,16 +515,12 @@ class _WalletScreenState extends State<WalletScreen> {
       ),
     );
 
-    if (isDesktop) {
-      return DesktopSidebarLayout(
-        user: _currentUser,
-        activeRoute: 'pembayaran',
-        onUserUpdated: widget.onUserUpdated,
-        child: content,
-      );
-    }
-
-    return content;
+    return DesktopSidebarLayout(
+      user: _currentUser,
+      activeRoute: 'pembayaran',
+      onUserUpdated: widget.onUserUpdated,
+      child: content,
+    );
   }
 
   Widget _buildActivationUI(ThemeData theme) {
