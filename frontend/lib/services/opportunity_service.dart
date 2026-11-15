@@ -556,6 +556,8 @@ class OpportunityService {
 
   static Future<Map<String, dynamic>> signContract({
     required String opportunityId,
+    String? applicationId,
+    bool signAll = false,
     String? signature,
     String? signatureType,
     String? documentUrl,
@@ -563,6 +565,10 @@ class OpportunityService {
   }) async {
     try {
       final body = <String, dynamic>{};
+      if (applicationId != null && applicationId.isNotEmpty) {
+        body['application_id'] = applicationId;
+      }
+      if (signAll) body['sign_all'] = true;
       if (signature != null && signature.isNotEmpty) body['signature'] = signature;
       if (signatureType != null && signatureType.isNotEmpty) body['signature_type'] = signatureType;
       if (documentUrl != null && documentUrl.isNotEmpty) body['document_url'] = documentUrl;
@@ -584,12 +590,17 @@ class OpportunityService {
 
   static Future<Map<String, dynamic>> updateDynamicTerms({
     required String opportunityId,
+    String? applicationId,
     required List<String> dynamicTerms,
   }) async {
     try {
-      final res = await ApiService.post('opportunities/$opportunityId/dynamic-terms', {
+      final body = <String, dynamic>{
         'dynamic_terms': dynamicTerms,
-      });
+      };
+      if (applicationId != null && applicationId.isNotEmpty) {
+        body['application_id'] = applicationId;
+      }
+      final res = await ApiService.post('opportunities/$opportunityId/dynamic-terms', body);
       return {
         'status': res['status'] == true,
         'message': res['message'] ?? 'Ketentuan khusus kontrak berhasil diperbarui.',

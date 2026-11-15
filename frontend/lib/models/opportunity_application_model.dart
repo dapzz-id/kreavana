@@ -71,6 +71,9 @@ class OpportunityApplicationModel {
   final String? reviewedAt;
   final String? createdAt;
   final List<Map<String, dynamic>> submittedDocuments;
+  final String? contractNumber;
+  final String? clientSignature;
+  final String? clientSignedAt;
   final String? creatorSignature;
   final String? creatorSignedAt;
   final List<String> dynamicTerms;
@@ -103,6 +106,9 @@ class OpportunityApplicationModel {
     this.reviewedAt,
     this.createdAt,
     this.submittedDocuments = const [],
+    this.contractNumber,
+    this.clientSignature,
+    this.clientSignedAt,
     this.creatorSignature,
     this.creatorSignedAt,
     this.dynamicTerms = const [],
@@ -112,7 +118,13 @@ class OpportunityApplicationModel {
   bool get isApproved => status == 'approved';
   bool get isRejected => status == 'rejected';
   bool get isConsideration => status == 'under_consideration';
-  bool get isCreatorSigned => creatorSignedAt != null && creatorSignedAt!.isNotEmpty;
+  bool get isClientSigned =>
+      (clientSignedAt != null && clientSignedAt!.isNotEmpty) ||
+      (clientSignature != null && clientSignature!.isNotEmpty);
+  bool get isCreatorSigned =>
+      (creatorSignedAt != null && creatorSignedAt!.isNotEmpty) ||
+      (creatorSignature != null && creatorSignature!.isNotEmpty);
+  bool get isContractFinal => isClientSigned && isCreatorSigned;
   bool get isCounterOfferByCreator => counterOfferBy == 'creator';
   bool get isCounterOfferByClient => counterOfferBy != 'creator';
   bool get isTermPayment => paymentScheme == 'term';
@@ -211,6 +223,9 @@ class OpportunityApplicationModel {
       reviewedAt: json['reviewed_at']?.toString(),
       createdAt: json['created_at']?.toString(),
       submittedDocuments: docs,
+      contractNumber: json['contract_number']?.toString(),
+      clientSignature: json['client_signature']?.toString(),
+      clientSignedAt: json['client_signed_at']?.toString(),
       creatorSignature: json['creator_signature']?.toString(),
       creatorSignedAt: json['creator_signed_at']?.toString(),
       dynamicTerms: json['dynamic_terms'] is List

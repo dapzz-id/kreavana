@@ -170,50 +170,84 @@ class OpportunityRequirementModel {
 
 class OpportunityApprovedCreatorModel {
   final String id;
+  final String? applicationId;
   final String name;
   final String username;
   final String? avatarUrl;
   final String? subRole;
   final String? capability;
+  final double agreedPrice;
+  final String? contractNumber;
+  final String? clientSignature;
+  final String? clientSignedAt;
   final String? creatorSignature;
   final String? creatorSignedAt;
+  final List<String> dynamicTerms;
 
   OpportunityApprovedCreatorModel({
     required this.id,
+    this.applicationId,
     required this.name,
     required this.username,
     this.avatarUrl,
     this.subRole,
     this.capability,
+    this.agreedPrice = 0.0,
+    this.contractNumber,
+    this.clientSignature,
+    this.clientSignedAt,
     this.creatorSignature,
     this.creatorSignedAt,
+    this.dynamicTerms = const [],
   });
 
-  bool get isSigned => creatorSignedAt != null && creatorSignedAt!.isNotEmpty;
+  bool get isClientSigned =>
+      (clientSignedAt != null && clientSignedAt!.isNotEmpty) ||
+      (clientSignature != null && clientSignature!.isNotEmpty);
+  bool get isSigned =>
+      (creatorSignedAt != null && creatorSignedAt!.isNotEmpty) ||
+      (creatorSignature != null && creatorSignature!.isNotEmpty);
+  bool get isContractFinal => isClientSigned && isSigned;
 
   factory OpportunityApprovedCreatorModel.fromJson(Map<String, dynamic> json) {
     return OpportunityApprovedCreatorModel(
       id: json['id']?.toString() ?? '',
+      applicationId: json['application_id']?.toString(),
       name: json['name'] ?? '',
       username: json['username'] ?? '',
       avatarUrl: json['avatar_url'],
       subRole: json['sub_role'],
       capability: json['capability'],
+      agreedPrice: json['agreed_price'] != null
+          ? (double.tryParse(json['agreed_price'].toString()) ?? 0.0)
+          : 0.0,
+      contractNumber: json['contract_number']?.toString(),
+      clientSignature: json['client_signature']?.toString(),
+      clientSignedAt: json['client_signed_at']?.toString(),
       creatorSignature: json['creator_signature'],
       creatorSignedAt: json['creator_signed_at'],
+      dynamicTerms: json['dynamic_terms'] is List
+          ? (json['dynamic_terms'] as List).map((e) => e.toString()).toList()
+          : const [],
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'application_id': applicationId,
       'name': name,
       'username': username,
       'avatar_url': avatarUrl,
       'sub_role': subRole,
       'capability': capability,
+      'agreed_price': agreedPrice,
+      'contract_number': contractNumber,
+      'client_signature': clientSignature,
+      'client_signed_at': clientSignedAt,
       'creator_signature': creatorSignature,
       'creator_signed_at': creatorSignedAt,
+      'dynamic_terms': dynamicTerms,
     };
   }
 }

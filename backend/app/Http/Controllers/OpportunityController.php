@@ -387,10 +387,16 @@ class OpportunityController extends Controller
 
         $request->validate([
             'dynamic_terms' => 'required|array',
+            'application_id' => 'nullable|string',
         ]);
 
         try {
-            $opp = $this->opportunityService->updateDynamicTerms($id, $user->id, $request->input('dynamic_terms'));
+            $opp = $this->opportunityService->updateDynamicTerms(
+                $id,
+                $user->id,
+                $request->input('dynamic_terms'),
+                $request->input('application_id')
+            );
             return $this->successResponse('Ketentuan khusus kontrak berhasil diperbarui.', $opp);
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
             return $this->errorResponse($e->getMessage(), $e->getStatusCode());
