@@ -144,15 +144,13 @@ class _ModalBodyState extends State<_ModalBody> {
       if (mounted) {
         setState(() {
           final loadedPlans = plans.map((plan) {
-            if (!isCreator) {
-              // Boost akun hanya untuk role creator; hilangkan dari user dan client
-              return plan.copyWith(
-                features: plan.features
-                    .where((f) => !f.toLowerCase().contains('boost'))
-                    .toList(),
-              );
-            }
-            return plan;
+            // Sembunyikan teks boost akun sementara di Pilih Paket Upgrade
+            // karena fitur belum siap utuh untuk institusi; logika fitur boost tetap aktif.
+            return plan.copyWith(
+              features: plan.features
+                  .where((f) => !f.toLowerCase().contains('boost'))
+                  .toList(),
+            );
           }).toList();
           if (loadedPlans.isNotEmpty) {
             _plans = loadedPlans;

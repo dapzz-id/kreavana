@@ -81,26 +81,15 @@ class SubscriptionController extends Controller
      */
     public function plans(Request $request)
     {
-        $role = $request->query('role');
-        if (!$role) {
-            $user = auth('api')->user();
-            if ($user) {
-                $role = is_object($user->role) ? $user->role->value : (string) $user->role;
-            }
-        }
-
-        $isCreator = in_array(strtolower((string) $role), ['creator', 'kreator']);
-
         $authUser = auth('api')->user();
         $currentTier = $authUser ? strtolower($authUser->subscription_tier ?? 'basic') : null;
 
-        $plans = array_values(array_map(function ($plan) use ($isCreator, $currentTier) {
-            if (!$isCreator) {
-                // Boost akun hanya untuk role creator; hilangkan fitur boost untuk user dan client
-                $plan['features'] = array_values(array_filter($plan['features'], function ($feature) {
-                    return !preg_match('/boost/i', $feature);
-                }));
-            }
+        $plans = array_values(array_map(function ($plan) use ($currentTier) {
+            // Sembunyikan teks "Boost akun" / "Tanpa boost" sementara pada Pilih Paket Upgrade
+            // karena fitur belum siap utuh untuk institusi; logika boost di backend tetap dipertahankan.
+            $plan['features'] = array_values(array_filter($plan['features'], function ($feature) {
+                return !preg_match('/boost/i', $feature);
+            }));
 
             $isCurrent = ($currentTier === $plan['tier']) 
                 || (empty($currentTier) && $plan['tier'] === 'basic')

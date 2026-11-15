@@ -83,9 +83,17 @@ class SubscriptionService {
 
       final plans = rawData
           .whereType<Map>()
-          .map((plan) => SubscriptionPlan.fromJson(
-                Map<String, dynamic>.from(plan),
-              ))
+          .map((plan) {
+            final parsed = SubscriptionPlan.fromJson(
+              Map<String, dynamic>.from(plan),
+            );
+            // Sembunyikan teks boost akun sementara di Pilih Paket Upgrade
+            return parsed.copyWith(
+              features: parsed.features
+                  .where((f) => !f.toLowerCase().contains('boost'))
+                  .toList(),
+            );
+          })
           .toList();
       return plans.isEmpty ? fallbackPlans(role: role) : plans;
     } catch (_) {
@@ -94,10 +102,10 @@ class SubscriptionService {
   }
 
   static List<SubscriptionPlan> fallbackPlans({String? role}) {
-    final isCreator = role?.toLowerCase() == 'creator';
-    List<String> features(List<String> values) => isCreator
-        ? values
-        : values.where((feature) => !feature.contains('Boost')).toList();
+    // Sembunyikan teks boost akun sementara di Pilih Paket Upgrade
+    // karena fitur boost belum siap secara utuh untuk institusi (fitur backend tetap dipertahankan).
+    List<String> features(List<String> values) =>
+        values.where((feature) => !feature.toLowerCase().contains('boost')).toList();
 
     return [
       const SubscriptionPlan(

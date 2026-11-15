@@ -162,6 +162,36 @@ class SubscriptionPurchaseTest extends TestCase
         $response->assertStatus(200);
         $response->assertJsonPath('data.subscription_tier', 'pro');
     }
+
+    public function test_plans_endpoint_hides_boost_account_text_while_preserving_boost_feature()
+    {
+        foreach (['institution', 'creator', 'client'] as $role) {
+            $response = $this->getJson('/api/subscription/plans?role=' . $role);
+            $response->assertStatus(200);
+            $plans = $response->json('data');
+            $this->assertNotEmpty($plans);
+
+            foreach ($plans as $plan) {
+                foreach ($plan['features'] ?? [] as $feature) {
+                    $this->assertStringNotContainsStringIgnoringCase('boost', $feature);
+                }
+            }
+        }
+
+        // Underlying boost feature still functions when purchasing a paid tier
+        $creator = User::factory()->create([
+            'role' => \App\Enums\RoleType::Creator,
+            'balance' => 500000,
+            'wallet_pin' => Hash::make('123456'),
+        ]);
+
+        $purchase = $this->withHeaders($this->getAuthHeaders($creator))->postJson('/api/subscription/purchase', [
+            'tier' => 'pro',
+            'pin' => '123456',
+        ]);
+        $purchase->assertStatus(200);
+        $this->assertEquals('pro', $creator->fresh()->subscription_tier);
+    }
 }
 
 
