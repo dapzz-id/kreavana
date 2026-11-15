@@ -34,25 +34,23 @@ class _ExploreScreenState extends State<ExploreScreen>
   List<OpportunityModel> _filteredOpportunities = [];
 
   final List<Map<String, String>> _filterOptions = [
-    {'slug': 'all', 'name': 'Semua'},
-    {'slug': 'tukang_kendang', 'name': 'Tukang Kendang'},
-    {'slug': 'institution', 'name': 'Institusi'},
-    {'slug': 'government', 'name': 'Pemerintah'},
-    {'slug': 'mc', 'name': 'MC'},
-    {'slug': 'singer', 'name': 'Penyanyi'},
-    {'slug': 'wedding_organizer', 'name': 'Wedding Organizer'},
-    {'slug': 'event_organizer', 'name': 'Event Organizer'},
-    {'slug': 'community', 'name': 'Komunitas'},
-    {'slug': 'makeup_artist', 'name': 'Makeup Artist'},
-    {'slug': 'photographer', 'name': 'Fotografer'},
-    {'slug': 'editor', 'name': 'Editor'},
-    {'slug': 'videographer', 'name': 'Videografer'},
+    {'slug': 'all', 'name': 'Semua Kategori'},
+    {'slug': 'videographer', 'name': 'Videografer & Sinema'},
+    {'slug': 'photographer', 'name': 'Fotografer & Visual'},
+    {'slug': 'designer', 'name': 'Desain Grafis & UI/UX'},
+    {'slug': 'animator', 'name': 'Animasi 2D & 3D'},
+    {'slug': 'editor', 'name': 'Editor Video & VFX'},
+    {'slug': 'drone_pilot', 'name': 'Pilot Drone & FPV'},
     {'slug': 'content_creator', 'name': 'Content Creator'},
-    {'slug': 'animator', 'name': 'Animator'},
-    {'slug': 'designer', 'name': 'Desainer'},
-    {'slug': 'musician', 'name': 'Musisi'},
-    {'slug': 'talent', 'name': 'Talent'},
-    {'slug': 'drone_pilot', 'name': 'Drone Pilot'},
+    {'slug': 'makeup_artist', 'name': 'Makeup Artist (MUA)'},
+    {'slug': 'mc', 'name': 'MC & Public Speaker'},
+    {'slug': 'musician', 'name': 'Musisi & Audio'},
+    {'slug': 'talent', 'name': 'Talenta & Model'},
+    {'slug': 'event_organizer', 'name': 'Event Organizer'},
+    {'slug': 'wedding_organizer', 'name': 'Wedding Organizer'},
+    {'slug': 'community', 'name': 'Komunitas Kreatif'},
+    {'slug': 'institution', 'name': 'Institusi Pendidikan'},
+    {'slug': 'government', 'name': 'Instansi Pemerintah'},
   ];
 
   bool get _isCreator => CreatorSidebarMenus.isCreatorUser(widget.user);
@@ -139,10 +137,240 @@ class _ExploreScreenState extends State<ExploreScreen>
     }
   }
 
+  Widget _buildSearchField(bool isDark) {
+    return Container(
+      height: 46,
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardDark : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
+          width: 1.2,
+        ),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+      ),
+      child: TextField(
+        controller: _searchController,
+        style: TextStyle(
+          fontSize: 13.5,
+          color: isDark ? Colors.white : Colors.black87,
+        ),
+        decoration: InputDecoration(
+          hintText: 'Cari peluang, lokasi, atau deskripsi...',
+          hintStyle: TextStyle(
+            fontSize: 13.5,
+            color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+          ),
+          prefixIcon: const Icon(
+            Icons.search_rounded,
+            size: 20,
+            color: Colors.grey,
+          ),
+          suffixIcon: _searchController.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.close_rounded, size: 18, color: Colors.grey),
+                  onPressed: () {
+                    _searchController.clear();
+                    _onSearchChanged();
+                  },
+                )
+              : null,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryDropdown(bool isDark) {
+    return Container(
+      height: 46,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardDark : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _selectedSubRole != 'all'
+              ? AppTheme.primaryPurple.withValues(alpha: 0.7)
+              : (isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0)),
+          width: _selectedSubRole != 'all' ? 1.4 : 1.2,
+        ),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          isExpanded: true,
+          value: _selectedSubRole,
+          icon: Icon(
+            Icons.keyboard_arrow_down_rounded,
+            color: isDark ? Colors.white70 : Colors.black54,
+            size: 20,
+          ),
+          dropdownColor: isDark ? const Color(0xFF1E1B2E) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          elevation: 8,
+          menuMaxHeight: 420,
+          selectedItemBuilder: (BuildContext context) {
+            return _filterOptions.map((opt) {
+              final slug = opt['slug']!;
+              final name = opt['name']!;
+              final icon = _getCategoryIcon(slug);
+              final color = _getSubRoleColor(slug);
+
+              return Row(
+                children: [
+                  Container(
+                    width: 26,
+                    height: 26,
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Icon(icon, size: 14, color: color),
+                  ),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
+                      name,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              );
+            }).toList();
+          },
+          onChanged: (newSlug) {
+            if (newSlug != null) {
+              setState(() => _selectedSubRole = newSlug);
+              _loadOpportunities();
+            }
+          },
+          items: _filterOptions.map((opt) {
+            final slug = opt['slug']!;
+            final name = opt['name']!;
+            final isSelected = _selectedSubRole == slug;
+            final color = _getSubRoleColor(slug);
+            final icon = _getCategoryIcon(slug);
+
+            return DropdownMenuItem<String>(
+              value: slug,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppTheme.primaryPurple.withValues(alpha: 0.08)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 30,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(icon, size: 16, color: color),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        name,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                          color: isSelected
+                              ? AppTheme.primaryPurple
+                              : (isDark ? Colors.white : Colors.black87),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (isSelected)
+                      const Icon(
+                        Icons.check_rounded,
+                        size: 18,
+                        color: AppTheme.primaryPurple,
+                      ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildResetFilterButton(bool isDark) {
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _selectedSubRole = 'all';
+          _searchController.clear();
+        });
+        _loadOpportunities();
+      },
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        height: 46,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF262338) : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.refresh_rounded,
+              size: 16,
+              color: isDark ? Colors.white70 : Colors.black87,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'Reset',
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.white70 : Colors.black87,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Color _getSubRoleColor(String slug) {
-    switch (slug) {
-      case 'tukang_kendang':
-        return const Color(0xFFD97706);
+    switch (slug.toLowerCase().replaceAll('-', '_')) {
       case 'institution':
         return const Color(0xFF10B981);
       case 'government':
@@ -150,6 +378,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       case 'mc':
         return const Color(0xFFF59E0B);
       case 'singer':
+      case 'musician':
         return const Color(0xFF8B5CF6);
       case 'wedding_organizer':
         return const Color(0xFFE11D48);
@@ -165,8 +394,66 @@ class _ExploreScreenState extends State<ExploreScreen>
         return const Color(0xFF14B8A6);
       case 'videographer':
         return const Color(0xFF0EA5E9);
+      case 'animator':
+        return const Color(0xFF6366F1);
+      case 'designer':
+        return const Color(0xFF8B5CF6);
+      case 'drone_pilot':
+      case 'drone':
+        return const Color(0xFF06B6D4);
+      case 'content_creator':
+      case 'content':
+        return const Color(0xFFF43F5E);
+      case 'talent':
+        return const Color(0xFFA855F7);
+      case 'tukang_kendang':
+        return const Color(0xFFD97706);
       default:
-        return Colors.indigo;
+        return AppTheme.primaryPurple;
+    }
+  }
+
+  IconData _getCategoryIcon(String slug) {
+    switch (slug.toLowerCase().replaceAll('-', '_')) {
+      case 'all':
+        return Icons.grid_view_rounded;
+      case 'videographer':
+        return Icons.videocam_rounded;
+      case 'photographer':
+        return Icons.camera_alt_rounded;
+      case 'designer':
+        return Icons.palette_rounded;
+      case 'animator':
+        return Icons.animation_rounded;
+      case 'editor':
+        return Icons.movie_filter_rounded;
+      case 'drone_pilot':
+      case 'drone':
+        return Icons.flight_rounded;
+      case 'content_creator':
+      case 'content':
+        return Icons.auto_awesome_rounded;
+      case 'makeup_artist':
+        return Icons.face_retouching_natural_rounded;
+      case 'mc':
+        return Icons.mic_none_rounded;
+      case 'singer':
+      case 'musician':
+        return Icons.music_note_rounded;
+      case 'talent':
+        return Icons.star_outline_rounded;
+      case 'event_organizer':
+        return Icons.event_available_rounded;
+      case 'wedding_organizer':
+        return Icons.favorite_outline_rounded;
+      case 'community':
+        return Icons.groups_rounded;
+      case 'institution':
+        return Icons.school_rounded;
+      case 'government':
+        return Icons.account_balance_rounded;
+      default:
+        return Icons.work_outline_rounded;
     }
   }
 
@@ -258,120 +545,44 @@ class _ExploreScreenState extends State<ExploreScreen>
               Padding(
                 padding: EdgeInsets.fromLTRB(
                   isDesktop ? 32 : 16,
-                  12,
+                  14,
                   isDesktop ? 32 : 16,
-                  0,
+                  10,
                 ),
-                child: SearchBar(
-                  controller: _searchController,
-                  hintText: 'Cari peluang, lokasi, atau deskripsi...',
-                  leading: const Icon(Icons.search, color: Colors.grey),
-                  elevation: WidgetStateProperty.all(0),
-                  backgroundColor: WidgetStateProperty.all(
-                    isDark ? AppTheme.cardBg : Colors.grey.shade100,
-                  ),
-                  shape: WidgetStateProperty.all(
-                    RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(
-                        color: isDark
-                            ? AppTheme.inputBorder
-                            : Colors.grey.shade200,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  isDesktop ? 32 : 16,
-                  8,
-                  isDesktop ? 32 : 16,
-                  6,
-                ),
-                child: Container(
-                  height: 46,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  decoration: BoxDecoration(
-                    color: isDark ? AppTheme.cardBg : Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: isDark
-                          ? AppTheme.inputBorder
-                          : const Color(0xFFE2E8F0),
-                      width: 1.2,
-                    ),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      isExpanded: true,
-                      value: _selectedSubRole,
-                      icon: Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        color: isDark ? Colors.white70 : Colors.black54,
-                        size: 22,
-                      ),
-                      dropdownColor: isDark
-                          ? const Color(0xFF1E1E2D)
-                          : Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      elevation: 4,
-                      menuMaxHeight: 380,
-                      onChanged: (newSlug) {
-                        if (newSlug != null) {
-                          setState(() => _selectedSubRole = newSlug);
-                          _loadOpportunities();
-                        }
-                      },
-                      items: _filterOptions.map((opt) {
-                        final slug = opt['slug']!;
-                        final name = opt['name']!;
-                        final isSelected = _selectedSubRole == slug;
-                        final color = _getSubRoleColor(slug);
-                        return DropdownMenuItem<String>(
-                          value: slug,
-                          child: Row(
+                child: isDesktop
+                    ? Row(
+                        children: [
+                          Expanded(
+                            child: _buildSearchField(isDark),
+                          ),
+                          const SizedBox(width: 12),
+                          SizedBox(
+                            width: 260,
+                            child: _buildCategoryDropdown(isDark),
+                          ),
+                          if (_selectedSubRole != 'all' || _searchController.text.isNotEmpty) ...[
+                            const SizedBox(width: 10),
+                            _buildResetFilterButton(isDark),
+                          ],
+                        ],
+                      )
+                    : Column(
+                        children: [
+                          _buildSearchField(isDark),
+                          const SizedBox(height: 10),
+                          Row(
                             children: [
-                              Container(
-                                width: 10,
-                                height: 10,
-                                decoration: BoxDecoration(
-                                  color: color,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
                               Expanded(
-                                child: Text(
-                                  name,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: isSelected
-                                        ? FontWeight.w700
-                                        : FontWeight.w500,
-                                    color: isSelected
-                                        ? (isDark
-                                            ? Colors.white
-                                            : AppTheme.primaryPurple)
-                                        : (isDark
-                                            ? Colors.white70
-                                            : Colors.black87),
-                                  ),
-                                ),
+                                child: _buildCategoryDropdown(isDark),
                               ),
-                              if (isSelected)
-                                const Icon(
-                                  Icons.check_rounded,
-                                  size: 18,
-                                  color: AppTheme.primaryPurple,
-                                ),
+                              if (_selectedSubRole != 'all' || _searchController.text.isNotEmpty) ...[
+                                const SizedBox(width: 8),
+                                _buildResetFilterButton(isDark),
+                              ],
                             ],
                           ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ),
+                        ],
+                      ),
               ),
               Expanded(
                 child: RefreshIndicator(
@@ -390,7 +601,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                       crossAxisCount: 2,
                                       crossAxisSpacing: 16,
                                       mainAxisSpacing: 16,
-                                      childAspectRatio: 2.5,
+                                      childAspectRatio: 1.65,
                                     ),
                                 itemCount: 6,
                                 itemBuilder: (context, index) =>
@@ -445,7 +656,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                 crossAxisCount: 2,
                                 crossAxisSpacing: 16,
                                 mainAxisSpacing: 16,
-                                childAspectRatio: 2.5,
+                                childAspectRatio: 1.65,
                               ),
                           itemCount: _filteredOpportunities.length,
                           itemBuilder: (context, index) {
