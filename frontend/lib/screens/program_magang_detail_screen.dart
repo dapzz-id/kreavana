@@ -1927,24 +1927,6 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
               ),
             ),
           ],
-          if (s.status == 'Ditolak') ...[
-            const SizedBox(height: 10),
-            Align(
-              alignment: Alignment.centerRight,
-              child: OutlinedButton.icon(
-                onPressed: () => _openSubmitStudentDialog(
-                  isAdditionalStudent: true,
-                  replacedStudent: s,
-                ),
-                icon: const Icon(Icons.swap_horiz_rounded, size: 16),
-                label: const Text('Ajukan Siswa Pengganti'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF6366F1),
-                  side: const BorderSide(color: Color(0xFF6366F1)),
-                ),
-              ),
-            ),
-          ],
         ],
       ),
     );

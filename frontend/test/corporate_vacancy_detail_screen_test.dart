@@ -261,7 +261,7 @@ void main() {
       expect(find.text('SMKN 1 Surabaya'), findsOneWidget);
     });
 
-    testWidgets('Can propose replacement student for rejected applicant from active institution and Corporate can approve it',
+    testWidgets('Corporate applicant card does not display "Ajukan Siswa Pengganti" button when an applicant is rejected',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(1280, 2200));
 
@@ -314,41 +314,9 @@ void main() {
       await tester.tap(find.text('Daftar Pelamar (2)'));
       await tester.pumpAndSettle();
 
-      // Tap 'Ajukan Siswa Pengganti' for Siti Nurhaliza
-      final proposeBtn = find.byKey(const ValueKey('btn_propose_replacement_Siti Nurhaliza'));
-      expect(proposeBtn, findsOneWidget);
-      await tester.ensureVisible(proposeBtn);
-      await tester.tap(proposeBtn);
-      await tester.pumpAndSettle();
-
-      // Dialog should appear
-      expect(find.text('Ajukan Siswa Magang Pengganti'), findsOneWidget);
-
-      // Enter student replacement name
-      final nameField = find.widgetWithText(TextFormField, 'Contoh: Muhammad Farhan');
-      expect(nameField, findsOneWidget);
-      await tester.enterText(nameField, 'Budi Santoso');
-      await tester.pumpAndSettle();
-
-      // Submit replacement form
-      await tester.tap(find.text('Kirim Pengajuan'));
-      await tester.pumpAndSettle();
-
-      // Verify Budi Santoso appears as replacement student
-      expect(find.text('Budi Santoso'), findsOneWidget);
-      expect(find.textContaining('Menggantikan Siti Nurhaliza'), findsOneWidget);
-
-      // Corporate quick approval button should be visible
-      final approveReplacementBtn = find.text('Setujui Pengganti');
-      expect(approveReplacementBtn, findsOneWidget);
-
-      // Corporate approves the replacement student
-      await tester.ensureVisible(approveReplacementBtn);
-      await tester.tap(approveReplacementBtn);
-      await tester.pumpAndSettle();
-
-      // Budi Santoso should now be accepted ('Diterima')
-      expect(find.text('Budi Santoso'), findsOneWidget);
+      // Verify 'Ajukan Siswa Pengganti' button is absent for rejected student
+      expect(find.byKey(const ValueKey('btn_propose_replacement_Siti Nurhaliza')), findsNothing);
+      expect(find.text('Ajukan Siswa Pengganti'), findsNothing);
     });
 
     testWidgets('Applicant card renders student name, description, institution in accordion header, and handles showcase popup / hidden portfolio button',
@@ -521,9 +489,10 @@ void main() {
       // 3. Verify pending student (Rian Pratama) still HAS the Ubah Status dropdown
       expect(find.byKey(const ValueKey('popup_status_Rian Pratama')), findsOneWidget);
 
-      // 4. Verify rejected student (Kadavi Raditya) has Ubah Status dropdown HIDDEN and shows Ajukan Siswa Pengganti
+      // 4. Verify rejected student (Kadavi Raditya) has Ubah Status dropdown HIDDEN and does NOT show Ajukan Siswa Pengganti
       expect(find.byKey(const ValueKey('popup_status_Kadavi Raditya')), findsNothing);
-      expect(find.byKey(const ValueKey('btn_propose_replacement_Kadavi Raditya')), findsOneWidget);
+      expect(find.byKey(const ValueKey('btn_propose_replacement_Kadavi Raditya')), findsNothing);
+      expect(find.text('Ajukan Siswa Pengganti'), findsNothing);
     });
   });
 }
