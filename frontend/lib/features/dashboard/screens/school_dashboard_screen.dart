@@ -2665,6 +2665,14 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (dialogCtx, setDialogState) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          const eventCategories = [
+            ('Pameran & Expo', Icons.campaign_outlined, Color(0xFF2563EB)),
+            ('Kompetisi & Lomba', Icons.emoji_events_outlined, Color(0xFFEAB308)),
+            ('Workshop & Seminar', Icons.school_outlined, Color(0xFF10B981)),
+            ('Showcase Tugas Akhir', Icons.palette_outlined, Color(0xFF8B5CF6)),
+          ];
+
           return AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             title: const Text('Buat Kegiatan / Lomba Baru', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -2683,13 +2691,99 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
                     initialValue: category,
-                    decoration: const InputDecoration(labelText: 'Kategori Kegiatan'),
-                    items: const [
-                      DropdownMenuItem(value: 'Pameran & Expo', child: Text('Pameran & Expo')),
-                      DropdownMenuItem(value: 'Kompetisi & Lomba', child: Text('Kompetisi & Lomba')),
-                      DropdownMenuItem(value: 'Workshop & Seminar', child: Text('Workshop & Seminar')),
-                      DropdownMenuItem(value: 'Showcase Tugas Akhir', child: Text('Showcase Tugas Akhir')),
-                    ],
+                    isExpanded: true,
+                    borderRadius: BorderRadius.circular(14),
+                    dropdownColor: isDark ? const Color(0xFF1E1B2E) : Colors.white,
+                    elevation: 6,
+                    icon: Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      size: 20,
+                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                    ),
+                    decoration: InputDecoration(
+                      labelText: 'Kategori Kegiatan',
+                      prefixIcon: const Icon(Icons.category_outlined, size: 18),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      isDense: true,
+                    ),
+                    selectedItemBuilder: (context) {
+                      return eventCategories.map((item) {
+                        return Align(
+                          alignment: Alignment.centerLeft,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(shape: BoxShape.circle, color: item.$3),
+                              ),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  item.$1,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList();
+                    },
+                    items: eventCategories.asMap().entries.map((entry) {
+                      final i = entry.key;
+                      final item = entry.value;
+                      final isLast = i == eventCategories.length - 1;
+                      return DropdownMenuItem<String>(
+                        value: item.$1,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          decoration: BoxDecoration(
+                            border: !isLast
+                                ? Border(
+                                    bottom: BorderSide(
+                                      color: isDark
+                                          ? const Color(0xFF2D2A42)
+                                          : const Color(0xFFF1F5F9),
+                                      width: 1,
+                                    ),
+                                  )
+                                : null,
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 26,
+                                height: 26,
+                                decoration: BoxDecoration(
+                                  color: item.$3.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(7),
+                                ),
+                                child: Icon(item.$2, size: 15, color: item.$3),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  item.$1,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
                     onChanged: (v) {
                       if (v != null) setDialogState(() => category = v);
                     },
