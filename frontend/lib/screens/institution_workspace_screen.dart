@@ -857,162 +857,421 @@ class _InstitutionWorkspaceScreenState
     return const Color(0xFF2563EB); // Corporate Sapphire Blue
   }
 
-  // ── HEADER HERO EXECUTIVE (Clean, Executive Workspace Card) ────────────────
+  static String _getWorkspaceHeroImage(String resourceType, bool isGovernment) {
+    const Map<String, String> map = {
+      'tenders': 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1600&q=80',
+      'rfp': 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1600&q=80',
+      'procurement': 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1600&q=80',
+      'partners': 'https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=1600&q=80',
+      'vendors': 'https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=1600&q=80',
+      'mitra': 'https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=1600&q=80',
+      'documents': 'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&w=1600&q=80',
+      'po': 'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&w=1600&q=80',
+      'contracts': 'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&w=1600&q=80',
+      'budgets': 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=1600&q=80',
+      'anggaran': 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=1600&q=80',
+      'reports': 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1600&q=80',
+      'audits': 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1600&q=80',
+      'laporan': 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1600&q=80',
+      'showcases': 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=1600&q=80',
+      'karya': 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=1600&q=80',
+      'monitoring': 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1600&q=80',
+      'facilities': 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1600&q=80',
+    };
+    if (map.containsKey(resourceType)) {
+      return map[resourceType]!;
+    }
+    return isGovernment
+        ? 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1600&q=80'
+        : 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=1600&q=80';
+  }
+
+  String _getHeroAuthorityBadge(String type) {
+    switch (type) {
+      case 'showcases':
+      case 'karya':
+        return 'Galeri Talenta & Kurasi Karya Vokasi';
+      case 'partners':
+      case 'mitra':
+        return _isSchool
+            ? 'Kemitraan Industri & DUDI Vokasi'
+            : 'Enterprise B2B Governance & Mitra';
+      case 'documents':
+        return 'Legalitas & MoU Kerjasama Resmi';
+      case 'reports':
+        return 'Akuntabilitas & Audit Mutu Akademik';
+      case 'monitoring':
+        return 'Sistem Monitoring & Evaluasi Kemitraan';
+      case 'tenders':
+        return _isGovernment
+            ? 'Tata Kelola Kedinasan & LPSE'
+            : 'Pengadaan & Tender Terbuka';
+      case 'budgets':
+        return 'Transparansi Pagu & Anggaran';
+      case 'facilities':
+        return 'Laboratorium & Fasilitas Produksi';
+      default:
+        return _isSchool
+            ? 'Instansi Pendidikan Vokasi Terakreditasi'
+            : 'Enterprise B2B Governance';
+    }
+  }
+
+  IconData _getHeroAuthorityIcon(String type) {
+    switch (type) {
+      case 'showcases':
+      case 'karya':
+        return Icons.auto_awesome_rounded;
+      case 'partners':
+      case 'mitra':
+        return Icons.handshake_outlined;
+      case 'documents':
+        return Icons.verified_user_outlined;
+      case 'reports':
+        return Icons.analytics_outlined;
+      case 'monitoring':
+        return Icons.query_stats_rounded;
+      case 'tenders':
+        return Icons.gavel_rounded;
+      case 'budgets':
+        return Icons.account_balance_wallet_outlined;
+      case 'facilities':
+        return Icons.meeting_room_outlined;
+      default:
+        return Icons.verified_rounded;
+    }
+  }
+
+  String _getHeroStatBadge(String type, int count) {
+    switch (type) {
+      case 'showcases':
+      case 'karya':
+        return '$count Portofolio Terkurasi';
+      case 'partners':
+      case 'mitra':
+        return '$count Rekanan Terdaftar';
+      case 'documents':
+        return '$count Dokumen Legal';
+      case 'reports':
+        return '$count Laporan Kinerja';
+      case 'monitoring':
+        return '$count Agenda Monev';
+      case 'tenders':
+        return '$count Tender RFP';
+      case 'budgets':
+        return '$count Alokasi Pagu';
+      case 'facilities':
+        return '$count Fasilitas Tersedia';
+      default:
+        return '$count Terdata';
+    }
+  }
+
+  // ── HEADER HERO EXECUTIVE (Rich Photographic Panoramic Banner) ───────────────
   Widget _buildExecutiveHero(bool isDark) {
+    final bgImageUrl = _getWorkspaceHeroImage(widget.resourceType, _isGovernment);
     final accentColor = _resolvedAccentColor;
+    final baseDark = isDark ? const Color(0xFF07050E) : const Color(0xFF0B132B);
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       decoration: BoxDecoration(
-        color: isDark ? AppTheme.cardBg : Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        color: baseDark,
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
+          color: Colors.white.withValues(alpha: isDark ? 0.12 : 0.22),
+          width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: isDark ? 0.15 : 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.20),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+          BoxShadow(
+            color: accentColor.withValues(alpha: isDark ? 0.28 : 0.20),
+            blurRadius: 36,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
+      clipBehavior: Clip.antiAlias,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final isCompact = constraints.maxWidth < 650;
+          final imageWidth = isCompact
+              ? constraints.maxWidth * 0.72
+              : (constraints.maxWidth * 0.58).clamp(380.0, 750.0);
 
-          final headerInfo = Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          return Stack(
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? accentColor.withValues(alpha: 0.2)
-                      : accentColor.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  _icons[widget.resourceType] ?? Icons.business_outlined,
-                  color: accentColor,
-                  size: 22,
+              // ── Layer 1: Contextual High-Resolution Background Photo (Anchored Right) ──
+              Positioned(
+                top: 0,
+                bottom: 0,
+                right: 0,
+                width: imageWidth,
+                child: Image.network(
+                  bgImageUrl,
+                  fit: BoxFit.cover,
+                  alignment: const Alignment(0.15, -0.22),
+                  errorBuilder: (_, _, _) => Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [accentColor, const Color(0xFF1E1B38)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(width: 14),
-              Expanded(
+
+              // ── Layer 2: Seamless Horizontal Dark Gradient (Solid Dark Left, Clear Right) ──
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [
+                        baseDark,
+                        baseDark,
+                        baseDark.withValues(alpha: 0.94),
+                        baseDark.withValues(alpha: 0.55),
+                        baseDark.withValues(alpha: 0.12),
+                        Colors.transparent,
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.35, 0.48, 0.62, 0.74, 0.84, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+
+              // ── Layer 3: Vibrant Accent Color Glow on Left ──
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: const Alignment(-0.85, -0.5),
+                      radius: 1.15,
+                      colors: [
+                        accentColor.withValues(alpha: isDark ? 0.35 : 0.45),
+                        accentColor.withValues(alpha: 0.10),
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.55, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+
+              // ── Layer 4: Foreground Content ──
+              Padding(
+                padding: const EdgeInsets.all(24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Flexible(
-                          child: Text(
-                            _title,
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: isDark ? Colors.white : const Color(0xFF0F172A),
-                              letterSpacing: -0.3,
-                            ),
-                            overflow: TextOverflow.ellipsis,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Authority & Count Badges
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 6,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF59E0B).withValues(alpha: 0.28),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: const Color(0xFFFDE68A).withValues(alpha: 0.5),
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.15),
+                                          blurRadius: 6,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          _getHeroAuthorityIcon(widget.resourceType),
+                                          color: const Color(0xFFFDE047),
+                                          size: 14,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          _getHeroAuthorityBadge(widget.resourceType),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 0.3,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.14),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
+                                    ),
+                                    child: Text(
+                                      _getHeroStatBadge(widget.resourceType, _records.length),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 14),
+
+                              // Module Title with Icon
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.16),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.2),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Icon(
+                                      _icons[widget.resourceType] ?? Icons.business_outlined,
+                                      color: Colors.white,
+                                      size: 22,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Flexible(
+                                    child: Text(
+                                      _title,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: -0.5,
+                                        shadows: [
+                                          Shadow(
+                                            color: Colors.black87,
+                                            offset: Offset(0, 2),
+                                            blurRadius: 8,
+                                          ),
+                                        ],
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+
+                              // Subtitle
+                              ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth: isCompact ? double.infinity : constraints.maxWidth * 0.62,
+                                ),
+                                child: Text(
+                                  _subtitle,
+                                  style: const TextStyle(
+                                    color: Color(0xFFF1F5F9),
+                                    fontSize: 13,
+                                    height: 1.45,
+                                    shadows: [
+                                      Shadow(
+                                        color: Colors.black87,
+                                        offset: Offset(0, 1),
+                                        blurRadius: 4,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-                          decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+
+                        // Desktop Action Button
+                        if (!isCompact && _canCreateResource) ...[
+                          const SizedBox(width: 20),
+                          ElevatedButton.icon(
+                            onPressed: _openEditor,
+                            icon: Icon(Icons.add_rounded, size: 18, color: accentColor),
+                            label: Text(
+                              _action,
+                              style: TextStyle(
+                                color: accentColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: accentColor,
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              elevation: 6,
+                              shadowColor: Colors.black.withValues(alpha: 0.35),
                             ),
                           ),
-                          child: Text(
-                            '${_records.length} Terdata',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
-                            ),
-                          ),
-                        ),
+                        ],
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _subtitle,
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        color: isDark ? AppTheme.textMuted : const Color(0xFF64748B),
-                        height: 1.4,
+
+                    // Mobile Action Button
+                    if (isCompact && _canCreateResource) ...[
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _openEditor,
+                          icon: Icon(Icons.add_rounded, size: 18, color: accentColor),
+                          label: Text(
+                            _action,
+                            style: TextStyle(
+                              color: accentColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: accentColor,
+                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            elevation: 4,
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
-            ],
-          );
-
-          if (isCompact) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                headerInfo,
-                if (_canCreateResource) ...[
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _openEditor,
-                      icon: const Icon(Icons.add, size: 16, color: Colors.white),
-                      label: Text(
-                        _action,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: accentColor,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        elevation: 0,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            );
-          }
-
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(child: headerInfo),
-              if (_canCreateResource) ...[
-                const SizedBox(width: 16),
-                ElevatedButton.icon(
-                  onPressed: _openEditor,
-                  icon: const Icon(Icons.add, size: 16, color: Colors.white),
-                  label: Text(
-                    _action,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: accentColor,
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    elevation: 0,
-                  ),
-                ),
-              ],
             ],
           );
         },
