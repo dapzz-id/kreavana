@@ -1,14 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../app/theme.dart';
 import '../app/app_animations.dart';
 import '../models/user_model.dart';
 import '../models/opportunity_model.dart';
 import '../services/ai_service.dart';
+import '../services/app_router.dart';
 import '../widgets/auth_guard_dialog.dart';
 import '../widgets/upgrade_plan_modal.dart';
 import '../widgets/opportunity_detail_sheet.dart';
-import '../screens/explore_screen.dart';
 import '../services/user_store.dart';
+
+typedef AiRecommendationsFetcher =
+    Future<Map<String, dynamic>?> Function({
+      String? role,
+      String? niche,
+      String? subRole,
+      String? location,
+    });
 
 /// Monochromatic Violet AI Recommendation Card Widget.
 /// Allows Plus, Pro, and Super subscribers to get tailored AI recommendations
@@ -17,12 +26,14 @@ class AiRecommendationCard extends StatefulWidget {
   final UserModel? user;
   final String role;
   final String niche;
+  final AiRecommendationsFetcher? onFetchRecommendations;
 
   const AiRecommendationCard({
     super.key,
     this.user,
     this.role = 'creator',
     this.niche = 'Kreatif',
+    this.onFetchRecommendations,
   });
 
   @override
@@ -32,16 +43,18 @@ class AiRecommendationCard extends StatefulWidget {
 class _AiRecommendationCardState extends State<AiRecommendationCard> {
   bool _isLoading = false;
   String? _summary;
+  String? _errorMessage;
   List<dynamic>? _recommendations;
   List<dynamic>? _matchedItems;
 
   // Active filters
   String _selectedSubRole = 'all';
-  String _locationMode = 'current'; // 'current' or 'custom'
+  String _locationMode = 'current'; // 'current', 'all', or 'custom'
   String _customCity = 'Jakarta';
 
   final List<Map<String, dynamic>> _subRoleOptions = [
     {'id': 'all', 'label': 'Semua', 'icon': Icons.tune_rounded},
+    {'id': 'corporate', 'label': 'Corporate', 'icon': Icons.business_center_outlined},
     {'id': 'photographer', 'label': 'Photographer', 'icon': Icons.camera_alt_outlined},
     {'id': 'event_organizer', 'label': 'Event Organizer', 'icon': Icons.festival_outlined},
     {'id': 'school', 'label': 'School / Institusi', 'icon': Icons.school_outlined},
@@ -72,6 +85,9 @@ class _AiRecommendationCardState extends State<AiRecommendationCard> {
     if (_locationMode == 'current') {
       return 'Lokasi Sekarang (GPS)';
     }
+    if (_locationMode == 'all') {
+      return 'Seluruh Indonesia';
+    }
     return _customCity;
   }
 
@@ -83,45 +99,142 @@ class _AiRecommendationCardState extends State<AiRecommendationCard> {
     return opt['label'] as String;
   }
 
+  UserModel? _resolveCurrentUser() {
+    final notifierUser = currentUserNotifier.value;
+    if (notifierUser != null && !notifierUser.isGuest) {
+      return notifierUser;
+    }
+    return widget.user ?? notifierUser;
+  }
+
+  String _formatSubRoleBadge(String? rawSubRole) {
+    final slug = (rawSubRole ?? '').trim().toLowerCase();
+    if (slug.isEmpty || slug == 'all') return _selectedSubRoleLabel;
+    for (final opt in _subRoleOptions) {
+      if (opt['id'] == slug) return opt['label'] as String;
+    }
+    if (slug == 'institution') return 'School / Institusi';
+    if (slug == 'kreator' || slug == 'creator') return 'Kreator';
+    return slug
+        .split('_')
+        .where((part) => part.isNotEmpty)
+        .map((part) => part[0].toUpperCase() + part.substring(1))
+        .join(' ');
+  }
+
+  String _formatFriendlyErrorMessage(Map<String, dynamic>? res) {
+    if (res == null) {
+      return 'Tidak dapat terhubung ke layanan Kreavana AI. Periksa koneksi internet Anda lalu coba lagi.';
+    }
+
+    final raw = (res['message'] ?? res['error'] ?? '').toString().trim();
+    final lower = raw.toLowerCase();
+
+    if (lower.isEmpty ||
+        lower.contains('sqlstate') ||
+        lower.contains('column not found') ||
+        lower.contains('stack trace') ||
+        lower.startsWith('error 5')) {
+      return 'Layanan rekomendasi AI sedang mengalami gangguan sementara. Silakan coba beberapa saat lagi.';
+    }
+
+    if (lower == 'unauthorized' || lower.contains('unauthenticated')) {
+      return 'Sesi login Anda tidak valid atau telah berakhir. Silakan masuk kembali untuk mengakses Rekomendasi AI.';
+    }
+
+    if (lower.contains('terjadi kesalahan internal')) {
+      return 'Terjadi kendala saat memproses rekomendasi AI di server. Silakan coba beberapa saat lagi.';
+    }
+
+    return raw;
+  }
+
   Future<void> _fetchRecommendations() async {
+    if (_isLoading) return;
+
     // 1. Intercept Guest user
-    final currentUser = widget.user ?? currentUserNotifier.value;
+    final currentUser = _resolveCurrentUser();
     if (currentUser == null || currentUser.isGuest) {
       AuthGuardDialog.show(context, actionName: 'mengakses Rekomendasi AI Pintar');
       return;
     }
 
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
-    final locationParam = _locationMode == 'current' ? 'Lokasi Sekarang' : _customCity;
+    final locationParam = switch (_locationMode) {
+      'current' => 'Lokasi Sekarang',
+      'all' => 'Seluruh Indonesia',
+      _ => _customCity,
+    };
 
-    final res = await AiService.getRecommendations(
-      role: widget.role,
-      niche: widget.niche,
-      subRole: _selectedSubRole,
-      location: locationParam,
-    );
+    try {
+      final fetcher = widget.onFetchRecommendations ??
+          ({
+            String? role,
+            String? niche,
+            String? subRole,
+            String? location,
+          }) =>
+              AiService.getRecommendations(
+                role: role,
+                niche: niche,
+                subRole: subRole,
+                location: location,
+              );
 
-    if (!mounted) return;
+      final res = await fetcher(
+        role: widget.role,
+        niche: widget.niche,
+        subRole: _selectedSubRole,
+        location: locationParam,
+      );
 
-    if (res != null && AiService.isProSubscriptionRequiredError(res)) {
-      setState(() => _isLoading = false);
-      UpgradePlanModal.show(context, user: widget.user);
-      return;
-    }
+      if (!mounted) return;
 
-    if (res != null && res['status'] == true && res['data'] != null) {
-      final recs = res['data']['recommendations'] as List?;
-      final matched = res['data']['matched_items'] as List?;
-      final summary = res['data']['summary']?.toString();
+      if (res != null && AiService.isProSubscriptionRequiredError(res)) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = null;
+        });
+        UpgradePlanModal.show(context, user: currentUser);
+        return;
+      }
+
+      if (res != null && res['status'] == true && res['data'] is Map) {
+        final data = Map<String, dynamic>.from(res['data'] as Map);
+        final rawRecs = data['recommendations'];
+        final rawMatched = data['matched_items'];
+        final recs = rawRecs is List
+            ? List<dynamic>.from(rawRecs)
+            : <dynamic>[];
+        final matched = rawMatched is List
+            ? List<dynamic>.from(rawMatched)
+            : <dynamic>[];
+        final summary = data['summary']?.toString();
+
+        setState(() {
+          _isLoading = false;
+          _errorMessage = null;
+          _recommendations = recs;
+          _matchedItems = matched;
+          _summary = summary;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = _formatFriendlyErrorMessage(res);
+        });
+      }
+    } catch (_) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _recommendations = recs;
-        _matchedItems = matched;
-        _summary = summary;
+        _errorMessage =
+            'Gagal memproses rekomendasi AI. Silakan coba lagi beberapa saat lagi.';
       });
-    } else {
-      setState(() => _isLoading = false);
     }
   }
 
@@ -615,6 +728,7 @@ class _AiRecommendationCardState extends State<AiRecommendationCard> {
                         onTap: () {
                           setState(() {
                             _selectedSubRole = item['id'];
+                            _errorMessage = null;
                           });
                           if (_recommendations != null) {
                             _fetchRecommendations();
@@ -634,55 +748,93 @@ class _AiRecommendationCardState extends State<AiRecommendationCard> {
           Padding(
             padding: const EdgeInsets.all(16),
             child: _recommendations == null
-                ? SizedBox(
-                    width: double.infinity,
-                    child: HoverLiftButton(
-                      glowColor: accent,
-                      scale: 1.025,
-                      translateY: -2.0,
-                      borderRadius: BorderRadius.circular(12),
-                      onTap: _isLoading ? null : _fetchRecommendations,
-                      child: ElevatedButton.icon(
-                        onPressed: _isLoading ? null : _fetchRecommendations,
-                        icon: _isLoading
-                            ? const SizedBox(
-                                width: 14,
-                                height: 14,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : Image.asset(
-                                'assets/brandlogo.png',
-                                width: 16,
-                                height: 16,
-                                fit: BoxFit.contain,
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (_errorMessage != null) ...[
+                        _buildErrorBanner(isDark, accent),
+                        const SizedBox(height: 12),
+                      ],
+                      SizedBox(
+                        width: double.infinity,
+                        child: HoverLiftButton(
+                          glowColor: accent,
+                          scale: 1.025,
+                          translateY: -2.0,
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: _isLoading ? null : _fetchRecommendations,
+                          child: ElevatedButton.icon(
+                            onPressed: _isLoading ? null : _fetchRecommendations,
+                            icon: _isLoading
+                                ? const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : Image.asset(
+                                    'assets/brandlogo.png',
+                                    width: 16,
+                                    height: 16,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (_, _, _) => const Icon(
+                                      Icons.auto_awesome_rounded,
+                                      size: 16,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                            label: Text(
+                              _isLoading
+                                  ? 'Menganalisis $_selectedSubRoleLabel di $_activeLocationLabel...'
+                                  : 'Dapatkan Rekomendasi AI ($_selectedSubRoleLabel • $_activeLocationLabel)',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12.5,
                               ),
-                        label: Text(
-                          _isLoading
-                              ? 'Menganalisis $_selectedSubRoleLabel di $_activeLocationLabel...'
-                              : 'Dapatkan Rekomendasi AI ($_selectedSubRoleLabel • $_activeLocationLabel)',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12.5,
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: accent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 13),
+                              elevation: 2,
+                            ),
                           ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: accent,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 13),
-                          elevation: 2,
                         ),
                       ),
-                    ),
+                    ],
                   )
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (_isLoading) ...[
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            minHeight: 3,
+                            backgroundColor: accent.withValues(alpha: 0.14),
+                            valueColor: const AlwaysStoppedAnimation<Color>(accent),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Menganalisis $_selectedSubRoleLabel di $_activeLocationLabel...',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: isDark ? Colors.white60 : Colors.black54,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                      ],
+                      if (_errorMessage != null) ...[
+                        _buildErrorBanner(isDark, accent),
+                        const SizedBox(height: 12),
+                      ],
                       // AI Summary Banner if present
                       if (_summary != null && _summary!.isNotEmpty) ...[
                         Container(
@@ -924,7 +1076,11 @@ class _AiRecommendationCardState extends State<AiRecommendationCard> {
                                         const SizedBox(width: 6),
                                         Expanded(
                                           child: Text(
-                                            (isOpp ? item['title'] : item['name']) ?? 'Mitra AI',
+                                            (isOpp
+                                                    ? (item['title'] ?? item['name'])
+                                                    : (item['name'] ?? item['title']))
+                                                ?.toString() ??
+                                                'Mitra AI',
                                             style: const TextStyle(
                                               fontSize: 11.5,
                                               fontWeight: FontWeight.bold,
@@ -945,7 +1101,9 @@ class _AiRecommendationCardState extends State<AiRecommendationCard> {
                                             borderRadius: BorderRadius.circular(4),
                                           ),
                                           child: Text(
-                                            item['sub_role'] ?? _selectedSubRoleLabel,
+                                            (item['sub_role_label']?.toString().trim().isNotEmpty ?? false)
+                                                ? item['sub_role_label'].toString()
+                                                : _formatSubRoleBadge(item['sub_role']?.toString()),
                                             style: const TextStyle(
                                               fontSize: 9.5,
                                               fontWeight: FontWeight.bold,
@@ -986,7 +1144,8 @@ class _AiRecommendationCardState extends State<AiRecommendationCard> {
                                         ),
                                         InkWell(
                                           onTap: () {
-                                            if (widget.user?.isGuest == true) {
+                                            final currentUser = _resolveCurrentUser();
+                                            if (currentUser == null || currentUser.isGuest) {
                                               AuthGuardDialog.show(context, actionName: 'melihat detail hasil rekomendasi AI');
                                               return;
                                             }
@@ -1005,16 +1164,15 @@ class _AiRecommendationCardState extends State<AiRecommendationCard> {
                                               OpportunityDetailSheet.show(
                                                 context,
                                                 opportunity: opp,
-                                                currentUserId: widget.user?.id ?? '',
+                                                currentUserId: currentUser.id,
                                               );
                                             } else {
-                                              if (widget.user != null) {
-                                                Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder: (_) => ExploreScreen(user: widget.user!),
-                                                  ),
-                                                );
+                                              final itemId = item['id']?.toString().trim() ?? '';
+                                              if (itemId.isNotEmpty) {
+                                                final router = GoRouter.maybeOf(context);
+                                                if (router != null) {
+                                                  router.push('${AppRoutes.profil}?id=$itemId');
+                                                }
                                               }
                                             }
                                           },
@@ -1067,6 +1225,57 @@ class _AiRecommendationCardState extends State<AiRecommendationCard> {
                       ],
                     ],
                   ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorBanner(bool isDark, Color accent) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: isDark
+            ? const Color(0xFF2B1722)
+            : const Color(0xFFFEF2F2),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: const Color(0xFFEF4444).withValues(alpha: 0.35),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.error_outline_rounded,
+            size: 18,
+            color: Color(0xFFDC2626),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              _errorMessage ?? 'Terjadi kendala saat memuat rekomendasi AI.',
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFF991B1B),
+                height: 1.35,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed: _isLoading ? null : _fetchRecommendations,
+            style: TextButton.styleFrom(
+              foregroundColor: accent,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text(
+              'Coba Lagi',
+              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),

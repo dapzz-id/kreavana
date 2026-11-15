@@ -12,7 +12,7 @@ class AiService extends BaseService implements AiServiceInterface
     /**
      * Call the configured AI provider.
      */
-    protected function generateContent(string $prompt, ?string $systemInstruction = null): string
+    protected function generateContent(string $prompt, ?string $systemInstruction = null, int $timeoutSeconds = 25): string
     {
         $enabled = SystemSetting::get('ai_features_enabled', true);
         if (!$enabled) {
@@ -46,7 +46,7 @@ class AiService extends BaseService implements AiServiceInterface
                     $url = "https://generativelanguage.googleapis.com/v1beta/models/{$currentModelToTry}:generateContent?key={$apiKey}";
                     $response = Http::withHeaders([
                         'x-goog-api-key' => $apiKey,
-                    ])->timeout(25)->post($url, [
+                    ])->timeout($timeoutSeconds)->post($url, [
                         'system_instruction' => [
                             'parts' => [
                                 ['text' => $systemPrompt]
@@ -124,14 +124,19 @@ class AiService extends BaseService implements AiServiceInterface
         $role = $payload['role'] ?? 'kreator';
         $niche = $payload['niche'] ?? 'Industri Kreatif';
         $subRole = strtolower(trim((string) ($payload['sub_role'] ?? 'all')));
+        if ($subRole === '' || $subRole === 'semua') {
+            $subRole = 'all';
+        }
         $rawLocation = trim((string) ($payload['location'] ?? ''));
         $location = (!empty($rawLocation) && $rawLocation !== 'Lokasi Sekarang') ? $rawLocation : 'Indonesia & Jabodetabek';
 
         $subRoleLabelMap = [
             'all' => 'Seluruh Industri Kreatif',
+            'corporate' => 'Perusahaan / Corporate & Brand Enterprise',
             'photographer' => 'Fotografer & Visual Content',
             'event_organizer' => 'Event Organizer (EO) & Manajemen Acara',
             'school' => 'Institusi Pendidikan & Vokasi',
+            'institution' => 'Institusi Pendidikan & Vokasi',
             'videographer' => 'Videografer & Sinematografi',
             'wedding_organizer' => 'Wedding Organizer (WO) & Pernikahan',
             'editor' => 'Video Editor & Colorist',
@@ -174,7 +179,7 @@ Kembalikan HANYA format JSON valid tanpa tanda petik pembuka markdown atau backt
         $summaryText = null;
 
         try {
-            $rawContent = $this->generateContent($prompt, $systemInstruction);
+            $rawContent = $this->generateContent($prompt, $systemInstruction, 10);
             // Clean markdown code blocks if wrapped by AI
             $cleanJson = trim($rawContent);
             if (str_starts_with($cleanJson, '```json')) {
@@ -223,46 +228,151 @@ Kembalikan HANYA format JSON valid tanpa tanda petik pembuka markdown atau backt
     }
 
     /**
-     * Query real matching opportunities and creators from database (Rule: Database-backed data only).
+     * Extract searchable location tokens from user-provided location filter.
+     *
+     * @return array<int, string>
+     */
+    protected function extractLocationTokens(string $location): array
+    {
+        $locLower = strtolower($location);
+        $cleanLoc = str_replace(
+            ['seluruh', 'semua', 'lokasi sekarang', 'gps', 'indonesia', '&', 'dan', 'sekitarnya', '(', ')'],
+            ' ',
+            $locLower
+        );
+        $cleanLoc = trim(preg_replace('/\s+/', ' ', $cleanLoc) ?? '');
+
+        if ($cleanLoc === '' || $cleanLoc === 'all') {
+            return [];
+        }
+
+        if ($cleanLoc === 'jabodetabek') {
+            return ['jabodetabek', 'jakarta', 'bogor', 'depok', 'tangerang', 'bekasi'];
+        }
+
+        return [$cleanLoc];
+    }
+
+    /**
+     * Corporate sub-role keyword slugs used across accounts and opportunities.
+     *
+     * @return array<int, string>
+     */
+    protected function corporateKeywordSlugs(): array
+    {
+        return ['corporate', 'company', 'business', 'perusahaan', 'bisnis', 'enterprise', 'b2b'];
+    }
+
+    /**
+     * Apply corporate entity constraints onto a User query builder.
+     */
+    protected function applyCorporateUserFilter(\Illuminate\Database\Eloquent\Builder $query): void
+    {
+        $keywords = $this->corporateKeywordSlugs();
+        $query->where(function ($sub) use ($keywords) {
+            $sub->whereIn('sub_role', $keywords)
+                ->orWhereIn('role', $keywords)
+                ->orWhereHas('userSubRoles', fn($sq) => $sq->whereIn('sub_role_slug', $keywords)->where('is_active', true))
+                ->orWhere('username', 'corporate_demo')
+                ->orWhere('email', 'like', 'corporate%@%');
+        });
+    }
+
+    /**
+     * Build a base Opportunity query filtered cleanly by target subRole.
+     */
+    protected function buildFilteredOpportunityQuery(string $subRole): \Illuminate\Database\Eloquent\Builder
+    {
+        $oppQuery = \App\Models\Opportunity::query()->where('status', 'open');
+
+        if ($subRole === 'all') {
+            return $oppQuery;
+        }
+
+        if ($subRole === 'corporate') {
+            $keywords = $this->corporateKeywordSlugs();
+            return $oppQuery->where(function ($q) use ($keywords) {
+                $q->whereIn('sub_role_slug', $keywords)
+                    ->orWhereHas('user', function ($uq) {
+                        $this->applyCorporateUserFilter($uq);
+                    });
+            });
+        }
+
+        if (in_array($subRole, ['school', 'institution'], true)) {
+            $schoolSlugs = ['school', 'institution', 'institusi', 'sekolah', 'kampus', 'campus', 'education'];
+            return $oppQuery->where(function ($q) use ($schoolSlugs) {
+                $q->whereIn('sub_role_slug', $schoolSlugs)
+                    ->orWhereHas('requirements', fn($rq) => $rq->whereIn('sub_role_slug', $schoolSlugs));
+            });
+        }
+
+        return $oppQuery->where(function ($q) use ($subRole) {
+            $q->where('sub_role_slug', $subRole)
+                ->orWhere('sub_role_slug', 'all')
+                ->orWhere('sub_role_slug', 'kreator')
+                ->orWhereHas('requirements', fn($rq) => $rq->where('sub_role_slug', $subRole));
+        });
+    }
+
+    /**
+     * Build a base User query filtered cleanly by target subRole (without invalid user columns).
+     */
+    protected function buildFilteredPartnerUserQuery(string $subRole): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = \App\Models\User::query()
+            ->where('is_suspended', false)
+            ->with(['addresses', 'activeSubscription']);
+
+        if ($subRole === 'corporate') {
+            $this->applyCorporateUserFilter($query);
+            return $query;
+        }
+
+        $query->where('role', \App\Enums\RoleType::Creator)
+            ->where('is_creator_approved', true);
+
+        if ($subRole === 'all') {
+            return $query;
+        }
+
+        $slugs = in_array($subRole, ['school', 'institution'], true)
+            ? ['school', 'institution', 'institusi', 'sekolah', 'kampus', 'campus', 'education']
+            : [$subRole];
+
+        return $query->where(function ($q) use ($slugs) {
+            $q->whereIn('sub_role', $slugs)
+                ->orWhereHas('userSubRoles', fn($sq) => $sq->whereIn('sub_role_slug', $slugs)->where('is_active', true));
+        });
+    }
+
+    /**
+     * Query real matching opportunities and creators/partners from database (Rule: Database-backed data only).
      */
     protected function queryMatchedDatabaseItems(string $subRole, string $location): array
     {
         $items = [];
-        $locLower = strtolower($location);
-        $cleanLoc = str_replace(['lokasi sekarang', 'gps', 'indonesia', '&', 'dan', 'sekitarnya'], '', $locLower);
-        $cleanLoc = trim($cleanLoc);
+        $locationTokens = $this->extractLocationTokens($location);
 
         // 1. Query Real Opportunities from Database
-        $oppQuery = \App\Models\Opportunity::query()
-            ->where('status', 'open');
-
-        if ($subRole !== 'all') {
-            $oppQuery->where(function ($q) use ($subRole) {
-                $q->where('sub_role_slug', $subRole)
-                  ->orWhere('sub_role_slug', 'all')
-                  ->orWhere('sub_role_slug', 'kreator');
-            });
-        }
-
-        if (!empty($cleanLoc)) {
-            $oppQuery->where(function ($q) use ($cleanLoc) {
-                $q->where('location', 'like', "%{$cleanLoc}%")
-                  ->orWhere('address', 'like', "%{$cleanLoc}%");
+        $oppQuery = $this->buildFilteredOpportunityQuery($subRole);
+        if (!empty($locationTokens)) {
+            $oppQuery->where(function ($q) use ($locationTokens) {
+                foreach ($locationTokens as $token) {
+                    $q->orWhere('location', 'like', "%{$token}%")
+                        ->orWhere('address', 'like', "%{$token}%");
+                }
             });
         }
 
         $opportunities = $oppQuery->latest('created_at')->take(4)->get();
 
-        // If specific location query gave 0, fallback to general open opportunities
-        if ($opportunities->isEmpty()) {
-            $generalQuery = \App\Models\Opportunity::query()->where('status', 'open');
-            if ($subRole !== 'all') {
-                $generalQuery->where(function ($q) use ($subRole) {
-                    $q->where('sub_role_slug', $subRole)
-                      ->orWhere('sub_role_slug', 'all');
-                });
-            }
-            $opportunities = $generalQuery->latest('created_at')->take(3)->get();
+        // Fallback to general open opportunities for the SAME sub_role when city filter yields 0
+        if ($opportunities->isEmpty() && !empty($locationTokens)) {
+            $opportunities = $this->buildFilteredOpportunityQuery($subRole)
+                ->latest('created_at')
+                ->take(3)
+                ->get();
         }
 
         foreach ($opportunities as $opp) {
@@ -280,56 +390,48 @@ Kembalikan HANYA format JSON valid tanpa tanda petik pembuka markdown atau backt
             ];
         }
 
-        // 2. Query Real Approved Creators from Database
-        $creatorQuery = \App\Models\User::query()
-            ->where('role', \App\Enums\RoleType::Creator)
-            ->where('is_creator_approved', true)
-            ->with(['addresses']);
-
-        if ($subRole !== 'all') {
-            $creatorQuery->where(function ($q) use ($subRole) {
-                $q->where('sub_role', $subRole)
-                  ->orWhereHas('userSubRoles', fn($sq) => $sq->where('sub_role_slug', $subRole));
-            });
-        }
-
-        if (!empty($cleanLoc)) {
-            $creatorQuery->where(function ($q) use ($cleanLoc) {
-                $q->where('location', 'like', "%{$cleanLoc}%")
-                  ->orWhereHas('addresses', function ($aq) use ($cleanLoc) {
-                      $aq->where('city', 'like', "%{$cleanLoc}%")
-                        ->orWhere('province', 'like', "%{$cleanLoc}%");
-                  });
+        // 2. Query Real Approved Creators / Corporate Partners from Database (addresses relation only)
+        $creatorQuery = $this->buildFilteredPartnerUserQuery($subRole);
+        if (!empty($locationTokens)) {
+            $creatorQuery->whereHas('addresses', function ($aq) use ($locationTokens) {
+                $aq->where(function ($inner) use ($locationTokens) {
+                    foreach ($locationTokens as $token) {
+                        $inner->orWhere('city', 'like', "%{$token}%")
+                            ->orWhere('province', 'like', "%{$token}%")
+                            ->orWhere('address', 'like', "%{$token}%");
+                    }
+                });
             });
         }
 
         $creators = $creatorQuery->orderByDesc('performance_boost')->take(4)->get();
 
-        // If specific location creator query was empty, grab top approved creators in sub_role
-        if ($creators->isEmpty()) {
-            $genCreatorQuery = \App\Models\User::query()
-                ->where('role', \App\Enums\RoleType::Creator)
-                ->where('is_creator_approved', true)
-                ->with(['addresses']);
-            if ($subRole !== 'all') {
-                $genCreatorQuery->where('sub_role', $subRole);
-            }
-            $creators = $genCreatorQuery->orderByDesc('performance_boost')->take(3)->get();
+        // Fallback to general users for the SAME sub_role when city filter yields 0
+        if ($creators->isEmpty() && !empty($locationTokens)) {
+            $creators = $this->buildFilteredPartnerUserQuery($subRole)
+                ->orderByDesc('performance_boost')
+                ->take(3)
+                ->get();
         }
 
         foreach ($creators as $c) {
             $addr = $c->addresses->firstWhere('is_default', true) ?? $c->addresses->first();
             $city = $addr?->city;
             $prov = $addr?->province;
-            $loc = ($city && $prov) ? "{$city}, {$prov}" : ($c->location ?: ($city ?? 'Indonesia'));
+            $loc = ($city && $prov) ? "{$city}, {$prov}" : ($city ?? ($addr?->address ?: 'Indonesia'));
             $boost = (float) ($c->performance_boost ?? 0);
+            $effectiveSubRole = $c->isCorporate() ? 'corporate' : ((string) ($c->sub_role ?? 'creator'));
+            $subRoleLabel = $c->isCorporate()
+                ? 'Corporate'
+                : (\App\Enums\CreatorSubRole::tryFrom($effectiveSubRole)?->label() ?? ucfirst(str_replace('_', ' ', $effectiveSubRole)));
 
             $items[] = [
                 'type' => 'creator',
                 'id' => (string) $c->id,
                 'name' => (string) $c->name,
                 'username' => (string) $c->username,
-                'sub_role' => (string) ($c->sub_role ?? 'creator'),
+                'sub_role' => $effectiveSubRole,
+                'sub_role_label' => $subRoleLabel,
                 'location' => $loc,
                 'avatar_url' => $c->avatar_url,
                 'match_score' => ($boost > 0 ? '99% ' : '96% ') . 'Cocok',
@@ -458,6 +560,37 @@ Kembalikan HANYA format JSON valid tanpa tanda petik pembuka markdown atau backt
                     ],
                 ];
 
+            case 'corporate':
+            case 'company':
+            case 'business':
+                return [
+                    [
+                        'title' => "Pengadaan Kampanye Branding & Konten Enterprise di {$location}",
+                        'category' => 'Peluang Proyek',
+                        'reason' => "Perusahaan dan brand korporat di area {$location} mengoptimalkan kolaborasi bersama agensi, fotografer, dan rumah produksi terkurasi untuk kampanye peluncuran produk serta laporan tahunan.",
+                        'impact' => 'Efisiensi biaya pengadaan kreatif B2B hingga 25% dengan kontrak SLA terjamin.',
+                        'match_score' => '98% Cocok',
+                        'action_label' => 'Jelajahi Mitra Korporat',
+                    ],
+                    [
+                        'title' => 'Program Kemitraan Magang Vokasi & Rekrutmen Talenta DUDI',
+                        'category' => 'Kemitraan Strategis',
+                        'reason' => "Menghubungkan divisi kreatif perusahaan di {$location} dengan sekolah/kampus vokasi untuk membangun pipeline talenta desain, videografi, dan media digital.",
+                        'impact' => 'Mempercepat kesiapan talenta muda dan memperkuat program CSR pendidikan.',
+                        'match_score' => '96% Cocok',
+                        'action_label' => 'Lihat Program Magang',
+                    ],
+                    [
+                        'title' => 'Konsolidasi Vendor Produksi Event, MICE & Aktivasi Merek',
+                        'category' => 'Inovasi Layanan',
+                        'reason' => "Standarisasi pengadaan EO, MC bilingual, panggung, dan tim dokumentasi multi-kamera melalui skema escrow aman di Kreavana.",
+                        'impact' => 'Pengendalian mutu acara korporat lebih terukur dan transparan.',
+                        'match_score' => '94% Cocok',
+                        'action_label' => 'Kelola Vendor Mitra',
+                    ],
+                ];
+
+            case 'institution':
             case 'school':
                 return [
                     [

@@ -51,15 +51,19 @@ class AiService {
     double? lng,
   }) async {
     try {
-      final response = await ApiService.post('ai/recommendations', {
-        'role': role,
-        'niche': niche,
-        'budget': budget,
-        if (subRole != null && subRole.isNotEmpty) 'sub_role': subRole,
-        if (location != null && location.isNotEmpty) 'location': location,
-        'lat': ?lat,
-        'lng': ?lng,
-      });
+      final response = await ApiService.post(
+        'ai/recommendations',
+        {
+          'role': role,
+          'niche': niche,
+          'budget': budget,
+          if (subRole != null && subRole.isNotEmpty) 'sub_role': subRole,
+          if (location != null && location.isNotEmpty) 'location': location,
+          'lat': ?lat,
+          'lng': ?lng,
+        },
+        receiveTimeout: const Duration(seconds: 35),
+      );
       return response;
     } catch (e) {
       return null;

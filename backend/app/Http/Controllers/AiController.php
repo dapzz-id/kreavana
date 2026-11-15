@@ -7,6 +7,7 @@ use App\Contracts\AiServiceInterface;
 use App\Models\AiChatSession;
 use App\Traits\ApiResponse;
 use Exception;
+use Illuminate\Support\Facades\Log;
 
 class AiController extends Controller
 {
@@ -96,7 +97,12 @@ class AiController extends Controller
             $result = $this->aiService->getRecommendations($payload);
             return $this->successResponse('Rekomendasi AI berhasil dibuat.', $result);
         } catch (Exception $e) {
-            return $this->errorResponse('Gagal memproses rekomendasi AI: ' . $e->getMessage(), 500);
+            Log::error('AiController::getRecommendations failed', [
+                'message' => $e->getMessage(),
+                'sub_role' => $payload['sub_role'] ?? null,
+                'location' => $payload['location'] ?? null,
+            ]);
+            return $this->errorResponse('Gagal memproses rekomendasi AI saat ini. Silakan coba beberapa saat lagi.', 500);
         }
     }
 

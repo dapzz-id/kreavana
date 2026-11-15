@@ -99,10 +99,17 @@ class ApiService {
 
   static Future<Map<String, dynamic>> post(
     String endpoint,
-    Map<String, dynamic> body,
-  ) async {
+    Map<String, dynamic> body, {
+    Duration? receiveTimeout,
+  }) async {
     try {
-      final response = await _dio.post(_normalizePath(endpoint), data: body);
+      final response = await _dio.post(
+        _normalizePath(endpoint),
+        data: body,
+        options: receiveTimeout != null
+            ? Options(receiveTimeout: receiveTimeout)
+            : null,
+      );
       return _formatResponse(response);
     } on DioException catch (e) {
       return _handleError(e);
