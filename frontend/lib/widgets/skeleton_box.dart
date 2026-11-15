@@ -99,7 +99,6 @@ class FeatureCardSkeleton extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
       decoration: AppTheme.cardDecoration(isDark),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -121,7 +120,7 @@ class FeatureCardSkeleton extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             const SkeletonBox(width: 200, height: 16, borderRadius: 4),
-            const SizedBox(height: 14),
+            const Spacer(),
             Divider(
               color: isDark ? AppTheme.dividerDark : AppTheme.dividerLight,
               height: 1,
