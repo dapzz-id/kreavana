@@ -420,6 +420,59 @@ class OpportunityModel {
 
   bool get isJob => !isMagang;
 
+  /// Calculates total quota strictly from specialization requirements,
+  /// excluding non-quota qualification descriptions.
+  int get totalQuota {
+    int total = 0;
+    for (final r in requirements) {
+      final sub = r.subRoleSlug.trim().toLowerCase();
+      if (sub == 'kualifikasi' || sub == 'qualification' || sub == 'syarat') {
+        continue;
+      }
+      final notes = (r.notes ?? '').trim();
+      if (notes.isNotEmpty &&
+          !notes.toLowerCase().startsWith('spesialisasi') &&
+          (notes.startsWith('Memiliki') ||
+           notes.startsWith('Mampu') ||
+           notes.startsWith('Siswa') ||
+           notes.startsWith('Mahasiswa') ||
+           notes.startsWith('Disiplin') ||
+           notes.startsWith('Menguasai') ||
+           notes.startsWith('Siap'))) {
+        continue;
+      }
+
+      int q = r.quantity;
+      if (q <= 0 && notes.isNotEmpty) {
+        final match = RegExp(r'\((\d+)\s+kuota\)').firstMatch(notes);
+        if (match != null) {
+          q = int.tryParse(match.group(1) ?? '0') ?? 0;
+        }
+      }
+
+      if (q > 0) {
+        total += q;
+      }
+    }
+
+    if (total <= 0) {
+      for (final r in requirements) {
+        final notes = r.notes ?? '';
+        final match = RegExp(r'\((\d+)\s+kuota\)').firstMatch(notes);
+        if (match != null) {
+          total += int.tryParse(match.group(1) ?? '0') ?? 0;
+        }
+      }
+    }
+    return total;
+  }
+
+  int get remainingQuota {
+    final t = totalQuota;
+    if (t <= 0) return 0;
+    return (t - approvedCreators.length).clamp(0, t);
+  }
+
   bool get isWetSignatureBudget {
     if (isWetSignatureRequired) return true;
     if (signatureType == 'wet_signature') return true;
