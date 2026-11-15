@@ -285,246 +285,673 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
     final formKey = GlobalKey<FormState>();
     final nameCtrl = TextEditingController();
     final majorCtrl = TextEditingController();
-    final roleCtrl = TextEditingController(
-      text: replacedStudent?.role ??
-          (widget.opportunity.requirements.isNotEmpty
-              ? widget.opportunity.requirements.first.subRoleSlug.replaceAll('_', ' ').toUpperCase()
-              : 'Peserta Magang'),
-    );
+
+    // Extract available specialization roles from requirements
+    final availableRoles = <String>[];
+    for (final r in widget.opportunity.requirements) {
+      final sub = r.subRoleSlug.trim().toLowerCase();
+      if (sub == 'kualifikasi' || sub == 'qualification' || sub == 'syarat') continue;
+      final notes = (r.notes ?? '').trim();
+      if (notes.isNotEmpty &&
+          !notes.toLowerCase().startsWith('spesialisasi') &&
+          (notes.startsWith('Memiliki') ||
+           notes.startsWith('Mampu') ||
+           notes.startsWith('Siswa') ||
+           notes.startsWith('Mahasiswa') ||
+           notes.startsWith('Disiplin') ||
+           notes.startsWith('Menguasai') ||
+           notes.startsWith('Siap'))) {
+        continue;
+      }
+      if (notes.isNotEmpty && notes.toLowerCase().startsWith('spesialisasi')) {
+        final clean = notes.replaceFirst(RegExp(r'^spesialisasi\s+', caseSensitive: false), '');
+        final roleOnly = clean.split('(').first.trim();
+        if (roleOnly.isNotEmpty && !availableRoles.contains(roleOnly)) {
+          availableRoles.add(roleOnly);
+        }
+      } else {
+        final roleOnly = r.subRoleSlug.replaceAll('_', ' ').trim();
+        if (roleOnly.isNotEmpty && !availableRoles.contains(roleOnly)) {
+          availableRoles.add(roleOnly);
+        }
+      }
+    }
+    if (availableRoles.isEmpty && widget.opportunity.subRoleSlug.isNotEmpty) {
+      final cleanSub = widget.opportunity.subRoleSlug.replaceAll('_', ' ').trim();
+      if (cleanSub.isNotEmpty && cleanSub.toLowerCase() != 'kualifikasi') {
+        availableRoles.add(cleanSub);
+      }
+    }
+
+    final initialRole = replacedStudent?.role ??
+        (availableRoles.isNotEmpty
+            ? availableRoles.first
+            : (widget.opportunity.isMagang ? 'Peserta Magang' : 'Kandidat Lowongan'));
+
+    final roleCtrl = TextEditingController(text: initialRole);
     final portfolioCtrl = TextEditingController();
     final noteCtrl = TextEditingController();
     bool isSubmitting = false;
 
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setDialogState) {
-            final isDark = Theme.of(ctx).brightness == Brightness.dark;
-            final isMagang = widget.opportunity.isMagang;
-            final title = replacedStudent != null
-                ? (isMagang ? 'Ajukan Siswa Pengganti' : 'Ajukan Kandidat Pengganti')
-                : (isAdditionalStudent
-                    ? (isMagang ? 'Ajukan Siswa Tambahan' : 'Ajukan Kandidat Tambahan')
-                    : (isMagang ? 'Ajukan Lamaran Magang Sekolah' : 'Ajukan Lamaran Pekerjaan'));
+    Widget buildSectionCard({
+      required bool isDark,
+      required Color accentColor,
+      required String title,
+      required IconData icon,
+      required List<Widget> children,
+    }) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white.withValues(alpha: 0.03) : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: accentColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icon, size: 16, color: accentColor),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ...children,
+          ],
+        ),
+      );
+    }
 
-            return AlertDialog(
-              backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: Row(
+    Widget buildFormContent(StateSetter setDialogState, BuildContext ctx) {
+      final isDark = Theme.of(ctx).brightness == Brightness.dark;
+      final isMagang = widget.opportunity.isMagang;
+      const accentColor = Color(0xFF6366F1);
+
+      final String title;
+      final String badgeText;
+      final String subtitle;
+
+      if (replacedStudent != null) {
+        title = isMagang ? 'Ajukan Siswa Pengganti' : 'Ajukan Kandidat Pengganti';
+        badgeText = 'Penggantian Siswa';
+        subtitle = 'Gantikan kandidat yang ditolak dengan kandidat lain yang memenuhi kualifikasi.';
+      } else if (isAdditionalStudent) {
+        title = isMagang ? 'Ajukan Siswa Tambahan' : 'Ajukan Kandidat Tambahan';
+        badgeText = 'Kemitraan Resmi';
+        subtitle = 'Daftarkan siswa tambahan untuk memperkuat alokasi talenta institusi sekolah.';
+      } else {
+        title = isMagang ? 'Ajukan Kandidat Siswa Magang' : 'Ajukan Kandidat Pekerjaan';
+        badgeText = 'Pendaftaran Resmi';
+        subtitle = 'Daftarkan data siswa berprestasi untuk seleksi dan penempatan pada lowongan ini.';
+      }
+
+      return Form(
+        key: formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 1. TOP HEADER (Icon box, title, badge, subtitle, close button)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF6366F1).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
+                      gradient: LinearGradient(
+                        colors: [
+                          accentColor,
+                          HSLColor.fromColor(accentColor).withLightness(0.35).toColor(),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: accentColor.withValues(alpha: 0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
-                    child: const Icon(Icons.person_add_alt_1_rounded, color: Color(0xFF6366F1), size: 20),
+                    child: const Icon(Icons.school_rounded, color: Colors.white, size: 24),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 14),
                   Expanded(
-                    child: Text(
-                      title,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
-              ),
-              content: SizedBox(
-                width: 460,
-                child: Form(
-                  key: formKey,
-                  child: SingleChildScrollView(
                     child: Column(
-                      mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (isAdditionalStudent && _schoolPartnershipStatus == 'approved')
-                          Container(
-                            margin: const EdgeInsets.only(bottom: 14),
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFEF3C7),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: const Color(0xFFFDE68A)),
-                            ),
-                            child: const Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Icon(Icons.info_outline_rounded, color: Color(0xFFD97706), size: 18),
-                                SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'Status kemitraan sekolah Anda tetap Disetujui (Approved). Hanya siswa baru ini yang akan berstatus Pending menunggu persetujuan Corporate.',
-                                    style: TextStyle(fontSize: 12, color: Color(0xFF92400E)),
-                                  ),
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                title,
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                  letterSpacing: -0.3,
                                 ),
-                              ],
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                          ),
-                        TextFormField(
-                          controller: nameCtrl,
-                          decoration: const InputDecoration(
-                            labelText: 'Nama Lengkap Siswa *',
-                            hintText: 'Contoh: Ahmad Fauzan',
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (v) =>
-                              (v == null || v.trim().isEmpty) ? 'Nama siswa wajib diisi' : null,
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: accentColor.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                badgeText,
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: accentColor,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: majorCtrl,
-                          decoration: const InputDecoration(
-                            labelText: 'Kelas & Jurusan *',
-                            hintText: 'Contoh: XII Animasi 1',
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (v) =>
-                              (v == null || v.trim().isEmpty) ? 'Kelas/jurusan wajib diisi' : null,
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: roleCtrl,
-                          decoration: const InputDecoration(
-                            labelText: 'Posisi / Spesialisasi yang Dilamar *',
-                            hintText: 'Contoh: 3D Modeler / UI UX Intern',
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (v) =>
-                              (v == null || v.trim().isEmpty) ? 'Posisi wajib diisi' : null,
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: portfolioCtrl,
-                          decoration: const InputDecoration(
-                            labelText: 'Tautan Portofolio / CV',
-                            hintText: 'https://...',
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: noteCtrl,
-                          maxLines: 3,
-                          decoration: const InputDecoration(
-                            labelText: 'Catatan Pengajuan untuk Corporate',
-                            hintText: 'Jelaskan kompetensi siswa atau keterangan tambahan...',
-                            border: OutlineInputBorder(),
+                        const SizedBox(height: 3),
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
                           ),
                         ),
                       ],
                     ),
                   ),
-                ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, size: 20),
+                    onPressed: () => Navigator.pop(ctx),
+                    style: IconButton.styleFrom(
+                      backgroundColor: isDark ? Colors.white10 : const Color(0xFFF1F5F9),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ],
               ),
-              actions: [
-                TextButton(
-                  onPressed: isSubmitting ? null : () => Navigator.of(ctx).pop(),
-                  child: const Text('Batal'),
-                ),
-                FilledButton.icon(
-                  onPressed: isSubmitting
-                      ? null
-                      : () async {
-                          if (!(formKey.currentState?.validate() ?? false)) return;
+              const SizedBox(height: 16),
 
-                          final oppId = widget.opportunity.id ?? '';
-                          if (oppId.isEmpty) {
-                            AppSweetAlert.error(
-                              context,
-                              'ID lowongan magang tidak ditemukan di database.',
-                            );
-                            return;
-                          }
-
-                          final studentName = nameCtrl.text.trim();
-                          final major = majorCtrl.text.trim();
-                          final role = roleCtrl.text.trim();
-                          final portfolio = portfolioCtrl.text.trim();
-                          final note = noteCtrl.text.trim().isNotEmpty
-                              ? noteCtrl.text.trim()
-                              : (replacedStudent != null
-                                  ? 'Siswa pengganti menggantikan ${replacedStudent.name}.'
-                                  : 'Siswa diajukan oleh institusi untuk program magang.');
-                          final additionalFlag =
-                              isAdditionalStudent || _schoolPartnershipStatus == 'approved';
-
-                          setDialogState(() => isSubmitting = true);
-
-                          final res = await OpportunityService.applyInstitutionStudent(
-                            opportunityId: oppId,
-                            subRoleSlug: role.toLowerCase().replaceAll(' ', '_'),
-                            pitchMessage:
-                                'Siswa: $studentName ($major)${portfolio.isNotEmpty ? ' | Portofolio: $portfolio' : ''} | $note',
-                            studentDocument: {
-                              'student_name': studentName,
-                              'major_class': major,
-                              'role': role,
-                              'portfolio_url': portfolio,
-                              'note': note,
-                              'is_additional': additionalFlag,
-                              'is_replacement': replacedStudent != null,
-                              if (replacedStudent != null)
-                                'replaced_student_name': replacedStudent.name,
-                            },
-                          );
-
-                          if (ctx.mounted) {
-                            setDialogState(() => isSubmitting = false);
-                          }
-
-                          if (res['status'] != true) {
-                            if (mounted) {
-                              AppSweetAlert.error(
-                                context,
-                                res['message']?.toString() ??
-                                    'Gagal menyimpan pengajuan siswa ke database.',
-                              );
-                            }
-                            return;
-                          }
-
-                          if (ctx.mounted) Navigator.of(ctx).pop();
-                          await _loadServerData();
-
-                          if (mounted) {
-                            setState(() {
-                              _selectedStudentFilter = 'Semua';
-                              _searchController.clear();
-                              _studentPage = 1;
-                            });
-                            AppSweetAlert.success(
-                              context,
-                              additionalFlag
-                                  ? 'Siswa tambahan $studentName berhasil diajukan dengan status Pending. Status kemitraan sekolah tetap Disetujui.'
-                                  : 'Lamaran siswa $studentName berhasil dikirim ke Corporate.',
-                              title: 'Pengajuan Berhasil',
-                            );
-                          }
-                        },
-                  icon: isSubmitting
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Icon(Icons.send_rounded, size: 16),
-                  label: Text(isSubmitting ? 'Mengirim...' : 'Kirim Pengajuan'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF6366F1),
-                    foregroundColor: Colors.white,
+              // 2. GUIDANCE BANNER
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: isDark
+                        ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
+                        : [const Color(0xFFEFF6FF), const Color(0xFFF0FDF4)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF3B82F6).withValues(alpha: 0.3) : const Color(0xFFBFDBFE),
                   ),
                 ),
-          ],
-        );
-      },
-    );
-  },
-);
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2563EB).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.lightbulb_rounded, size: 18, color: Color(0xFF2563EB)),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Panduan Pengajuan Siswa & Seleksi Kemitraan:',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w800,
+                              color: isDark ? const Color(0xFF93C5FD) : const Color(0xFF1E3A8A),
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            replacedStudent != null
+                                ? '• Pengajuan ini menggantikan berkas kandidat ${replacedStudent.name} (${replacedStudent.role}) yang sebelumnya ditolak.\n'
+                                  '• Pastikan data identitas siswa lengkap dan berkas portofolio relevan dengan kriteria industri.\n'
+                                  '• Pengajuan pengganti akan langsung tersimpan dan diverifikasi oleh pihak Corporate industri.'
+                                : (isAdditionalStudent && _schoolPartnershipStatus == 'approved')
+                                    ? '• Status kemitraan sekolah tetap Disetujui (Approved). Siswa tambahan akan masuk dalam status Pending.\n'
+                                      '• Masukkan identitas siswa dan pilih posisi spesialisasi yang diinginkan sesuai kebutuhan kuota.\n'
+                                      '• Corporate akan meninjau kualifikasi berkas siswa tambahan secara terintegrasi.'
+                                    : '• Pastikan data identitas siswa (Nama Lengkap, Kelas / Jurusan) sesuai dengan data administrasi sekolah.\n'
+                                      '• Pilih posisi spesialisasi yang sesuai dengan keahlian dan kompetensi portofolio siswa.\n'
+                                      '• Pengajuan yang dikirim akan otomatis tercatat di database dan diverifikasi oleh tim Corporate.',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: isDark ? Colors.white70 : const Color(0xFF1E293B).withValues(alpha: 0.85),
+                              height: 1.45,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // 3. GROUP 1: INFORMASI POKOK SISWA / KANDIDAT
+              buildSectionCard(
+                isDark: isDark,
+                accentColor: accentColor,
+                title: 'Informasi Pokok Kandidat / Siswa',
+                icon: Icons.badge_outlined,
+                children: [
+                  TextFormField(
+                    controller: nameCtrl,
+                    decoration: InputDecoration(
+                      labelText: isMagang ? 'Nama Lengkap Siswa *' : 'Nama Lengkap Kandidat *',
+                      hintText: 'Contoh: Ahmad Fauzan',
+                      prefixIcon: const Icon(Icons.person_outline_rounded, size: 20, color: accentColor),
+                      filled: true,
+                      fillColor: isDark ? AppTheme.cardBg : Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                        ),
+                      ),
+                    ),
+                    validator: (v) =>
+                        (v == null || v.trim().isEmpty) ? 'Nama siswa wajib diisi' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: majorCtrl,
+                    decoration: InputDecoration(
+                      labelText: isMagang ? 'Kelas & Jurusan Siswa *' : 'Jurusan / Pendidikan Terakhir *',
+                      hintText: isMagang ? 'Contoh: XII Rekayasa Perangkat Lunak 1' : 'Contoh: D4 Teknik Elektro',
+                      prefixIcon: const Icon(Icons.school_outlined, size: 20, color: accentColor),
+                      filled: true,
+                      fillColor: isDark ? AppTheme.cardBg : Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                        ),
+                      ),
+                    ),
+                    validator: (v) =>
+                        (v == null || v.trim().isEmpty) ? 'Kelas/jurusan wajib diisi' : null,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+
+              // 4. GROUP 2: POSISI & SPESIALISASI
+              buildSectionCard(
+                isDark: isDark,
+                accentColor: accentColor,
+                title: 'Pilihan Posisi & Spesialisasi',
+                icon: Icons.work_outline_rounded,
+                children: [
+                  if (availableRoles.isNotEmpty) ...[
+                    Text(
+                      'Pilih Posisi / Sub-Role Terbuka:',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? Colors.white70 : const Color(0xFF475569),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: availableRoles.map((roleOpt) {
+                        final isSelected =
+                            roleCtrl.text.trim().toLowerCase() == roleOpt.trim().toLowerCase();
+                        return InkWell(
+                          onTap: () {
+                            setDialogState(() {
+                              roleCtrl.text = roleOpt;
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(10),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? accentColor.withValues(alpha: 0.15)
+                                  : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: isSelected
+                                    ? accentColor
+                                    : (isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+                                width: isSelected ? 1.5 : 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.check_circle_rounded,
+                                  size: 14,
+                                  color: isSelected ? accentColor : Colors.grey.shade400,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  roleOpt,
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                    color: isSelected
+                                        ? accentColor
+                                        : (isDark ? Colors.white70 : const Color(0xFF334155)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  TextFormField(
+                    controller: roleCtrl,
+                    onChanged: (_) => setDialogState(() {}),
+                    decoration: InputDecoration(
+                      labelText: 'Posisi / Spesialisasi yang Dilamar *',
+                      hintText: 'Contoh: Electrician / Videographer / UI UX Intern',
+                      prefixIcon: const Icon(Icons.workspace_premium_outlined, size: 20, color: accentColor),
+                      filled: true,
+                      fillColor: isDark ? AppTheme.cardBg : Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                        ),
+                      ),
+                    ),
+                    validator: (v) =>
+                        (v == null || v.trim().isEmpty) ? 'Posisi spesialisasi wajib diisi' : null,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+
+              // 5. GROUP 3: PORTOFOLIO & CATATAN INSTITUSI
+              buildSectionCard(
+                isDark: isDark,
+                accentColor: accentColor,
+                title: 'Portofolio & Rekomendasi Institusi',
+                icon: Icons.folder_shared_outlined,
+                children: [
+                  TextFormField(
+                    controller: portfolioCtrl,
+                    decoration: InputDecoration(
+                      labelText: 'Tautan Portofolio / CV / LinkedIn (Opsional)',
+                      hintText: 'https://behance.net/... atau link Google Drive',
+                      prefixIcon: const Icon(Icons.link_rounded, size: 20, color: Color(0xFF64748B)),
+                      filled: true,
+                      fillColor: isDark ? AppTheme.cardBg : Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: noteCtrl,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      labelText: 'Catatan Rekomendasi untuk Corporate (Opsional)',
+                      hintText: 'Tuliskan kompetensi unggulan, karakter kerja, atau rekomendasi khusus guru pembimbing...',
+                      prefixIcon: const Icon(Icons.rate_review_outlined, size: 20, color: Color(0xFF64748B)),
+                      filled: true,
+                      fillColor: isDark ? AppTheme.cardBg : Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // 6. FOOTER ACTIONS
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.shield_outlined, size: 16, color: Color(0xFF64748B)),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Tersimpan Langsung ke Database',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      OutlinedButton(
+                        onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF64748B),
+                          side: BorderSide(
+                            color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        child: const Text('Batal', style: TextStyle(fontWeight: FontWeight.w600)),
+                      ),
+                      const SizedBox(width: 10),
+                      FilledButton.icon(
+                        icon: isSubmitting
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.send_rounded, size: 18),
+                        label: Text(
+                          isSubmitting ? 'Mengirim...' : 'Kirim Pengajuan',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: accentColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: isSubmitting
+                            ? null
+                            : () async {
+                                if (!(formKey.currentState?.validate() ?? false)) return;
+
+                                final oppId = widget.opportunity.id ?? '';
+                                if (oppId.isEmpty) {
+                                  AppSweetAlert.error(
+                                    context,
+                                    'ID lowongan magang tidak ditemukan di database.',
+                                  );
+                                  return;
+                                }
+
+                                final studentName = nameCtrl.text.trim();
+                                final major = majorCtrl.text.trim();
+                                final role = roleCtrl.text.trim();
+                                final portfolio = portfolioCtrl.text.trim();
+                                final note = noteCtrl.text.trim().isNotEmpty
+                                    ? noteCtrl.text.trim()
+                                    : (replacedStudent != null
+                                        ? 'Siswa pengganti menggantikan ${replacedStudent.name}.'
+                                        : 'Siswa diajukan oleh institusi untuk program magang.');
+                                final additionalFlag =
+                                    isAdditionalStudent || _schoolPartnershipStatus == 'approved';
+
+                                setDialogState(() => isSubmitting = true);
+
+                                final res = await OpportunityService.applyInstitutionStudent(
+                                  opportunityId: oppId,
+                                  subRoleSlug: role.toLowerCase().replaceAll(' ', '_'),
+                                  pitchMessage:
+                                      'Siswa: $studentName ($major)${portfolio.isNotEmpty ? ' | Portofolio: $portfolio' : ''} | $note',
+                                  studentDocument: {
+                                    'student_name': studentName,
+                                    'major_class': major,
+                                    'role': role,
+                                    'portfolio_url': portfolio,
+                                    'note': note,
+                                    'is_additional': additionalFlag,
+                                    'is_replacement': replacedStudent != null,
+                                    if (replacedStudent != null)
+                                      'replaced_student_name': replacedStudent.name,
+                                  },
+                                );
+
+                                if (ctx.mounted) {
+                                  setDialogState(() => isSubmitting = false);
+                                }
+
+                                if (res['status'] != true) {
+                                  if (mounted) {
+                                    AppSweetAlert.error(
+                                      context,
+                                      res['message']?.toString() ??
+                                          'Gagal menyimpan pengajuan siswa ke database.',
+                                    );
+                                  }
+                                  return;
+                                }
+
+                                if (ctx.mounted) Navigator.of(ctx).pop();
+                                await _loadServerData();
+
+                                if (mounted) {
+                                  setState(() {
+                                    _selectedStudentFilter = 'Semua';
+                                    _searchController.clear();
+                                    _studentPage = 1;
+                                  });
+                                  AppSweetAlert.success(
+                                    context,
+                                    additionalFlag
+                                        ? 'Siswa tambahan $studentName berhasil diajukan dengan status Pending. Status kemitraan sekolah tetap Disetujui.'
+                                        : 'Lamaran siswa $studentName berhasil dikirim ke Corporate.',
+                                    title: 'Pengajuan Berhasil',
+                                  );
+                                }
+                              },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final isDesktop = MediaQuery.of(context).size.width > 700;
+    if (isDesktop) {
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          clipBehavior: Clip.antiAlias,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 680, maxHeight: 850),
+            child: StatefulBuilder(
+              builder: (ctx, setDialogState) {
+                final isDark = Theme.of(ctx).brightness == Brightness.dark;
+                return Container(
+                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  padding: const EdgeInsets.fromLTRB(26, 24, 26, 24),
+                  child: buildFormContent(setDialogState, ctx),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+    } else {
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (ctx) {
+          return StatefulBuilder(
+            builder: (ctx, setDialogState) {
+              final isDark = Theme.of(ctx).brightness == Brightness.dark;
+              return Container(
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  20,
+                  20,
+                  MediaQuery.of(ctx).viewInsets.bottom + 24,
+                ),
+                child: buildFormContent(setDialogState, ctx),
+              );
+            },
+          );
+        },
+      );
+    }
   }
 
   @override
@@ -737,26 +1164,6 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
             ],
           ),
         ),
-        if (isDesktop) ...[
-          const SizedBox(width: 12),
-          ElevatedButton.icon(
-            onPressed: () => _openSubmitStudentDialog(
-              isAdditionalStudent: _schoolPartnershipStatus == 'approved',
-            ),
-            icon: const Icon(Icons.person_add_alt_1_rounded, size: 18, color: Colors.white),
-            label: Text(
-              _schoolPartnershipStatus == 'not_applied'
-                  ? (opp.isMagang ? 'Ajukan Lamaran Magang' : 'Ajukan Lamaran Pekerjaan')
-                  : (opp.isMagang ? 'Ajukan Siswa Tambahan' : 'Ajukan Kandidat Tambahan'),
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: accentColor,
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-          ),
-        ],
       ],
     );
   }
@@ -791,7 +1198,7 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
         ? 'Institusi Anda telah disetujui pada ${widget.opportunity.isMagang ? 'program magang ini' : 'lowongan pekerjaan ini'} ($acceptedCount ${widget.opportunity.isMagang ? 'siswa' : 'kandidat'} diterima${pendingCount > 0 ? ', $pendingCount ${widget.opportunity.isMagang ? 'siswa' : 'kandidat'} tambahan menunggu review' : ''}). Penambahan kandidat baru tidak mengubah status persetujuan sekolah Anda.'
         : (isPending
             ? 'Pengajuan kemitraan ${widget.opportunity.isMagang ? 'magang' : 'rekrutmen'} sekolah Anda sedang ditinjau oleh pihak Corporate.'
-            : 'Sekolah Anda belum mendaftarkan ${widget.opportunity.isMagang ? 'siswa pada program magang ini' : 'kandidat pada lowongan pekerjaan ini'}. Klik tombol ${widget.opportunity.isMagang ? 'Ajukan Lamaran Magang' : 'Ajukan Lamaran Pekerjaan'} untuk mendaftarkan.');
+            : 'Sekolah Anda belum mendaftarkan ${widget.opportunity.isMagang ? 'siswa pada program magang ini' : 'kandidat pada lowongan pekerjaan ini'}. Buka tab "Daftar Siswa" lalu klik "+ Ajukan Siswa" untuk mendaftarkan kandidat.');
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -966,10 +1373,7 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
     final rawDate = opp.deadline ?? opp.eventDate ?? opp.eventStartDate;
     final period = ProgramMagangCard.formatDateDisplay(rawDate, defaultFallback: '-');
 
-    int totalQuota = 0;
-    for (final r in opp.requirements) {
-      totalQuota += r.quantity;
-    }
+    final totalQuota = opp.totalQuota;
     final int filled = opp.approvedCreators.isNotEmpty
         ? opp.approvedCreators.length
         : _students.where((s) => s.status == 'Diterima').length;

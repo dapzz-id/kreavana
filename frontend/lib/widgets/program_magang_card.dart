@@ -118,51 +118,10 @@ class ProgramMagangCard extends StatelessWidget {
     final period = formatDateDisplay(rawDate, defaultFallback: '21 Sep 2026');
 
     // 4. Quota text from database requirements & approvals (only count specializations, ignore qualifications)
-    int totalQuota = 0;
-    for (final r in opp.requirements) {
-      final sub = r.subRoleSlug.trim().toLowerCase();
-      if (sub == 'kualifikasi' || sub == 'qualification' || sub == 'syarat') {
-        continue;
-      }
-      final notes = (r.notes ?? '').trim();
-      if (notes.isNotEmpty &&
-          !notes.toLowerCase().startsWith('spesialisasi') &&
-          (notes.startsWith('Memiliki') ||
-           notes.startsWith('Mampu') ||
-           notes.startsWith('Siswa') ||
-           notes.startsWith('Mahasiswa') ||
-           notes.startsWith('Disiplin') ||
-           notes.startsWith('Menguasai') ||
-           notes.startsWith('Siap'))) {
-        continue;
-      }
-
-      int q = r.quantity;
-      if (q <= 0 && notes.isNotEmpty) {
-        final match = RegExp(r'\((\d+)\s+kuota\)').firstMatch(notes);
-        if (match != null) {
-          q = int.tryParse(match.group(1) ?? '0') ?? 0;
-        }
-      }
-
-      if (q > 0) {
-        totalQuota += q;
-      }
-    }
-
-    if (totalQuota <= 0) {
-      for (final r in opp.requirements) {
-        final notes = r.notes ?? '';
-        final match = RegExp(r'\((\d+)\s+kuota\)').firstMatch(notes);
-        if (match != null) {
-          totalQuota += int.tryParse(match.group(1) ?? '0') ?? 0;
-        }
-      }
-    }
+    final totalQuota = opp.totalQuota;
     final String quotaString;
     if (totalQuota > 0) {
-      final int filled = opp.approvedCreators.length;
-      final int remaining = (totalQuota - filled).clamp(0, totalQuota);
+      final int remaining = opp.remainingQuota;
       quotaString = '$remaining dari $totalQuota posisi';
     } else {
       quotaString = 'Terbuka';

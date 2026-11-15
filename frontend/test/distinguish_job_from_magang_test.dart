@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kreavana/models/opportunity_model.dart';
 import 'package:kreavana/screens/corporate_lowongan_screen.dart';
+import 'package:kreavana/screens/program_magang_detail_screen.dart';
 import 'package:kreavana/widgets/app_pagination_bar.dart';
 import 'package:kreavana/widgets/program_magang_card.dart';
 
@@ -133,6 +134,14 @@ void main() {
       expect(find.text('Menghandle segala hal yang berkaitan dengan semua kelistrikan'), findsOneWidget);
     });
 
+    test('OpportunityModel calculates totalQuota strictly from specializations', () {
+      expect(jobOpportunity.totalQuota, equals(4));
+      expect(jobOpportunity.remainingQuota, equals(4));
+
+      expect(magangOpportunity.totalQuota, equals(10));
+      expect(magangOpportunity.remainingQuota, equals(10));
+    });
+
     testWidgets('Widget test: AppPaginationBar renders compact, fixed-size 36x36 pill and does not stretch', (tester) async {
       await tester.binding.setSurfaceSize(const Size(1280, 800));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -165,6 +174,26 @@ void main() {
       final Size pillSize = tester.getSize(pillFinder);
       expect(pillSize.width, equals(36));
       expect(pillSize.height, equals(36));
+    });
+
+    testWidgets('Widget test: ProgramMagangDetailScreen header has no top apply button', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1280, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ProgramMagangDetailScreen(
+            opportunity: jobOpportunity,
+          ),
+        ),
+      );
+      // Pump initial frame without waiting for infinite CircularProgressIndicator
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Verify top-right button "Ajukan Lamaran Pekerjaan" / "Ajukan Lamaran Magang" is removed from header
+      expect(find.text('Ajukan Lamaran Pekerjaan'), findsNothing);
+      expect(find.text('Ajukan Lamaran Magang'), findsNothing);
     });
   });
 }
