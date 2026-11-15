@@ -444,4 +444,172 @@ class InstitutionResourceTest extends TestCase
             ->assertJsonPath('data.status', 'rejected')
             ->assertJsonPath('data.metadata.approval_status', 'rejected');
     }
+
+    public function test_bidirectional_corporate_to_institution_partnership_flow_and_phone_contacts(): void
+    {
+        Storage::fake('public');
+
+        $institution = User::factory()->create([
+            'role' => RoleType::User,
+            'sub_role' => 'institution',
+            'name' => 'SMK Telekomunikasi Telesandi Bekasi',
+            'username' => 'smk_telesandi',
+            'phone' => '081111222333',
+            'is_verified' => true,
+        ]);
+
+        $corporate = User::factory()->create([
+            'role' => RoleType::User,
+            'sub_role' => 'corporate',
+            'name' => 'PT Kreavana Nusantara Korporat',
+            'username' => 'corporate_demo',
+            'phone' => '082222333444',
+            'is_verified' => true,
+        ]);
+
+        // Corporate searches institutions by @username
+        $searchRes = $this->actingAsApi($corporate)
+            ->getJson('/api/institution/resources/corporate-search?q=@smk_telesandi')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $institution->id)
+            ->assertJsonPath('data.0.phone', '081111222333');
+        $this->assertSame('institution', $searchRes->json('data.0.selected_sub_role'));
+
+        // Corporate submits partnership proposal targeting Institution
+        $createRes = $this->actingAsApi($corporate)
+            ->postJson('/api/institution/resources', [
+                'resource_type' => 'partners',
+                'title' => $institution->name,
+                'description' => 'Program perekrutan lulusan magang dan teaching factory.',
+                'metadata' => [
+                    'target_user_id' => $institution->id,
+                    'target_name' => $institution->name,
+                    'target_username' => $institution->username,
+                    'institution_user_id' => $institution->id,
+                    'institution_username' => $institution->username,
+                    'mou_files' => [
+                        ['url' => 'https://example.test/corp_mou.pdf', 'filename' => 'corp_mou.pdf', 'extension' => 'pdf'],
+                        ['url' => 'https://example.test/lampiran.docx', 'filename' => 'lampiran.docx', 'extension' => 'docx'],
+                    ],
+                ],
+            ])
+            ->assertStatus(201)
+            ->assertJsonPath('data.status', 'pending')
+            ->assertJsonPath('data.metadata.sender_phone', '082222333444')
+            ->assertJsonPath('data.metadata.target_phone', '081111222333')
+            ->assertJsonPath('data.recipient.phone', '081111222333');
+
+        $partnerId = $createRes->json('data.id');
+
+        // Corporate (sender) sees viewer_is_sender=true and cannot approve/reject own proposal
+        $corpList = $this->actingAsApi($corporate)
+            ->getJson('/api/institution/resources?type=partners')
+            ->assertOk();
+        $corpRow = collect($corpList->json('data'))->firstWhere('id', $partnerId);
+        $this->assertNotNull($corpRow);
+        $this->assertTrue($corpRow['viewer_is_sender']);
+        $this->assertFalse($corpRow['viewer_is_recipient']);
+        $this->assertFalse($corpRow['viewer_can_review']);
+
+        $this->actingAsApi($corporate)->postJson("/api/institution/resources/{$partnerId}/approve")->assertStatus(403);
+        $this->actingAsApi($corporate)->postJson("/api/institution/resources/{$partnerId}/reject")->assertStatus(403);
+
+        // Institution (recipient) sees proposal with Corporate's phone and cannot edit sender data
+        $instList = $this->actingAsApi($institution)
+            ->getJson('/api/institution/resources?type=partners')
+            ->assertOk();
+        $instRow = collect($instList->json('data'))->firstWhere('id', $partnerId);
+        $this->assertNotNull($instRow);
+        $this->assertFalse($instRow['viewer_is_sender']);
+        $this->assertTrue($instRow['viewer_is_recipient']);
+        $this->assertTrue($instRow['viewer_can_review']);
+        $this->assertSame('082222333444', $instRow['owner']['phone']);
+        $this->assertSame('082222333444', $instRow['metadata']['sender_phone']);
+
+        $this->actingAsApi($institution)
+            ->putJson("/api/institution/resources/{$partnerId}", ['title' => 'Diedit Penerima'])
+            ->assertStatus(403);
+
+        // Institution (recipient) approves -> publishes MoU document visible to both parties
+        $approveRes = $this->actingAsApi($institution)
+            ->postJson("/api/institution/resources/{$partnerId}/approve")
+            ->assertOk()
+            ->assertJsonPath('data.partner.status', 'active');
+        $docId = $approveRes->json('data.document.id');
+
+        $corpDocs = $this->actingAsApi($corporate)->getJson('/api/institution/resources?type=documents')->assertOk();
+        $instDocs = $this->actingAsApi($institution)->getJson('/api/institution/resources?type=documents')->assertOk();
+        $this->assertNotNull(collect($corpDocs->json('data'))->firstWhere('id', $docId));
+        $this->assertNotNull(collect($instDocs->json('data'))->firstWhere('id', $docId));
+    }
+
+    public function test_sender_cannot_approve_or_reject_own_proposal_and_approved_partner_is_immutable(): void
+    {
+        $institution = User::factory()->create([
+            'role' => RoleType::User,
+            'sub_role' => 'institution',
+            'phone' => '081900001111',
+        ]);
+        $corporate = User::factory()->create([
+            'role' => RoleType::User,
+            'sub_role' => 'corporate',
+            'phone' => '082900002222',
+        ]);
+
+        $createRes = $this->actingAsApi($institution)
+            ->postJson('/api/institution/resources', [
+                'resource_type' => 'partners',
+                'title' => $corporate->name,
+                'description' => 'Kerjasama vokasi dan sertifikasi industri.',
+                'metadata' => [
+                    'corporate_user_id' => $corporate->id,
+                    'corporate_username' => $corporate->username,
+                    'mou_files' => [
+                        ['url' => 'https://example.test/mou_asli.pdf', 'filename' => 'mou_asli.pdf', 'extension' => 'pdf'],
+                    ],
+                ],
+            ])
+            ->assertStatus(201);
+
+        $partnerId = $createRes->json('data.id');
+
+        // Sender cannot approve or reject their own submission
+        $this->actingAsApi($institution)->postJson("/api/institution/resources/{$partnerId}/approve")->assertStatus(403);
+        $this->actingAsApi($institution)->postJson("/api/institution/resources/{$partnerId}/reject")->assertStatus(403);
+
+        // Sender cannot force-activate pending partnership via PUT
+        $this->actingAsApi($institution)
+            ->putJson("/api/institution/resources/{$partnerId}", ['status' => 'active'])
+            ->assertStatus(403);
+
+        // Target Corporate approves
+        $approveRes = $this->actingAsApi($corporate)
+            ->postJson("/api/institution/resources/{$partnerId}/approve")
+            ->assertOk();
+        $documentId = $approveRes->json('data.document.id');
+
+        // Once approved, neither partner data/MoU files nor synced MoU document can be edited
+        $this->actingAsApi($institution)
+            ->putJson("/api/institution/resources/{$partnerId}", [
+                'title' => 'Ubah Nama Setelah Disetujui',
+                'description' => 'Ubah deskripsi',
+                'metadata' => [
+                    'mou_files' => [
+                        ['url' => 'https://example.test/ganti.pdf', 'filename' => 'ganti.pdf'],
+                    ],
+                ],
+            ])
+            ->assertStatus(403);
+
+        $this->actingAsApi($institution)
+            ->putJson("/api/institution/resources/{$documentId}", [
+                'title' => 'Ubah MoU Resmi',
+            ])
+            ->assertStatus(403);
+
+        $this->actingAsApi($corporate)
+            ->postJson("/api/institution/resources/{$partnerId}/reject")
+            ->assertStatus(422);
+    }
 }

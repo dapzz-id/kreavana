@@ -201,44 +201,48 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
           final owner = rawOwner is Map
               ? Map<String, dynamic>.from(rawOwner)
               : <String, dynamic>{};
-          final institutionName =
-              (meta['institution_name'] ?? owner['name'] ?? '').toString().trim();
-          final institutionEmail =
-              (meta['institution_email'] ?? owner['email'] ?? '').toString().trim();
-          final isIncomingProposal = !_isInstitution &&
-              partnerMap['user_id']?.toString() != widget.user.id.toString() &&
-              institutionName.isNotEmpty;
-          final title = isIncomingProposal
-              ? institutionName
-              : (partnerMap['title']?.toString() ?? 'Mitra B2B');
-          String phone = meta['phone']?.toString() ?? '';
-          if (phone.isEmpty && meta['contact'] != null && !meta['contact'].toString().contains('@')) {
-            phone = meta['contact'].toString();
-          }
-          if (phone.isEmpty) {
-            if (title.contains('Visual Kreasi')) {
-              phone = '081289123401';
-            } else if (title.contains('Grafika Mandiri')) {
-              phone = '081378234502';
-            } else if (title.contains('Nusantara Audio')) {
-              phone = '081567345603';
-            } else if (title.contains('Cipta Event')) {
-              phone = '081856456704';
-            } else if (title.contains('Pixel Craft')) {
-              phone = '081945567805';
-            } else {
-              phone = '081234567890';
+          final recipientMap = partnerMap['recipient'] is Map
+              ? Map<String, dynamic>.from(partnerMap['recipient'] as Map)
+              : <String, dynamic>{};
+          final isIncomingProposal = partnerMap['viewer_is_recipient'] == true ||
+              (!_isInstitution &&
+                  partnerMap['user_id']?.toString() != widget.user.id.toString() &&
+                  (meta['sender_name'] ?? meta['institution_name'] ?? owner['name'] ?? '').toString().trim().isNotEmpty);
+          final counterpartyName = isIncomingProposal
+              ? (meta['sender_name'] ?? meta['institution_name'] ?? owner['name'] ?? partnerMap['title'] ?? 'Mitra')
+                  .toString()
+                  .trim()
+              : (meta['target_name'] ?? recipientMap['name'] ?? partnerMap['title'] ?? 'Mitra B2B')
+                  .toString()
+                  .trim();
+          final counterpartyEmail = isIncomingProposal
+              ? (meta['sender_email'] ?? meta['institution_email'] ?? owner['email'] ?? '')
+                  .toString()
+                  .trim()
+              : (meta['target_email'] ?? recipientMap['email'] ?? meta['email'] ?? (meta['contact']?.toString().contains('@') == true ? meta['contact'] : '') ?? '')
+                  .toString()
+                  .trim();
+          final phoneCandidates = isIncomingProposal
+              ? [meta['sender_phone'], owner['phone'], meta['institution_phone'], meta['phone']]
+              : [meta['target_phone'], recipientMap['phone'], meta['institution_phone'], meta['corporate_phone'], meta['phone']];
+          String phone = '';
+          for (final candidate in phoneCandidates) {
+            final value = (candidate ?? '').toString().trim();
+            if (value.isNotEmpty && value.toLowerCase() != 'null') {
+              phone = value;
+              break;
             }
           }
+          if (phone.isEmpty && meta['contact'] != null && !meta['contact'].toString().contains('@')) {
+            phone = meta['contact'].toString().trim();
+          }
           loadedCreators.add({
-            'name': title,
-            'cat': meta['category'] ?? (isIncomingProposal ? 'Mitra Institusi Pendidikan' : 'Creative Partner'),
+            'name': counterpartyName.isNotEmpty ? counterpartyName : 'Mitra B2B',
+            'cat': meta['category'] ?? (isIncomingProposal ? 'Mitra Institusi Pendidikan' : 'Mitra Kemitraan'),
             'rating': '4.9',
             'verified': true,
             'phone': phone,
-            'email': isIncomingProposal
-                ? institutionEmail
-                : (meta['email'] ?? (meta['contact']?.toString().contains('@') == true ? meta['contact'] : '')),
+            'email': counterpartyEmail,
             'website': meta['website'] ?? '',
           });
         }
@@ -248,7 +252,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
         for (final v in vendorList) {
           if (v is Map<String, dynamic>) {
             final vName = (v['name'] ?? v['user_name'] ?? 'Mitra B2B').toString();
-            final vPhone = (v['phone'] ?? v['contact'] ?? '081234567890').toString();
+            final vPhone = (v['phone'] ?? v['contact'] ?? '').toString();
             loadedCreators.add({
               'name': vName,
               'cat': (v['category'] ?? v['sub_role'] ?? 'Creative Partner').toString(),

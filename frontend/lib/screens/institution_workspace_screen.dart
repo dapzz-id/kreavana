@@ -665,11 +665,32 @@ class _InstitutionWorkspaceScreenState
   }
 
   Future<void> _openEditor([Map<String, dynamic>? existing]) async {
+    if (existing != null) {
+      final exStatus = existing['status']?.toString().toLowerCase() ?? '';
+      final exMeta = _metadata(existing);
+      final isLockedApprovedPartner = widget.resourceType == 'partners' &&
+          (exStatus == 'active' ||
+              exStatus == 'approved' ||
+              exMeta['approval_status']?.toString().toLowerCase() == 'approved' ||
+              exMeta['locked_after_approval'] == true);
+      final isLockedSyncedMou = widget.resourceType == 'documents' &&
+          ((exMeta['partner_resource_id']?.toString().trim().isNotEmpty ?? false) ||
+              exMeta['locked_after_approval'] == true);
+      if (isLockedApprovedPartner || isLockedSyncedMou) {
+        AppSweetAlert.warning(
+          context,
+          'Kemitraan dan berkas MoU yang telah disetujui tidak dapat diubah lagi.',
+          title: 'Dokumen Terkunci',
+        );
+        return;
+      }
+    }
+
     if (existing == null && !_canCreateResource) {
       if (widget.resourceType == 'documents') {
         AppSweetAlert.info(
           context,
-          'Dokumen MoU diterbitkan secara otomatis setelah pengajuan kemitraan di menu Mitra Industri disetujui oleh Corporate.',
+          'Dokumen MoU diterbitkan secara otomatis setelah pengajuan kemitraan disetujui oleh pihak mitra penerima.',
           title: 'Penerbitan Dokumen Otomatis',
         );
         return;
@@ -818,50 +839,213 @@ class _InstitutionWorkspaceScreenState
     }
   }
 
-  void _openOfficialDocument(Map<String, dynamic> record) {
-    OfficialDocumentViewerDialog.show(
-      context,
-      document: record,
-      isGovernment: _isGovernment,
-    );
+  Future<void> _openOfficialDocument(
+    Map<String, dynamic> record, {
+    Map<String, dynamic>? specificFile,
+  }) async {
+    final meta = _metadata(record);
+
+    if (specificFile != null) {
+      final rawUrl = specificFile['url']?.toString().trim() ?? '';
+      if (rawUrl.isNotEmpty) {
+        await _launchOriginalFileUrl(rawUrl);
+        return;
+      }
+    }
+
+    final files = _extractMouFiles(meta);
+    if (files.length == 1) {
+      await _launchOriginalFileUrl(files.first['url']!.toString());
+      return;
+    }
+
+    if (files.length > 1) {
+      if (!mounted) return;
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      final accent = _resolvedAccentColor;
+      final docTitle = record['title']?.toString().trim().isNotEmpty == true
+          ? record['title'].toString().trim()
+          : 'Berkas Kerjasama Asli';
+
+      await showDialog<void>(
+        context: context,
+        builder: (dialogCtx) => AlertDialog(
+          backgroundColor: isDark ? const Color(0xFF1A162D) : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          titlePadding: const EdgeInsets.fromLTRB(20, 18, 16, 8),
+          contentPadding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+          title: Row(
+            children: [
+              Icon(Icons.folder_open_rounded, color: accent, size: 22),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Berkas Kerjasama Asli (${files.length})',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      ),
+                    ),
+                    Text(
+                      docTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: () => Navigator.of(dialogCtx).pop(),
+                icon: const Icon(Icons.close_rounded, size: 20),
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 460,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (int i = 0; i < files.length; i++)
+                  Container(
+                    margin: EdgeInsets.only(bottom: i < files.length - 1 ? 8 : 0),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF231F3A) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF383457) : const Color(0xFFE2E8F0),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.insert_drive_file_outlined, color: accent, size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                files[i]['filename']?.toString() ?? 'Berkas ${i + 1}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                ),
+                              ),
+                              Text(
+                                '${(files[i]['extension'] ?? 'PDF').toString().toUpperCase()} • ${files[i]['filesize'] ?? 'Dokumen Asli'}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        FilledButton.icon(
+                          onPressed: () {
+                            Navigator.of(dialogCtx).pop();
+                            _launchOriginalFileUrl(files[i]['url'].toString());
+                          },
+                          icon: const Icon(Icons.open_in_new_rounded, size: 14),
+                          label: const Text('Buka Berkas', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: accent,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            visualDensity: VisualDensity.compact,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+
+    final fallbackUrl = (meta['url'] ??
+            meta['file_url'] ??
+            meta['mou_url'] ??
+            record['url'] ??
+            record['file_url'] ??
+            '')
+        .toString()
+        .trim();
+
+    if (fallbackUrl.isNotEmpty) {
+      await _launchOriginalFileUrl(fallbackUrl);
+      return;
+    }
+
+    if (widget.resourceType == 'reports') {
+      if (!mounted) return;
+      OfficialDocumentViewerDialog.show(
+        context,
+        document: record,
+        isGovernment: _isGovernment,
+      );
+      return;
+    }
+
+    if (mounted) {
+      AppSweetAlert.warning(
+        context,
+        'Berkas dokumen asli belum tersedia atau belum diunggah.',
+        title: 'Berkas Tidak Tersedia',
+      );
+    }
+  }
+
+  Future<void> _launchOriginalFileUrl(String rawUrl) async {
+    final trimmed = rawUrl.trim();
+    if (trimmed.isEmpty) return;
+
+    final resolved = ApiService.resolveAssetUrl(trimmed);
+    final candidate = resolved.isNotEmpty ? resolved : trimmed;
+
+    try {
+      final uri = Uri.parse(candidate);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        return;
+      }
+      final fallbackUri = Uri.parse(trimmed);
+      if (await canLaunchUrl(fallbackUri)) {
+        await launchUrl(fallbackUri, mode: LaunchMode.externalApplication);
+        return;
+      }
+    } catch (_) {}
+
+    if (mounted) {
+      AppSweetAlert.error(
+        context,
+        'Tidak dapat membuka berkas dokumen: $candidate',
+        title: 'Gagal Membuka Berkas',
+      );
+    }
   }
 
   Future<void> _launchUrl(String? urlStr, {Map<String, dynamic>? record}) async {
     if (urlStr == null || urlStr.trim().isEmpty) return;
-    final trimmed = urlStr.trim();
-
-    // Intercept internal/mock docs or docs.kreavana.id to show authentic official viewer
-    if (trimmed.contains('docs.kreavana.id') || trimmed.endsWith('.pdf')) {
-      if (mounted) {
-        _openOfficialDocument(record ?? {
-          'title': 'Dokumen Resmi',
-          'description': 'Dokumen elektronik resmi terverifikasi instansi.',
-          'metadata': {'url': trimmed},
-        });
-      }
-      return;
-    }
-
-    try {
-      final uri = Uri.parse(trimmed);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        if (mounted) {
-          _openOfficialDocument(record ?? {
-            'title': 'Dokumen Resmi',
-            'metadata': {'url': trimmed},
-          });
-        }
-      }
-    } catch (_) {
-      if (mounted) {
-        _openOfficialDocument(record ?? {
-          'title': 'Dokumen Resmi',
-          'metadata': {'url': trimmed},
-        });
-      }
-    }
+    await _launchOriginalFileUrl(urlStr);
   }
 
   Color get _resolvedAccentColor {
@@ -1125,13 +1309,17 @@ class _InstitutionWorkspaceScreenState
                                           size: 14,
                                         ),
                                         const SizedBox(width: 6),
-                                        Text(
-                                          _getHeroAuthorityBadge(widget.resourceType),
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
-                                            letterSpacing: 0.3,
+                                        Flexible(
+                                          child: Text(
+                                            _getHeroAuthorityBadge(widget.resourceType),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              letterSpacing: 0.3,
+                                            ),
                                           ),
                                         ),
                                       ],
@@ -1998,6 +2186,26 @@ class _InstitutionWorkspaceScreenState
     return files;
   }
 
+  static bool _isCorporateRoleValue(String? role) {
+    final normalized = (role ?? '').trim().toLowerCase();
+    return ['corporate', 'company', 'business', 'perusahaan', 'bisnis', 'enterprise', 'b2b'].contains(normalized);
+  }
+
+  static bool _isInstitutionRoleValue(String? role) {
+    final normalized = (role ?? '').trim().toLowerCase();
+    return ['institution', 'school', 'sekolah', 'kampus', 'education', 'institusi', 'smk', 'universitas'].contains(normalized);
+  }
+
+  static String _firstNonEmpty(List<dynamic> candidates) {
+    for (final item in candidates) {
+      final value = (item ?? '').toString().trim();
+      if (value.isNotEmpty && value.toLowerCase() != 'null') {
+        return value;
+      }
+    }
+    return '';
+  }
+
   Widget _buildPartnerCard(Map<String, dynamic> record, bool isDark) {
     final meta = _metadata(record);
     final status = record['status']?.toString().toLowerCase() ?? 'active';
@@ -2008,16 +2216,110 @@ class _InstitutionWorkspaceScreenState
     final ownerMap = record['owner'] is Map
         ? Map<String, dynamic>.from(record['owner'] as Map)
         : <String, dynamic>{};
-    final institutionName =
-        (meta['institution_name'] ?? ownerMap['name'] ?? '').toString().trim();
-    final institutionUsername =
-        (meta['institution_username'] ?? ownerMap['username'] ?? '').toString().trim();
-    final corpUsername = (meta['corporate_username'] ?? '').toString().trim();
-    final isIncomingForCorporate = _isCorporate &&
-        record['user_id']?.toString() != widget.user.id.toString() &&
-        institutionName.isNotEmpty;
+    final recipientMap = record['recipient'] is Map
+        ? Map<String, dynamic>.from(record['recipient'] as Map)
+        : <String, dynamic>{};
 
-    final displayTitle = isIncomingForCorporate ? institutionName : title;
+    final myId = widget.user.id.toString().trim();
+    final myUsername = widget.user.username.trim().toLowerCase();
+    final senderId = _firstNonEmpty([meta['sender_user_id'], record['user_id']]);
+    final targetId = _firstNonEmpty([meta['target_user_id']]);
+    final senderUsername = _firstNonEmpty([meta['sender_username'], ownerMap['username']]).toLowerCase();
+    final targetUsername = _firstNonEmpty([meta['target_username'], recipientMap['username']]).toLowerCase();
+    final senderRole = _firstNonEmpty([meta['sender_role'], ownerMap['sub_role']]);
+    final targetRole = _firstNonEmpty([meta['target_role'], recipientMap['sub_role']]);
+
+    final bool isIncomingProposal;
+    if (record.containsKey('viewer_is_recipient')) {
+      isIncomingProposal = record['viewer_is_recipient'] == true;
+    } else if (targetId.isNotEmpty || targetUsername.isNotEmpty) {
+      final matchesTarget = (targetId.isNotEmpty && targetId == myId) ||
+          (myUsername.isNotEmpty && targetUsername == myUsername);
+      final matchesSender = (senderId.isNotEmpty && senderId == myId) ||
+          (myUsername.isNotEmpty && senderUsername == myUsername);
+      if (matchesTarget && !matchesSender) {
+        isIncomingProposal = true;
+      } else if (matchesSender) {
+        isIncomingProposal = false;
+      } else {
+        isIncomingProposal = (_isCorporate && _isInstitutionRoleValue(senderRole)) ||
+            (_isSchool && _isCorporateRoleValue(senderRole));
+      }
+    } else {
+      final instNameLegacy = _firstNonEmpty([meta['institution_name'], ownerMap['name']]);
+      final corpNameLegacy = _firstNonEmpty([meta['corporate_name'], ownerMap['name']]);
+      isIncomingProposal = (record['user_id']?.toString() != myId) &&
+          ((_isCorporate && instNameLegacy.isNotEmpty) || (_isSchool && corpNameLegacy.isNotEmpty));
+    }
+
+    final canReviewProposal = record.containsKey('viewer_can_review')
+        ? record['viewer_can_review'] == true
+        : isIncomingProposal;
+
+    final senderIsCorporate = _isCorporateRoleValue(senderRole) ||
+        (_isSchool && isIncomingProposal && !_isInstitutionRoleValue(senderRole));
+    final targetIsInstitution = _isInstitutionRoleValue(targetRole) ||
+        (_isCorporate && !isIncomingProposal && (meta['institution_user_id'] != null && meta['institution_user_id'].toString() != myId));
+
+    final counterpartyName = isIncomingProposal
+        ? _firstNonEmpty([
+            meta['sender_name'],
+            ownerMap['name'],
+            senderIsCorporate ? meta['corporate_name'] : meta['institution_name'],
+            title,
+          ])
+        : _firstNonEmpty([
+            meta['target_name'],
+            recipientMap['name'],
+            title,
+          ]);
+
+    final counterpartyUsername = isIncomingProposal
+        ? _firstNonEmpty([
+            meta['sender_username'],
+            ownerMap['username'],
+            senderIsCorporate ? meta['corporate_username'] : meta['institution_username'],
+          ])
+        : _firstNonEmpty([
+            meta['target_username'],
+            recipientMap['username'],
+            targetIsInstitution ? meta['institution_username'] : meta['corporate_username'],
+          ]);
+
+    final phone = isIncomingProposal
+        ? _firstNonEmpty([
+            meta['sender_phone'],
+            ownerMap['phone'],
+            senderIsCorporate ? meta['corporate_phone'] : meta['institution_phone'],
+            meta['phone'],
+            meta['telepon'],
+          ])
+        : _firstNonEmpty([
+            meta['target_phone'],
+            recipientMap['phone'],
+            targetIsInstitution ? meta['institution_phone'] : meta['corporate_phone'],
+            meta['phone'],
+            meta['telepon'],
+          ]);
+
+    final contact = isIncomingProposal
+        ? _firstNonEmpty([
+            meta['sender_email'],
+            ownerMap['email'],
+            senderIsCorporate ? meta['corporate_email'] : meta['institution_email'],
+            meta['contact'],
+            meta['email'],
+          ])
+        : _firstNonEmpty([
+            meta['target_email'],
+            recipientMap['email'],
+            targetIsInstitution ? meta['institution_email'] : meta['corporate_email'],
+            meta['contact'],
+            meta['email'],
+          ]);
+
+    final primaryContact = phone.isNotEmpty ? phone : contact;
+    final displayTitle = counterpartyName.isNotEmpty ? counterpartyName : title;
     final mouFiles = _extractMouFiles(meta);
 
     if (desc.trim().isEmpty) {
@@ -2027,8 +2329,6 @@ class _InstitutionWorkspaceScreenState
     final category =
         (meta['category']?.toString() ?? meta['bidang']?.toString() ?? '')
             .trim();
-    final contact =
-        (meta['contact']?.toString() ?? meta['email']?.toString() ?? '').trim();
 
     final picName =
         (meta['pic_name']?.toString() ?? meta['pic']?.toString() ?? '').trim();
@@ -2037,10 +2337,7 @@ class _InstitutionWorkspaceScreenState
             .trim();
     final picDisplay = picName.isNotEmpty
         ? (picRole.isNotEmpty ? '$picName ($picRole)' : picName)
-        : (contact.isNotEmpty ? contact : '');
-
-    final phone =
-        (meta['phone']?.toString() ?? meta['telepon']?.toString() ?? '').trim();
+        : '';
 
     final mouNumber =
         (meta['mou_number']?.toString() ?? meta['nomor_mou']?.toString() ?? '')
@@ -2062,13 +2359,13 @@ class _InstitutionWorkspaceScreenState
     final website =
         (meta['website']?.toString() ?? meta['url']?.toString() ?? '').trim();
 
-    final subtitleLabel = isIncomingForCorporate
-        ? (institutionUsername.isNotEmpty
-            ? '@$institutionUsername • Pengajuan Kemitraan Institusi'
-            : 'Pengajuan Kemitraan Institusi')
+    final subtitleLabel = isIncomingProposal
+        ? (counterpartyUsername.isNotEmpty
+            ? '@$counterpartyUsername • ${senderIsCorporate ? 'Pengajuan Kemitraan Corporate' : 'Pengajuan Kemitraan Institusi'}'
+            : (senderIsCorporate ? 'Pengajuan Kemitraan Corporate' : 'Pengajuan Kemitraan Institusi'))
         : (category.isNotEmpty
             ? category
-            : (corpUsername.isNotEmpty ? '@$corpUsername' : ''));
+            : (counterpartyUsername.isNotEmpty ? '@$counterpartyUsername' : ''));
 
     final normalizedRecord = Map<String, dynamic>.from(record);
     final normalizedMeta = Map<String, dynamic>.from(meta);
@@ -2085,10 +2382,14 @@ class _InstitutionWorkspaceScreenState
     normalizedRecord['metadata'] = normalizedMeta;
 
     // Status styling
-    final isPublishedOrActive = status == 'active' || status == 'published' || status == 'approved';
-    final isPending = status == 'pending';
+    final isPublishedOrActive = status == 'active' ||
+        status == 'published' ||
+        status == 'approved' ||
+        meta['approval_status']?.toString().toLowerCase() == 'approved';
+    final isPending = status == 'pending' && !isPublishedOrActive;
     final isDraft = status == 'draft';
     final isRejected = status == 'rejected';
+    final canEditPartner = !isIncomingProposal && !isPublishedOrActive;
 
     final Color statusBg = isPublishedOrActive
         ? const Color(0xFFECFDF5)
@@ -2108,18 +2409,24 @@ class _InstitutionWorkspaceScreenState
     final String statusText = isPublishedOrActive
         ? 'MoU Aktif / Siap Kerjasama'
         : (isPending
-            ? (_isCorporate ? 'Menunggu Persetujuan Anda' : 'Menunggu Persetujuan Corporate')
+            ? (isIncomingProposal
+                ? 'Menunggu Persetujuan Anda'
+                : 'Menunggu Persetujuan Mitra')
             : (isDraft ? 'Tahap Inisiasi MoU' : (isRejected ? 'Pengajuan Ditolak' : 'Arsip Kemitraan')));
 
+    final counterpartyIsInstitutionSide = isIncomingProposal
+        ? !senderIsCorporate
+        : targetIsInstitution;
     final initials = _getPartnerMonogram(displayTitle);
     final gradientColors = _getPartnerGradient(category, displayTitle);
-    final categoryIcon = isIncomingForCorporate ? Icons.school_outlined : _getCategoryIcon(category);
-    final logoPath = isIncomingForCorporate ? null : _resolvePartnerLogo(title, meta);
-    final networkUrl = isIncomingForCorporate
-        ? (ownerMap['avatar_url']?.toString().trim().isNotEmpty == true
-            ? ApiService.resolveAssetUrl(ownerMap['avatar_url']?.toString())
-            : null)
-        : _resolvePartnerNetworkLogo(title, meta);
+    final categoryIcon = counterpartyIsInstitutionSide ? Icons.school_outlined : _getCategoryIcon(category);
+    final counterpartyAvatar = isIncomingProposal
+        ? ownerMap['avatar_url']?.toString().trim()
+        : recipientMap['avatar_url']?.toString().trim();
+    final logoPath = isIncomingProposal ? null : _resolvePartnerLogo(displayTitle, meta);
+    final networkUrl = (counterpartyAvatar != null && counterpartyAvatar.isNotEmpty)
+        ? ApiService.resolveAssetUrl(counterpartyAvatar)
+        : (isIncomingProposal ? null : _resolvePartnerNetworkLogo(displayTitle, meta));
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -2200,7 +2507,7 @@ class _InstitutionWorkspaceScreenState
                               border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
                             ),
                             child: Text(
-                              isIncomingForCorporate ? 'Institusi Mitra' : 'Mitra DUDI',
+                              counterpartyIsInstitutionSide ? 'Institusi Mitra' : (isIncomingProposal ? 'Corporate Mitra' : 'Mitra DUDI'),
                               style: TextStyle(
                                 fontSize: 10.5,
                                 fontWeight: FontWeight.w600,
@@ -2266,8 +2573,8 @@ class _InstitutionWorkspaceScreenState
                     ],
                   ),
                 ),
-                // Actions PopupMenu (for record owner)
-                if (!isIncomingForCorporate)
+                // Actions PopupMenu (for creator/sender; edit locked after approval)
+                if (!isIncomingProposal)
                   PopupMenuButton<String>(
                     icon: Icon(Icons.more_vert_rounded, color: isDark ? const Color(0xFF94A3B8) : Colors.grey.shade500),
                     color: isDark ? const Color(0xFF1E1B2E) : Colors.white,
@@ -2281,35 +2588,47 @@ class _InstitutionWorkspaceScreenState
                     onSelected: (value) {
                       if (value == 'edit') _openEditor(normalizedRecord);
                       if (value == 'delete') _deleteRecord(record);
-                      if (value == 'contact') _copyOrLaunchContact(contact);
+                      if (value == 'contact') _copyOrLaunchContact(primaryContact);
                     },
-                    itemBuilder: (_) => [
-                      _buildPopupActionItem(
-                        value: 'edit',
-                        icon: Icons.edit_outlined,
-                        label: 'Edit Data Mitra',
-                        isDark: isDark,
-                        color: accentColor,
-                      ),
-                      if (contact.isNotEmpty) ...[
-                        _buildPopupDivider(),
-                        _buildPopupActionItem(
-                          value: 'contact',
-                          icon: Icons.copy_rounded,
-                          label: 'Salin Kontak PIC',
-                          isDark: isDark,
-                          color: const Color(0xFF059669),
-                        ),
-                      ],
-                      _buildPopupDivider(),
-                      _buildPopupActionItem(
-                        value: 'delete',
-                        icon: Icons.delete_outline_rounded,
-                        label: 'Hapus Permanen',
-                        isDark: isDark,
-                        isDestructive: true,
-                      ),
-                    ],
+                    itemBuilder: (_) {
+                      final items = <PopupMenuEntry<String>>[];
+                      if (canEditPartner) {
+                        items.add(
+                          _buildPopupActionItem(
+                            value: 'edit',
+                            icon: Icons.edit_outlined,
+                            label: 'Edit Data Mitra',
+                            isDark: isDark,
+                            color: accentColor,
+                          ),
+                        );
+                      }
+                      if (primaryContact.isNotEmpty) {
+                        if (items.isNotEmpty) items.add(_buildPopupDivider());
+                        items.add(
+                          _buildPopupActionItem(
+                            value: 'contact',
+                            icon: Icons.copy_rounded,
+                            label: 'Salin Kontak Mitra',
+                            isDark: isDark,
+                            color: const Color(0xFF059669),
+                          ),
+                        );
+                      }
+                      if (!isPublishedOrActive) {
+                        if (items.isNotEmpty) items.add(_buildPopupDivider());
+                        items.add(
+                          _buildPopupActionItem(
+                            value: 'delete',
+                            icon: Icons.delete_outline_rounded,
+                            label: 'Hapus Permanen',
+                            isDark: isDark,
+                            isDestructive: true,
+                          ),
+                        );
+                      }
+                      return items;
+                    },
                   ),
               ],
             ),
@@ -2330,6 +2649,7 @@ class _InstitutionWorkspaceScreenState
 
           // 3. KEY HIGHLIGHTS / METADATA TILES (Clean & Restrained, no blank '-' clutter)
           if (picDisplay.isNotEmpty ||
+              phone.isNotEmpty ||
               contact.isNotEmpty ||
               mouDisplay.isNotEmpty ||
               quotaDisplay.isNotEmpty ||
@@ -2349,7 +2669,16 @@ class _InstitutionWorkspaceScreenState
                       color: const Color(0xFF475569),
                       isDark: isDark,
                     ),
-                  if (contact.isNotEmpty)
+                  if (phone.isNotEmpty)
+                    _buildInfoBadge(
+                      icon: Icons.phone_outlined,
+                      label: 'Telepon:',
+                      value: phone,
+                      color: const Color(0xFF059669),
+                      isDark: isDark,
+                      onTap: () => _copyOrLaunchContact(phone),
+                    ),
+                  if (contact.isNotEmpty && contact != phone)
                     _buildInfoBadge(
                       icon: Icons.mail_outline_rounded,
                       label: 'Kontak:',
@@ -2381,21 +2710,10 @@ class _InstitutionWorkspaceScreenState
                       value: mouFiles[i]['filename']?.toString() ?? 'Dokumen MoU Terlampir',
                       color: accentColor,
                       isDark: isDark,
-                      onTap: () => _openOfficialDocument({
-                        'title': 'Perjanjian Kerjasama (MoU) - $displayTitle',
-                        'description': desc,
-                        'status': status,
-                        'metadata': {
-                          'url': mouFiles[i]['url'],
-                          'file_name': mouFiles[i]['filename'],
-                          'file_size': mouFiles[i]['filesize'],
-                          'file_format': (mouFiles[i]['extension'] ?? 'PDF').toString().toUpperCase(),
-                          'mou_files': mouFiles,
-                          if (mouDisplay.isNotEmpty) 'doc_number': mouDisplay,
-                          'partner_name': title,
-                          if (institutionName.isNotEmpty) 'institution_name': institutionName,
-                        },
-                      }),
+                      onTap: () => _openOfficialDocument(
+                        normalizedRecord,
+                        specificFile: mouFiles[i],
+                      ),
                     ),
                 ],
               ),
@@ -2411,161 +2729,162 @@ class _InstitutionWorkspaceScreenState
             child: Row(
               children: [
                 // Left: Vokasi Sync Label
-                Row(
-                  children: [
-                    Icon(Icons.shield_outlined, size: 14, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
-                    const SizedBox(width: 5),
-                    Text(
-                      isIncomingForCorporate
-                          ? 'Pengajuan Resmi Mitra Institusi Kreavana'
-                          : 'Terverifikasi Direktori Vokasi & DUDI',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                        fontWeight: FontWeight.w500,
+                Expanded(
+                  child: Row(
+                    children: [
+                      Icon(Icons.shield_outlined, size: 14, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Text(
+                          isIncomingProposal
+                              ? 'Pengajuan Resmi Mitra Kreavana'
+                              : (isPublishedOrActive
+                                  ? 'MoU Disetujui & Terkunci Permanen'
+                                  : 'Terverifikasi Direktori Vokasi & DUDI'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 10),
                 // Right Action Buttons
-                if (mouFiles.isNotEmpty) ...[
-                  InkWell(
-                    onTap: () => _openOfficialDocument({
-                      'title': 'Perjanjian Kerjasama (MoU) - $displayTitle',
-                      'description': desc,
-                      'status': status,
-                      'metadata': {
-                        'url': mouFiles.first['url'],
-                        'file_name': mouFiles.first['filename'],
-                        'file_size': mouFiles.first['filesize'],
-                        'file_format': (mouFiles.first['extension'] ?? 'PDF').toString().toUpperCase(),
-                        'mou_files': mouFiles,
-                        if (mouDisplay.isNotEmpty) 'doc_number': mouDisplay,
-                        'partner_name': title,
-                        if (institutionName.isNotEmpty) 'institution_name': institutionName,
-                      },
-                    }),
-                    borderRadius: BorderRadius.circular(6),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: accentColor.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: accentColor.withValues(alpha: 0.25)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.description_outlined, size: 13, color: accentColor),
-                          const SizedBox(width: 5),
-                          Text(
-                            mouFiles.length > 1
-                                ? 'Dokumen MoU (${mouFiles.length} Berkas)'
-                                : 'Dokumen MoU',
-                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: accentColor),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                if (website.isNotEmpty) ...[
-                  InkWell(
-                    onTap: () => _launchUrl(website),
-                    borderRadius: BorderRadius.circular(6),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.language_rounded, size: 13, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569)),
-                          const SizedBox(width: 5),
-                          Text(
-                            'Website',
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w600,
-                              color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                Flexible(
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    alignment: WrapAlignment.end,
+                    children: [
+                      if (mouFiles.isNotEmpty)
+                        InkWell(
+                          onTap: () => _openOfficialDocument(normalizedRecord),
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: accentColor.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: accentColor.withValues(alpha: 0.25)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.description_outlined, size: 13, color: accentColor),
+                                const SizedBox(width: 5),
+                                Text(
+                                  mouFiles.length > 1
+                                      ? 'Dokumen MoU (${mouFiles.length} Berkas)'
+                                      : 'Dokumen MoU',
+                                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: accentColor),
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(width: 3),
-                          Icon(Icons.open_in_new_rounded, size: 11, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                if (contact.isNotEmpty) ...[
-                  InkWell(
-                    onTap: () => _copyOrLaunchContact(contact),
-                    borderRadius: BorderRadius.circular(6),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.chat_bubble_outline_rounded, size: 13, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569)),
-                          const SizedBox(width: 5),
-                          Text(
-                            'Kontak',
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w600,
-                              color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                        ),
+                      if (website.isNotEmpty)
+                        InkWell(
+                          onTap: () => _launchUrl(website),
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.language_rounded, size: 13, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569)),
+                                const SizedBox(width: 5),
+                                Text(
+                                  'Website',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                                  ),
+                                ),
+                                const SizedBox(width: 3),
+                                Icon(Icons.open_in_new_rounded, size: 11, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                if (!isIncomingForCorporate)
-                  InkWell(
-                    onTap: () => _openEditor(normalizedRecord),
-                    borderRadius: BorderRadius.circular(6),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.edit_outlined, size: 13, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
-                          const SizedBox(width: 5),
-                          Text(
-                            'Kelola',
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w600,
-                              color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                        ),
+                      if (primaryContact.isNotEmpty)
+                        InkWell(
+                          onTap: () => _copyOrLaunchContact(primaryContact),
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  phone.isNotEmpty ? Icons.phone_outlined : Icons.chat_bubble_outline_rounded,
+                                  size: 13,
+                                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  'Kontak',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
-                    ),
+                        ),
+                      if (canEditPartner)
+                        InkWell(
+                          onTap: () => _openEditor(normalizedRecord),
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.edit_outlined, size: 13, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                                const SizedBox(width: 5),
+                                Text(
+                                  'Kelola',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
+                ),
               ],
             ),
           ),
 
-          // 5. CORPORATE APPROVAL / PENDING BANNER
+          // 5. PENDING PROPOSAL REVIEW / STATUS BANNER
           if (isPending)
             Container(
               margin: const EdgeInsets.fromLTRB(16, 0, 16, 14),
@@ -2584,49 +2903,51 @@ class _InstitutionWorkspaceScreenState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          _isCorporate
+                          isIncomingProposal
                               ? 'Pengajuan Kemitraan Menunggu Persetujuan Anda'
-                              : 'Pengajuan Kemitraan Menunggu Persetujuan Pihak Corporate',
+                              : 'Pengajuan Kemitraan Menunggu Persetujuan Mitra',
                           style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF92400E)),
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          _isCorporate
-                              ? 'Setelah disetujui, status kemitraan aktif dan dokumen MoU otomatis diterbitkan ke menu "Dokumen & MoU".'
-                              : 'Saat pihak Corporate menyetujui, kemitraan aktif dan berkas MoU otomatis terbit di menu "Dokumen & MoU".',
+                          isIncomingProposal
+                              ? 'Tinjau deskripsi dan berkas asli dari pengirim. Setelah disetujui, status kemitraan aktif dan berkas MoU otomatis diterbitkan.'
+                              : 'Saat pihak mitra penerima menyetujui, kemitraan aktif dan berkas MoU otomatis terbit di menu "Dokumen & MoU".',
                           style: TextStyle(fontSize: 11, color: Colors.amber.shade900),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  OutlinedButton(
-                    onPressed: () => _rejectPartnerProposal(record),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFFDC2626),
-                      side: const BorderSide(color: Color(0xFFFCA5A5)),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                      visualDensity: VisualDensity.compact,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                  if (isIncomingProposal && canReviewProposal) ...[
+                    const SizedBox(width: 10),
+                    OutlinedButton(
+                      onPressed: () => _rejectPartnerProposal(record),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFFDC2626),
+                        side: const BorderSide(color: Color(0xFFFCA5A5)),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                        visualDensity: VisualDensity.compact,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                      ),
+                      child: const Text('Tolak', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
                     ),
-                    child: const Text('Tolak', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton.icon(
-                    icon: const Icon(Icons.check_circle_outline_rounded, size: 15),
-                    onPressed: () => _approvePartnerProposal(record),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF059669),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                      visualDensity: VisualDensity.compact,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                    const SizedBox(width: 8),
+                    FilledButton.icon(
+                      icon: const Icon(Icons.check_circle_outline_rounded, size: 15),
+                      onPressed: () => _approvePartnerProposal(record),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF059669),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                        visualDensity: VisualDensity.compact,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                      ),
+                      label: const Text(
+                        'Setujui Kemitraan',
+                        style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
+                      ),
                     ),
-                    label: Text(
-                      _isCorporate ? 'Setujui Kemitraan' : 'Setujui (Simulasi)',
-                      style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
-                    ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -2986,52 +3307,76 @@ class _InstitutionWorkspaceScreenState
                       ),
                     ),
                     const SizedBox(width: 12),
-                    // Action Popup Menu
-                    PopupMenuButton<String>(
-                      icon: Icon(Icons.more_vert_rounded, color: isDark ? const Color(0xFF94A3B8) : Colors.grey.shade500),
-                      color: isDark ? const Color(0xFF1E1B2E) : Colors.white,
-                      elevation: 6,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        side: BorderSide(
-                          color: isDark ? const Color(0xFF2D2A42) : const Color(0xFFE2E8F0),
+                    // Action Popup Menu (lock edit for approved synced MoUs and incoming records)
+                    Builder(builder: (_) {
+                      final isLockedMou = (meta['partner_resource_id']?.toString().trim().isNotEmpty ?? false) ||
+                          meta['locked_after_approval'] == true;
+                      final myDocUserId = widget.user.id.toString();
+                      final docTargetId = meta['target_user_id']?.toString() ?? '';
+                      final isIncomingDoc = record['user_id']?.toString() != myDocUserId &&
+                          (docTargetId == myDocUserId ||
+                              (_isCorporate && meta['corporate_user_id']?.toString() == myDocUserId) ||
+                              (_isSchool && meta['institution_user_id']?.toString() == myDocUserId));
+                      final canEditDoc = !isLockedMou && !isIncomingDoc;
+                      final canDeleteDoc = !isIncomingDoc && !isLockedMou;
+
+                      return PopupMenuButton<String>(
+                        icon: Icon(Icons.more_vert_rounded, color: isDark ? const Color(0xFF94A3B8) : Colors.grey.shade500),
+                        color: isDark ? const Color(0xFF1E1B2E) : Colors.white,
+                        elevation: 6,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          side: BorderSide(
+                            color: isDark ? const Color(0xFF2D2A42) : const Color(0xFFE2E8F0),
+                          ),
                         ),
-                      ),
-                      onSelected: (value) {
-                        if (value == 'open') {
-                          _openOfficialDocument(record);
-                        } else if (value == 'edit') {
-                          _openEditor(record);
-                        } else if (value == 'delete') {
-                          _deleteRecord(record);
-                        }
-                      },
-                      itemBuilder: (_) => [
-                        _buildPopupActionItem(
-                          value: 'open',
-                          icon: Icons.open_in_new_rounded,
-                          label: 'Buka Dokumen Resmi',
-                          isDark: isDark,
-                          color: accentColor,
-                        ),
-                        _buildPopupDivider(),
-                        _buildPopupActionItem(
-                          value: 'edit',
-                          icon: Icons.edit_outlined,
-                          label: 'Edit Berkas',
-                          isDark: isDark,
-                          color: accentColor,
-                        ),
-                        _buildPopupDivider(),
-                        _buildPopupActionItem(
-                          value: 'delete',
-                          icon: Icons.delete_outline_rounded,
-                          label: 'Hapus Permanen',
-                          isDark: isDark,
-                          isDestructive: true,
-                        ),
-                      ],
-                    ),
+                        onSelected: (value) {
+                          if (value == 'open') {
+                            _openOfficialDocument(record);
+                          } else if (value == 'edit') {
+                            _openEditor(record);
+                          } else if (value == 'delete') {
+                            _deleteRecord(record);
+                          }
+                        },
+                        itemBuilder: (_) {
+                          final items = <PopupMenuEntry<String>>[
+                            _buildPopupActionItem(
+                              value: 'open',
+                              icon: Icons.open_in_new_rounded,
+                              label: 'Buka Dokumen Resmi',
+                              isDark: isDark,
+                              color: accentColor,
+                            ),
+                          ];
+                          if (canEditDoc) {
+                            items.add(_buildPopupDivider());
+                            items.add(
+                              _buildPopupActionItem(
+                                value: 'edit',
+                                icon: Icons.edit_outlined,
+                                label: 'Edit Berkas',
+                                isDark: isDark,
+                                color: accentColor,
+                              ),
+                            );
+                          }
+                          if (canDeleteDoc) {
+                            items.add(_buildPopupDivider());
+                            items.add(
+                              _buildPopupActionItem(
+                                value: 'delete',
+                                icon: Icons.delete_outline_rounded,
+                                label: 'Hapus Permanen',
+                                isDark: isDark,
+                                isDestructive: true,
+                              ),
+                            );
+                          }
+                          return items;
+                        },
+                      );
+                    }),
                   ],
                 ),
               ),
@@ -6255,12 +6600,26 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
 
     if (widget.resourceType == 'partners') {
       _fetchCorporates('');
-      if (meta['corporate_user_id'] != null) {
+      final targetUserId = meta['target_user_id'] ??
+          (_isCorporateCaller ? meta['institution_user_id'] : meta['corporate_user_id']);
+      if (targetUserId != null) {
         _selectedCorporate = {
-          'id': meta['corporate_user_id'],
-          'name': meta['corporate_name'] ?? existing?['title'],
-          'username': meta['corporate_username'] ?? '',
-          'avatar_url': meta['corporate_avatar'],
+          'id': targetUserId,
+          'name': meta['target_name'] ??
+              (_isCorporateCaller ? meta['institution_name'] : meta['corporate_name']) ??
+              existing?['title'],
+          'username': meta['target_username'] ??
+              (_isCorporateCaller ? meta['institution_username'] : meta['corporate_username']) ??
+              '',
+          'email': meta['target_email'] ??
+              (_isCorporateCaller ? meta['institution_email'] : meta['corporate_email']) ??
+              '',
+          'phone': meta['target_phone'] ??
+              (_isCorporateCaller ? meta['institution_phone'] : meta['corporate_phone']) ??
+              meta['phone'] ??
+              '',
+          'avatar_url': _isCorporateCaller ? meta['institution_avatar'] : meta['corporate_avatar'],
+          'selected_sub_role': meta['target_role'] ?? (_isCorporateCaller ? 'institution' : 'corporate'),
         };
       }
       final rawMouFiles = meta['mou_files'];
@@ -6499,7 +6858,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
       'resource_type': widget.resourceType,
       'title': _titleController.text.trim(),
       'description': _descriptionController.text.trim(),
-      'status': _status,
+      'status': (isPartnerResource && widget.existing == null) ? 'pending' : _status,
       'metadata': {
         ...baseMeta,
         if (!isPartnerResource)
@@ -6507,10 +6866,36 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
             if ((_controllers[field.key]?.text.trim() ?? '').isNotEmpty)
               field.key: _controllers[field.key]!.text.trim(),
         if (_selectedCorporate != null) ...{
-          'corporate_user_id': _selectedCorporate!['id'],
-          'corporate_name': _selectedCorporate!['name'],
-          'corporate_username': _selectedCorporate!['username'],
-          'corporate_avatar': _selectedCorporate!['avatar_url'],
+          'target_user_id': _selectedCorporate!['id'],
+          'target_name': _selectedCorporate!['name'],
+          'target_username': _selectedCorporate!['username'],
+          if ((_selectedCorporate!['email'] ?? '').toString().trim().isNotEmpty)
+            'target_email': _selectedCorporate!['email'],
+          if ((_selectedCorporate!['phone'] ?? '').toString().trim().isNotEmpty)
+            'target_phone': _selectedCorporate!['phone'],
+          if ((_selectedCorporate!['selected_sub_role'] ?? '').toString().trim().isNotEmpty)
+            'target_role': _selectedCorporate!['selected_sub_role'],
+          if (_isCorporateCaller) ...{
+            'institution_user_id': _selectedCorporate!['id'],
+            'institution_name': _selectedCorporate!['name'],
+            'institution_username': _selectedCorporate!['username'],
+            if ((_selectedCorporate!['email'] ?? '').toString().trim().isNotEmpty)
+              'institution_email': _selectedCorporate!['email'],
+            if ((_selectedCorporate!['phone'] ?? '').toString().trim().isNotEmpty)
+              'institution_phone': _selectedCorporate!['phone'],
+            'institution_avatar': _selectedCorporate!['avatar_url'],
+          } else ...{
+            'corporate_user_id': _selectedCorporate!['id'],
+            'corporate_name': _selectedCorporate!['name'],
+            'corporate_username': _selectedCorporate!['username'],
+            if ((_selectedCorporate!['email'] ?? '').toString().trim().isNotEmpty)
+              'corporate_email': _selectedCorporate!['email'],
+            if ((_selectedCorporate!['phone'] ?? '').toString().trim().isNotEmpty)
+              'corporate_phone': _selectedCorporate!['phone'],
+            'corporate_avatar': _selectedCorporate!['avatar_url'],
+          },
+          if ((_selectedCorporate!['phone'] ?? '').toString().trim().isNotEmpty)
+            'phone': _selectedCorporate!['phone'],
         },
         if (isPartnerResource) ...{
           'mou_files': _mouFiles,
@@ -6701,6 +7086,11 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
   }
 
   bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+
+  bool get _isCorporateCaller {
+    final subRole = widget.user?.subRole?.toLowerCase() ?? '';
+    return ['corporate', 'company', 'business', 'perusahaan', 'bisnis'].contains(subRole);
+  }
 
   bool get _isInstitution {
     final subRole = widget.user?.subRole?.toLowerCase() ?? '';
@@ -7137,10 +7527,22 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
   }
 
   Widget _buildCorporateSearchSection() {
+    final isCorpCaller = _isCorporateCaller;
+    final selectedRole = (_selectedCorporate?['selected_sub_role'] ?? '').toString().toLowerCase();
+    final selectedIsInstitution = selectedRole.isNotEmpty
+        ? ['institution', 'school', 'sekolah', 'kampus', 'education', 'institusi', 'smk', 'universitas'].contains(selectedRole)
+        : isCorpCaller;
+    final selectedPhone = (_selectedCorporate?['phone'] ?? '').toString().trim();
+    final selectedEmail = (_selectedCorporate?['email'] ?? '').toString().trim();
+
     return _buildFieldCardContainer(
-      title: '1. Cari PT / Akun Corporate Mitra',
-      subtitle: 'Cari perusahaan berdasarkan nama PT atau username (contoh: @corporate_demo).',
-      icon: Icons.business_rounded,
+      title: isCorpCaller
+          ? '1. Cari Institusi / Sekolah / Kampus Mitra'
+          : '1. Cari PT / Akun Corporate Mitra',
+      subtitle: isCorpCaller
+          ? 'Cari institusi pendidikan berdasarkan nama atau username (contoh: @smk_telesandi).'
+          : 'Cari perusahaan berdasarkan nama PT atau username (contoh: @corporate_demo).',
+      icon: isCorpCaller ? Icons.school_rounded : Icons.business_rounded,
       children: [
         if (_selectedCorporate != null) ...[
           Container(
@@ -7165,7 +7567,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                     child: Text(
                       _selectedCorporate!['name'] != null && _selectedCorporate!['name'].toString().isNotEmpty
                           ? _selectedCorporate!['name'].toString().substring(0, 1).toUpperCase()
-                          : 'C',
+                          : (isCorpCaller ? 'I' : 'C'),
                       style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
                     ),
                   ),
@@ -7179,7 +7581,8 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                         children: [
                           Flexible(
                             child: Text(
-                              _selectedCorporate!['name']?.toString() ?? 'Perusahaan Mitra',
+                              _selectedCorporate!['name']?.toString() ??
+                                  (selectedIsInstitution ? 'Institusi Mitra' : 'Perusahaan Mitra'),
                               style: TextStyle(
                                 fontWeight: FontWeight.w800,
                                 fontSize: 14,
@@ -7200,7 +7603,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                               ),
                             ),
                             child: Text(
-                              'Corporate Terverifikasi',
+                              selectedIsInstitution ? 'Institusi Terverifikasi' : 'Corporate Terverifikasi',
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,
@@ -7212,7 +7615,9 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '@${_selectedCorporate!['username'] ?? 'corporate'} • ${_selectedCorporate!['email'] ?? 'Akun Resmi Industri'}',
+                        '@${_selectedCorporate!['username'] ?? (selectedIsInstitution ? 'institution' : 'corporate')}'
+                        '${selectedEmail.isNotEmpty ? ' • $selectedEmail' : ''}'
+                        '${selectedPhone.isNotEmpty ? ' • $selectedPhone' : ''}',
                         style: TextStyle(
                           fontSize: 12,
                           color: _isDark ? const Color(0xFFCBD5E1) : Colors.grey.shade600,
@@ -7270,7 +7675,9 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
               }
             },
             decoration: _inputDecoration(
-              hint: 'Ketik nama PT/Perusahaan atau @username (contoh: @corporate_demo)...',
+              hint: isCorpCaller
+                  ? 'Ketik nama Institusi/Sekolah atau @username (contoh: @smk_telesandi)...'
+                  : 'Ketik nama PT/Perusahaan atau @username (contoh: @corporate_demo)...',
               prefixIcon: Icons.search_rounded,
               suffixIcon: _isLoadingCorporates
                   ? const Padding(
@@ -7311,14 +7718,17 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                 borderRadius: BorderRadius.circular(11.5),
                 clipBehavior: Clip.antiAlias,
                 child: _isLoadingCorporates && _corporateList.isEmpty
-                    ? const Padding(
-                        padding: EdgeInsets.all(16),
+                    ? Padding(
+                        padding: const EdgeInsets.all(16),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-                            SizedBox(width: 10),
-                            Text('Mencari akun Corporate...', style: TextStyle(fontSize: 12)),
+                            const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                            const SizedBox(width: 10),
+                            Text(
+                              isCorpCaller ? 'Mencari akun Institusi...' : 'Mencari akun Corporate...',
+                              style: const TextStyle(fontSize: 12),
+                            ),
                           ],
                         ),
                       )
@@ -7335,7 +7745,9 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
-                                    'Tidak ditemukan akun PT/Corporate yang cocok. Anda tetap dapat mengetik nama resmi PT di bawah.',
+                                    isCorpCaller
+                                        ? 'Tidak ditemukan akun Institusi yang cocok. Anda tetap dapat mengetik nama resmi institusi di bawah.'
+                                        : 'Tidak ditemukan akun PT/Corporate yang cocok. Anda tetap dapat mengetik nama resmi PT di bawah.',
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: _isDark ? const Color(0xFF94A3B8) : Colors.grey.shade600,
@@ -7354,10 +7766,11 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                             ),
                             itemBuilder: (context, idx) {
                               final corp = _corporateList[idx];
-                              final corpName = corp['name']?.toString() ?? 'Perusahaan';
+                              final corpName = corp['name']?.toString() ?? (isCorpCaller ? 'Institusi' : 'Perusahaan');
                               final corpUname = corp['username']?.toString() ?? '';
                               final corpEmail = corp['email']?.toString() ?? '';
-                              final initials = corpName.isNotEmpty ? corpName.substring(0, 1).toUpperCase() : 'C';
+                              final corpPhone = corp['phone']?.toString().trim() ?? '';
+                              final initials = corpName.isNotEmpty ? corpName.substring(0, 1).toUpperCase() : (isCorpCaller ? 'I' : 'C');
 
                               return ListTile(
                                 dense: true,
@@ -7388,7 +7801,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                                   ],
                                 ),
                                 subtitle: Text(
-                                  '@$corpUname${corpEmail.isNotEmpty ? ' • $corpEmail' : ''}',
+                                  '@$corpUname${corpEmail.isNotEmpty ? ' • $corpEmail' : ''}${corpPhone.isNotEmpty ? ' • $corpPhone' : ''}',
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: _isDark ? const Color(0xFF94A3B8) : Colors.grey.shade600,
@@ -7412,7 +7825,9 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
         ],
         const SizedBox(height: 14),
         _buildFieldWithHeader(
-          label: 'Nama Resmi Perusahaan / Mitra Industri *',
+          label: isCorpCaller
+              ? 'Nama Resmi Institusi / Mitra *'
+              : 'Nama Resmi Perusahaan / Mitra Industri *',
           caption: 'Nama identitas resmi rekanan (terisi otomatis jika memilih akun di atas).',
           child: TextFormField(
             controller: _titleController,
@@ -7421,8 +7836,10 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
               color: _isDark ? Colors.white : const Color(0xFF0F172A),
             ),
             decoration: _inputDecoration(
-              hint: 'Contoh: PT Studio Animasi Nusantara, Google, Inc...',
-              prefixIcon: Icons.domain_rounded,
+              hint: isCorpCaller
+                  ? 'Contoh: SMK Telekomunikasi Telesandi, Universitas Indonesia...'
+                  : 'Contoh: PT Studio Animasi Nusantara, Google, Inc...',
+              prefixIcon: isCorpCaller ? Icons.school_rounded : Icons.domain_rounded,
             ),
             validator: (value) =>
                 value == null || value.trim().isEmpty

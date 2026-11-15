@@ -178,8 +178,19 @@ void main() {
                     'name': 'SMK Telekomunikasi Telesandi Bekasi',
                     'username': 'institution_demo',
                     'email': 'institution@kreavana.id',
+                    'phone': '081111222333',
+                    'sub_role': 'institution',
                   },
                   'metadata': {
+                    'sender_user_id': 'inst-demo-1',
+                    'sender_name': 'SMK Telekomunikasi Telesandi Bekasi',
+                    'sender_username': 'institution_demo',
+                    'sender_phone': '081111222333',
+                    'sender_role': 'institution',
+                    'target_user_id': 'corp-demo-1',
+                    'target_name': 'PT Kreavana Nusantara Korporat',
+                    'target_username': 'corporate_demo',
+                    'target_role': 'corporate',
                     'corporate_user_id': 'corp-demo-1',
                     'corporate_name': 'PT Kreavana Nusantara Korporat',
                     'corporate_username': 'corporate_demo',
@@ -237,6 +248,7 @@ void main() {
 
         expect(find.text('SMK Telekomunikasi Telesandi Bekasi'), findsOneWidget);
         expect(find.text('@institution_demo • Pengajuan Kemitraan Institusi'), findsOneWidget);
+        expect(find.text('081111222333'), findsOneWidget);
         expect(find.text('Kerjasama magang siswa DKV, guru tamu industri, dan uji kompetensi.'), findsOneWidget);
         expect(find.text('Menunggu Persetujuan Anda'), findsWidgets);
         expect(find.text('Tolak'), findsOneWidget);
@@ -244,14 +256,276 @@ void main() {
         expect(find.text('Kelola'), findsNothing);
         expect(find.text('Dokumen MoU (3 Berkas)'), findsOneWidget);
 
-        // Pastikan seluruh 3 berkas tampil di dialog OfficialDocumentViewerDialog saat dibuka
+        // Saat dibuka, tampilkan pemilih berkas asli langsung tanpa pratinjau dokumen palsu
         await tester.tap(find.text('Dokumen MoU (3 Berkas)'));
         await tester.pumpAndSettle();
 
-        expect(find.text('Berkas Lampiran Tersedia (3 Berkas)'), findsOneWidget);
+        expect(find.text('PRATINJAU DOKUMEN RESMI'), findsNothing);
+        expect(find.text('Draft / Dalam Proses'), findsNothing);
+        expect(find.text('Berkas Kerjasama Asli (3)'), findsOneWidget);
         expect(find.text('mou_draf.pdf'), findsWidgets);
         expect(find.text('kurikulum_industri.docx'), findsWidgets);
         expect(find.text('silabus_pkl.pdf'), findsWidgets);
+        expect(find.text('Buka Berkas'), findsNWidgets(3));
+      },
+    );
+
+    testWidgets(
+      'Pengirim tidak melihat tombol Tolak/Setujui pada pengajuan miliknya dan data disetujui tidak bisa diedit',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(860, 1000);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        DioClient.instance.dio.httpClientAdapter = _MockAdapter((options) async {
+          if (options.uri.path.endsWith('/institution/resources')) {
+            return _jsonResponse({
+              'status': true,
+              'data': [
+                {
+                  'id': 'partner-outgoing-pending',
+                  'user_id': 'inst-demo-1',
+                  'resource_type': 'partners',
+                  'title': 'PT Kreavana Nusantara Korporat',
+                  'description': 'Mau kerja sama',
+                  'status': 'pending',
+                  'viewer_is_sender': true,
+                  'viewer_is_recipient': false,
+                  'viewer_can_review': false,
+                  'recipient': {
+                    'id': 'corp-demo-1',
+                    'name': 'PT Kreavana Nusantara Korporat',
+                    'username': 'corporate_demo',
+                    'phone': '082222333444',
+                    'sub_role': 'corporate',
+                  },
+                  'metadata': {
+                    'sender_user_id': 'inst-demo-1',
+                    'target_user_id': 'corp-demo-1',
+                    'target_phone': '082222333444',
+                    'corporate_username': 'corporate_demo',
+                    'mou_files': [
+                      {
+                        'url': 'https://example.test/storage/doc1.pdf',
+                        'filename': 'doc1.pdf',
+                        'filesize': '36 KB',
+                        'extension': 'pdf',
+                      },
+                    ],
+                  },
+                },
+                {
+                  'id': 'partner-approved-locked',
+                  'user_id': 'inst-demo-1',
+                  'resource_type': 'partners',
+                  'title': 'PT Mitra Terkunci',
+                  'description': 'Sudah disetujui penerima',
+                  'status': 'active',
+                  'viewer_is_sender': true,
+                  'viewer_is_recipient': false,
+                  'viewer_can_review': false,
+                  'metadata': {
+                    'approval_status': 'approved',
+                    'locked_after_approval': true,
+                    'sender_user_id': 'inst-demo-1',
+                    'target_user_id': 'corp-demo-2',
+                    'target_phone': '085555666777',
+                    'mou_files': [
+                      {
+                        'url': 'https://example.test/storage/mou_final.pdf',
+                        'filename': 'mou_final.pdf',
+                        'filesize': '50 KB',
+                        'extension': 'pdf',
+                      },
+                    ],
+                  },
+                },
+              ],
+            });
+          }
+          return _jsonResponse({'status': true, 'data': []});
+        });
+
+        final institutionUser = UserModel(
+          id: 'inst-demo-1',
+          name: 'SMK Telekomunikasi Telesandi Bekasi',
+          username: 'smk_telesandi',
+          email: 'institution@kreavana.id',
+          role: 'user',
+          subRole: 'institution',
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: InstitutionWorkspaceScreen(
+              user: institutionUser,
+              resourceType: 'partners',
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('PT Kreavana Nusantara Korporat'), findsOneWidget);
+        expect(find.text('082222333444'), findsOneWidget);
+        expect(find.text('Menunggu Persetujuan Mitra'), findsWidgets);
+        // Tombol Tolak / Setujui / Setujui (Simulasi) HARAM muncul di sisi pengirim
+        expect(find.text('Tolak'), findsNothing);
+        expect(find.textContaining('Setujui'), findsNothing);
+
+        // Hanya pengajuan pending yang masih punya Kelola; yang sudah active/approved terkunci
+        expect(find.text('PT Mitra Terkunci'), findsOneWidget);
+        expect(find.text('MoU Disetujui & Terkunci Permanen'), findsOneWidget);
+        expect(find.text('Kelola'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Corporate dapat mencari Institusi untuk mengajukan kerjasama dan Institusi penerima hanya meninjau Tolak/Setujui',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(860, 1000);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        DioClient.instance.dio.httpClientAdapter = _MockAdapter((options) async {
+          final path = options.uri.path;
+          if (path.endsWith('/institution/resources/corporate-search')) {
+            return _jsonResponse({
+              'status': true,
+              'data': [
+                {
+                  'id': 'inst-demo-1',
+                  'name': 'SMK Telekomunikasi Telesandi Bekasi',
+                  'username': 'smk_telesandi',
+                  'email': 'institution@kreavana.id',
+                  'phone': '081111222333',
+                  'selected_sub_role': 'institution',
+                  'is_verified': true,
+                },
+              ],
+            });
+          }
+          if (path.endsWith('/institution/resources')) {
+            return _jsonResponse({
+              'status': true,
+              'data': [
+                {
+                  'id': 'partner-corp-to-inst',
+                  'user_id': 'corp-demo-1',
+                  'resource_type': 'partners',
+                  'title': 'SMK Telekomunikasi Telesandi Bekasi',
+                  'description': 'Undangan kerjasama kelas industri dari PT Kreavana.',
+                  'status': 'pending',
+                  'owner': {
+                    'id': 'corp-demo-1',
+                    'name': 'PT Kreavana Nusantara Korporat',
+                    'username': 'corporate_demo',
+                    'email': 'corporate@kreavana.id',
+                    'phone': '082222333444',
+                    'sub_role': 'corporate',
+                  },
+                  'metadata': {
+                    'sender_user_id': 'corp-demo-1',
+                    'sender_name': 'PT Kreavana Nusantara Korporat',
+                    'sender_username': 'corporate_demo',
+                    'sender_phone': '082222333444',
+                    'sender_role': 'corporate',
+                    'target_user_id': 'inst-demo-1',
+                    'target_name': 'SMK Telekomunikasi Telesandi Bekasi',
+                    'target_username': 'smk_telesandi',
+                    'target_role': 'institution',
+                    'mou_files': [
+                      {
+                        'url': 'https://example.test/storage/undangan_corp.pdf',
+                        'filename': 'undangan_corp.pdf',
+                        'filesize': '90 KB',
+                        'extension': 'pdf',
+                      },
+                    ],
+                  },
+                },
+              ],
+            });
+          }
+          return _jsonResponse({'status': true, 'data': []});
+        });
+
+        // 1. Corporate membuka modal pengajuan mitra dan mencari Institusi by @username
+        final corporateUser = UserModel(
+          id: 'corp-demo-1',
+          name: 'PT Kreavana Nusantara Korporat',
+          username: 'corporate_demo',
+          email: 'corporate@kreavana.id',
+          phone: '082222333444',
+          role: 'user',
+          subRole: 'corporate',
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: InstitutionWorkspaceScreen(
+              user: corporateUser,
+              resourceType: 'partners',
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Tambah Mitra Vendor').first);
+        await tester.pumpAndSettle();
+
+        expect(find.text('1. Cari Institusi / Sekolah / Kampus Mitra'), findsOneWidget);
+        expect(find.text('Nama Resmi Institusi / Mitra *'), findsOneWidget);
+
+        final searchInstField = find.widgetWithText(
+          TextField,
+          'Ketik nama Institusi/Sekolah atau @username (contoh: @smk_telesandi)...',
+        );
+        await tester.enterText(searchInstField, '@smk_telesandi');
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pumpAndSettle();
+
+        final resultTile = find.descendant(
+          of: find.byType(ListTile),
+          matching: find.text('SMK Telekomunikasi Telesandi Bekasi'),
+        );
+        expect(resultTile, findsOneWidget);
+        await tester.tap(resultTile);
+        await tester.pumpAndSettle();
+        expect(find.text('Institusi Terverifikasi'), findsOneWidget);
+        expect(find.textContaining('081111222333'), findsWidgets);
+
+        await tester.tap(find.text('Batal'));
+        await tester.pumpAndSettle();
+
+        // 2. Institusi penerima melihat pengajuan dari Corporate & hanya bisa Tolak/Setujui
+        final institutionUser = UserModel(
+          id: 'inst-demo-1',
+          name: 'SMK Telekomunikasi Telesandi Bekasi',
+          username: 'smk_telesandi',
+          email: 'institution@kreavana.id',
+          phone: '081111222333',
+          role: 'user',
+          subRole: 'institution',
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: InstitutionWorkspaceScreen(
+              user: institutionUser,
+              resourceType: 'partners',
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('PT Kreavana Nusantara Korporat'), findsOneWidget);
+        expect(find.text('@corporate_demo • Pengajuan Kemitraan Corporate'), findsOneWidget);
+        expect(find.text('082222333444'), findsOneWidget);
+        expect(find.text('Tolak'), findsOneWidget);
+        expect(find.text('Setujui Kemitraan'), findsOneWidget);
+        expect(find.text('Kelola'), findsNothing);
       },
     );
   });

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../app/theme.dart';
 import '../models/user_model.dart';
 import '../services/api_service.dart';
+import '../widgets/app_sweet_alert.dart';
 import '../widgets/desktop_sidebar_layout.dart';
-import '../widgets/official_document_viewer_dialog.dart';
 import 'institution_workspace_screen.dart';
 
 class DokumenInstansiScreen extends StatefulWidget {
@@ -343,11 +344,30 @@ class _DokumenInstansiScreenState extends State<DokumenInstansiScreen> {
                           ),
                           const SizedBox(width: 10),
                           ElevatedButton.icon(
-                            onPressed: () {
-                              OfficialDocumentViewerDialog.show(
+                            onPressed: () async {
+                              final rawUrl = (d['file_url'] ?? d['url'] ?? '').toString().trim();
+                              if (rawUrl.isEmpty) {
+                                AppSweetAlert.warning(
+                                  context,
+                                  'Berkas dokumen asli tidak tersedia.',
+                                  title: 'Berkas Tidak Tersedia',
+                                );
+                                return;
+                              }
+                              final resolved = ApiService.resolveAssetUrl(rawUrl);
+                              final target = resolved.isNotEmpty ? resolved : rawUrl;
+                              try {
+                                final uri = Uri.parse(target);
+                                if (await canLaunchUrl(uri)) {
+                                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                  return;
+                                }
+                              } catch (_) {}
+                              if (!context.mounted) return;
+                              AppSweetAlert.error(
                                 context,
-                                document: d,
-                                isGovernment: _isGovernment,
+                                'Gagal membuka berkas dokumen: $target',
+                                title: 'Gagal Membuka Berkas',
                               );
                             },
                             icon: const Icon(Icons.verified_user_outlined, size: 15),
