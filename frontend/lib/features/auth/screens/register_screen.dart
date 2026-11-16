@@ -701,7 +701,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                     fieldFillColor: fieldFillColor,
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return 'Wajib diisi';
-                      if (v.length < 6) return 'Min 6 karakter';
+                      if (v.length < 8) return 'Min 8 karakter';
                       return null;
                     },
                   ),
@@ -743,7 +743,7 @@ class _RegisterScreenState extends State<RegisterScreen>
               fieldFillColor: fieldFillColor,
               validator: (v) {
                 if (v == null || v.trim().isEmpty) return 'Wajib diisi';
-                if (v.length < 6) return 'Min 6 karakter';
+                if (v.length < 8) return 'Min 8 karakter';
                 return null;
               },
             ),

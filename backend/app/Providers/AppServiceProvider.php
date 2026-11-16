@@ -94,5 +94,15 @@ class AppServiceProvider extends ServiceProvider
             $identifier = strtolower((string) $request->input('email', 'anonymous'));
             return Limit::perMinute(2)->by('resend-verification:'.$request->ip().':'.sha1($identifier));
         });
+
+        RateLimiter::for('auth-forgot-password', function (Request $request) {
+            $identifier = strtolower((string) $request->input('email', 'anonymous'));
+            return Limit::perMinute(3)->by('forgot-password:'.$request->ip().':'.sha1($identifier));
+        });
+
+        RateLimiter::for('auth-reset-password', function (Request $request) {
+            $identifier = strtolower((string) $request->input('email', 'anonymous'));
+            return Limit::perMinute(5)->by('reset-password:'.$request->ip().':'.sha1($identifier));
+        });
     }
 }

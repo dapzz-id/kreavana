@@ -6,6 +6,7 @@ use App\Contracts\AuthServiceInterface;
 use App\Models\User;
 use App\Models\AuthLog;
 use App\Jobs\SendEmailVerificationJob;
+use App\Jobs\SendPasswordResetJob;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -26,7 +27,20 @@ class AuthService implements AuthServiceInterface
                 'email' => $data['email'],
                 'full_name' => $data['name'],
             ];
-            return UsersApiClient::syncShadowUser($userApiData);
+            $userApiData['is_email_verified'] = $userApiData['is_email_verified'] ?? false;
+            $user = UsersApiClient::syncShadowUser($userApiData);
+
+            if ($user->email_verified_at === null) {
+                $otp = $this->generateOtp();
+                $user->update([
+                    'email_verification_code_hash' => Hash::make($otp),
+                    'email_verification_expires_at' => now()->addMinutes(15),
+                    'email_verification_attempts' => 0,
+                ]);
+                SendEmailVerificationJob::dispatch($user->email, $otp);
+            }
+
+            return $user;
         }
 
         if (!empty($regResult['errors'])) {
@@ -114,6 +128,21 @@ class AuthService implements AuthServiceInterface
         ]);
 
         if (!$proxyResult['success']) {
+            if (($proxyResult['error_code'] ?? null) === 'email_not_verified') {
+                $unverifiedUser = $proxyResult['data']['user'] ?? null;
+                if (is_array($unverifiedUser) && !empty($unverifiedUser['email'])) {
+                    UsersApiClient::syncShadowUser(array_merge($unverifiedUser, ['is_email_verified' => false]));
+                }
+                AuthLog::create([
+                    'user_id' => null,
+                    'action' => 'login_email_not_verified',
+                    'ip_address' => $ip,
+                    'user_agent' => substr($userAgent, 0, 255),
+                ]);
+
+                return 'email_not_verified';
+            }
+
             AuthLog::create([
                 'user_id' => null,
                 'action' => 'login_failed',
@@ -129,6 +158,9 @@ class AuthService implements AuthServiceInterface
         }
 
         $userApiData = $proxyResult['data']['user'] ?? [];
+        if (!array_key_exists('is_email_verified', $userApiData)) {
+            $userApiData['is_email_verified'] = true;
+        }
         $user = UsersApiClient::syncShadowUser($userApiData);
 
         if ($user->isSuspended()) {
@@ -165,8 +197,11 @@ class AuthService implements AuthServiceInterface
 
     public function verifyEmail(string $email, string $code): string
     {
-        return DB::transaction(function () use ($email, $code) {
-            $user = User::where('email', $email)->lockForUpdate()->first();
+        $normalizedEmail = strtolower(trim($email));
+        $verifiedUser = null;
+
+        $result = DB::transaction(function () use ($normalizedEmail, $code, &$verifiedUser) {
+            $user = User::whereRaw('LOWER(email) = ?', [$normalizedEmail])->lockForUpdate()->first();
 
             if (!$user) {
                 // Generic error to prevent user enumeration
@@ -175,6 +210,7 @@ class AuthService implements AuthServiceInterface
 
             // Already verified — idempotent success
             if ($user->email_verified_at !== null) {
+                $verifiedUser = $user;
                 return 'success';
             }
 
@@ -207,19 +243,28 @@ class AuthService implements AuthServiceInterface
                 'email_verification_attempts' => 0,
             ]);
 
+            $verifiedUser = $user;
             return 'success';
         });
+
+        if ($result === 'success' && $verifiedUser instanceof User && UsersApiClient::isEnabled()) {
+            UsersApiClient::markEmailVerified($verifiedUser);
+        }
+
+        return $result;
     }
 
     public function resendVerificationCode(string $email): string
     {
+        $normalizedEmail = strtolower(trim($email));
+
         // Backend rate limit: 1 resend per 180 seconds (3 minutes) per email
-        $rateLimitKey = 'email-verification-resend:' . sha1(strtolower($email));
+        $rateLimitKey = 'email-verification-resend:' . sha1($normalizedEmail);
         if (RateLimiter::tooManyAttempts($rateLimitKey, 1)) {
             return 'verification_resend_rate_limited';
         }
 
-        $user = User::where('email', $email)->first();
+        $user = User::whereRaw('LOWER(email) = ?', [$normalizedEmail])->first();
 
         if (!$user) {
             // Don't reveal whether email exists — consume rate limit and return success
@@ -240,11 +285,92 @@ class AuthService implements AuthServiceInterface
             'email_verification_attempts' => 0,
         ]);
 
-        SendEmailVerificationJob::dispatch($email, $otp);
+        SendEmailVerificationJob::dispatch($user->email, $otp);
 
         RateLimiter::hit($rateLimitKey, 180);
 
         return 'success';
+    }
+
+    public function requestPasswordReset(string $email): array
+    {
+        $normalizedEmail = strtolower(trim($email));
+
+        if (!UsersApiClient::isEnabled()) {
+            return ['status' => 503, 'outcome' => 'service_unavailable'];
+        }
+
+        $rateLimitKey = 'password-reset-request:' . sha1($normalizedEmail);
+        if (RateLimiter::tooManyAttempts($rateLimitKey, 1)) {
+            return ['status' => 429, 'outcome' => 'rate_limited'];
+        }
+
+        $result = UsersApiClient::requestPasswordReset($normalizedEmail);
+        if (!$result['success']) {
+            if (($result['status'] ?? 0) === 503) {
+                return ['status' => 503, 'outcome' => 'service_unavailable'];
+            }
+            return [
+                'status' => $result['status'] ?? 422,
+                'outcome' => 'error',
+                'message' => $result['message'] ?? 'Gagal memproses permintaan reset kata sandi.',
+            ];
+        }
+
+        $data = $result['data'] ?? [];
+        if (($data['found'] ?? false) === true && !empty($data['otp']) && !empty($data['email'])) {
+            SendPasswordResetJob::dispatch(
+                (string) $data['email'],
+                (string) $data['otp'],
+                isset($data['name']) ? (string) $data['name'] : null
+            );
+        }
+
+        RateLimiter::hit($rateLimitKey, 60);
+
+        return ['status' => 200, 'outcome' => 'success'];
+    }
+
+    public function confirmPasswordReset(
+        string $email,
+        string $code,
+        string $password,
+        string $passwordConfirmation,
+        string $ip = '',
+        string $userAgent = ''
+    ): array {
+        if (!UsersApiClient::isEnabled()) {
+            return [
+                'success' => false,
+                'status' => 503,
+                'message' => 'Layanan autentikasi sedang tidak dapat dijangkau. Silakan coba beberapa saat lagi.',
+                'error_code' => 'service_unavailable',
+            ];
+        }
+
+        $normalizedEmail = strtolower(trim($email));
+        $result = UsersApiClient::confirmPasswordReset($normalizedEmail, $code, $password, $passwordConfirmation);
+
+        if ($result['success']) {
+            RateLimiter::clear('password-reset-request:' . sha1($normalizedEmail));
+
+            $shadow = User::whereRaw('LOWER(email) = ?', [$normalizedEmail])->first();
+            if ($shadow) {
+                if ($shadow->email_verified_at === null) {
+                    $shadow->update(['email_verified_at' => now()]);
+                }
+                app(RefreshTokenRepository::class)->revokeAllForUser($shadow->id);
+
+                AuthLog::create([
+                    'user_id' => $shadow->id,
+                    'action' => 'password_reset_via_email',
+                    'ip_address' => $ip ?: '0.0.0.0',
+                    'user_agent' => substr($userAgent, 0, 255),
+                ]);
+            }
+        }
+
+        return $result;
     }
 
     /**

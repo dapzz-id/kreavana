@@ -283,10 +283,25 @@ class AuthService {
     return ApiService.post('auth/resend-verification', {'email': email});
   }
 
-  /// Lupa kata sandi
+  /// Lupa kata sandi (kirim kode OTP 6 digit ke email)
   static Future<Map<String, dynamic>> forgotPassword({
     required String email,
   }) async {
-    return ApiService.post('auth/forgot-password', {'email': email});
+    return ApiService.post('auth/forgot-password', {'email': email.trim()});
+  }
+
+  /// Konfirmasi reset kata sandi dengan kode OTP 6 digit & kata sandi baru
+  static Future<Map<String, dynamic>> resetPassword({
+    required String email,
+    required String code,
+    required String password,
+    required String passwordConfirmation,
+  }) async {
+    return ApiService.post('auth/reset-password', {
+      'email': email.trim(),
+      'code': code.trim(),
+      'password': password,
+      'password_confirmation': passwordConfirmation,
+    });
   }
 }

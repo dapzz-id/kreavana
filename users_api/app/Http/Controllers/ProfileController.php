@@ -25,9 +25,97 @@ class ProfileController
      */
     public function internalUpdateProfile(Request $request)
     {
+        $resolved = $this->resolveInternalUser($request);
+        if ($resolved instanceof \Illuminate\Http\JsonResponse) {
+            return $resolved;
+        }
+
+        return $this->validateAndPersistProfile($request, $resolved, wrapInUserKey: true);
+    }
+
+    /**
+     * Internal S2S: Synchronize email verification status to UserCredential.
+     */
+    public function internalVerifyEmail(Request $request)
+    {
+        $resolved = $this->resolveInternalUser($request);
+        if ($resolved instanceof \Illuminate\Http\JsonResponse) {
+            return $resolved;
+        }
+
+        $credential = $resolved->credential;
+        $verifiedAt = $credential?->email_verified_at ?? now();
+
+        if ($credential) {
+            $credential->update([
+                'is_email_verified' => true,
+                'email_verified_at' => $verifiedAt,
+                'email_verification_code_hash' => null,
+                'email_verification_expires_at' => null,
+                'email_verification_attempts' => 0,
+            ]);
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Status verifikasi email universal berhasil diperbarui.',
+            'data' => [
+                'user_id' => $resolved->id,
+                'email' => $resolved->email,
+                'is_email_verified' => true,
+            ],
+        ]);
+    }
+
+    /**
+     * Internal S2S: Set or synchronize password hash in UserCredential (e.g., initial social password).
+     */
+    public function internalSetPassword(Request $request)
+    {
+        $resolved = $this->resolveInternalUser($request);
+        if ($resolved instanceof \Illuminate\Http\JsonResponse) {
+            return $resolved;
+        }
+
+        $validator = Validator::make($request->all(), [
+            'password' => 'required|string|min:8',
+        ], [
+            'password.required' => 'Kata sandi wajib diisi.',
+            'password.min' => 'Kata sandi minimal 8 karakter.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors()->first(),
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $existingCredential = $resolved->credential;
+        UserCredential::updateOrCreate(
+            ['user_id' => $resolved->id],
+            [
+                'password_hash' => Hash::make((string) $request->input('password')),
+                'password_changed_at' => now(),
+                'failed_login_attempts' => 0,
+                'locked_until' => null,
+                'is_email_verified' => $existingCredential?->is_email_verified ?? true,
+                'email_verified_at' => $existingCredential?->email_verified_at ?? now(),
+            ]
+        );
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Kata sandi universal berhasil diperbarui.',
+        ]);
+    }
+
+    private function resolveInternalUser(Request $request): User|\Illuminate\Http\JsonResponse
+    {
         $userId = trim((string) $request->input('user_id', ''));
-        $currentEmail = strtolower(trim((string) $request->input('current_email', '')));
-        $currentUsername = strtolower(trim((string) $request->input('current_username', '')));
+        $currentEmail = strtolower(trim((string) ($request->input('current_email') ?? $request->input('email') ?? '')));
+        $currentUsername = strtolower(trim((string) ($request->input('current_username') ?? $request->input('username') ?? '')));
 
         if ($userId === '' && $currentEmail === '' && $currentUsername === '') {
             return response()->json([
@@ -54,7 +142,7 @@ class ProfileController
             ], 404);
         }
 
-        return $this->validateAndPersistProfile($request, $user, wrapInUserKey: true);
+        return $user;
     }
 
     /**

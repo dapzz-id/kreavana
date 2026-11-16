@@ -12,7 +12,6 @@ use Illuminate\Support\Str;
 use App\Jobs\SendSocialLoginPasswordJob;
 use App\Contracts\AuthServiceInterface;
 use App\Services\UsersApiClient;
-use Illuminate\Support\Facades\Http;
 
 class AuthController extends Controller
 {
@@ -34,7 +33,7 @@ class AuthController extends Controller
             'name' => 'required|string|max:100',
             'username' => 'required|string|max:50|unique:users,username',
             'email' => 'required|string|email|max:150|unique:users,email',
-            'password' => 'required|string|min:6',
+            'password' => 'required|string|min:8',
         ], [
             'name.required' => 'Nama lengkap wajib diisi.',
             'username.required' => 'Username wajib diisi.',
@@ -43,7 +42,7 @@ class AuthController extends Controller
             'email.email' => 'Format email tidak valid.',
             'email.unique' => 'Alamat email ini sudah terdaftar. Silakan gunakan email lain atau masuk ke akun Anda.',
             'password.required' => 'Kata sandi wajib diisi.',
-            'password.min' => 'Kata sandi minimal 6 karakter.',
+            'password.min' => 'Kata sandi minimal 8 karakter.',
         ]);
 
         $user = $this->authService->register([
@@ -118,12 +117,19 @@ class AuthController extends Controller
         }
 
         if ($token === 'email_not_verified') {
+            $rawIdentifier = trim((string) $request->email);
+            $identifier = strtolower($rawIdentifier);
+            $user = User::whereRaw('LOWER(email) = ?', [$identifier])
+                ->orWhereRaw('LOWER(username) = ?', [$identifier])
+                ->when($rawIdentifier !== '', fn ($q) => $q->orWhere('phone', $rawIdentifier))
+                ->first();
+
             return response()->json([
                 'status' => false,
                 'message' => 'Email Anda belum diverifikasi.',
                 'error_code' => 'email_not_verified',
                 'data' => [
-                    'email' => $request->email,
+                    'email' => $user?->email ?? $request->email,
                 ],
             ], 403);
         }
@@ -305,14 +311,42 @@ class AuthController extends Controller
     public function setInitialPassword(Request $request)
     {
         $request->validate([
-            'password' => 'required|string|min:6',
+            'password' => 'required|string|min:8',
+        ], [
+            'password.required' => 'Kata sandi wajib diisi.',
+            'password.min' => 'Kata sandi minimal 8 karakter.',
         ]);
 
         $user = Auth::guard('api')->user();
 
-        $user->update([
-            'password' => \Illuminate\Support\Facades\Hash::make($request->password),
-        ]);
+        if ($user->isInstitutionSubAccount()) {
+            $subAccount = $user->institutionSubAccount;
+            if (!$subAccount || !$subAccount->is_active) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Sub-akun institusi tidak aktif.',
+                ], 403);
+            }
+            $subAccount->update([
+                'password_hash' => Hash::make($request->password),
+                'password_changed_at' => now(),
+            ]);
+        } else {
+            if (!UsersApiClient::isEnabled()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Layanan autentikasi sedang tidak dapat dijangkau.',
+                ], 503);
+            }
+
+            $sync = UsersApiClient::setUserPassword($user, $request->password);
+            if (!$sync['success']) {
+                return response()->json([
+                    'status' => false,
+                    'message' => $sync['message'] ?? 'Gagal menyimpan kata sandi awal.',
+                ], $sync['status'] ?? 503);
+            }
+        }
 
         AuthLog::create([
             'user_id' => $user->id,
@@ -410,291 +444,60 @@ class AuthController extends Controller
         $provider = $request->provider;
         $idToken = $request->id_token;
 
-        if ($provider === 'google' && UsersApiClient::isEnabled()) {
+        if ($provider === 'google') {
+            if (!UsersApiClient::isEnabled()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Layanan autentikasi sedang tidak dapat dijangkau. Silakan coba beberapa saat lagi.',
+                ], 503);
+            }
+
             $proxyResult = UsersApiClient::socialLogin($idToken, 'google');
             if ($proxyResult['success']) {
                 $userApiData = $proxyResult['data']['user'] ?? [];
+                $userApiData['is_email_verified'] = true;
+                $isNewUser = (bool) ($proxyResult['data']['is_new_user'] ?? false);
+
                 $user = UsersApiClient::syncShadowUser($userApiData);
+
+                if ($isNewUser && !empty($user->email)) {
+                    $tempPassword = Str::random(12);
+                    $pwdSync = UsersApiClient::setUserPassword($user, $tempPassword);
+                    if ($pwdSync['success']) {
+                        SendSocialLoginPasswordJob::dispatch($user->email, $tempPassword);
+                    }
+                }
+
+                AuthLog::create([
+                    'user_id' => $user->id,
+                    'action' => 'login_social_' . $provider,
+                    'ip_address' => $request->ip(),
+                    'user_agent' => substr((string) $request->userAgent(), 0, 255),
+                ]);
+
                 $token = Auth::guard('api')->login($user);
-                return $this->respondWithToken($token, $user);
+                $response = $this->respondWithToken($token, $user);
+                $data = $response->getData(true);
+                $data['data']['is_new_user'] = $isNewUser;
+                $response->setData($data);
+
+                return $response;
             }
+
+            $status = ($proxyResult['status'] ?? 0) === 503
+                ? 503
+                : ($proxyResult['status'] >= 400 && $proxyResult['status'] < 500 ? $proxyResult['status'] : 401);
+
             return response()->json([
                 'status' => false,
                 'message' => $proxyResult['message'] ?? 'Login Google gagal.',
-            ], $proxyResult['status'] >= 400 && $proxyResult['status'] < 500 ? $proxyResult['status'] : 401);
+            ], $status);
         }
 
-        try {
-            // Verify token based on provider
-            if ($provider === 'google') {
-                $googleUser = $this->verifyGoogleToken($idToken);
-                if (!$googleUser) {
-                    return response()->json([
-                        'status' => false,
-                        'message' => 'Token Google tidak valid.',
-                    ], 401);
-                }
-
-                $email = $googleUser['email'];
-                $name = $googleUser['name'] ?? $request->name;
-                $photoUrl = $googleUser['picture'] ?? $request->photo_url;
-                $providerId = $googleUser['sub'];
-            } elseif ($provider === 'apple') {
-                // TODO: Implement Apple Sign-In verification
-                $email = $request->email;
-                $name = $request->name;
-                $photoUrl = $request->photo_url;
-                $providerId = null;
-            } else {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Provider tidak didukung.',
-                ], 400);
-            }
-
-            // Find or create user
-            $user = User::where('email', $email)->first();
-            $isNewUser = false;
-
-            if (!$user) {
-                // Create new user
-                $username = $this->generateUsername($email);
-                $plainPassword = Str::random(10);
-
-                $user = User::create([
-                    'name' => $name ?? 'User',
-                    'username' => $username,
-                    'email' => $email,
-                    'password' => \Illuminate\Support\Facades\Hash::make($plainPassword),
-                    'avatar_url' => $photoUrl,
-                    'role' => 'user',
-                    'email_verified_at' => now(), // Auto-verify for social login
-                ]);
-
-                // Dispatch job to send email in the background
-                SendSocialLoginPasswordJob::dispatch($email, $plainPassword);
-
-                $isNewUser = true;
-            } else {
-                // Auto-verify existing user's email if not yet verified
-                if ($user->email_verified_at === null) {
-                    $user->update([
-                        'email_verified_at' => now(),
-                        'email_verification_code_hash' => null,
-                        'email_verification_expires_at' => null,
-                        'email_verification_attempts' => 0,
-                    ]);
-                }
-            }
-
-            // Log successful login
-            AuthLog::create([
-                'user_id' => $user->id,
-                'action' => 'login_social_' . $provider,
-                'ip_address' => $request->ip(),
-                'user_agent' => substr((string) $request->userAgent(), 0, 255)
-            ]);
-
-            // Generate JWT token
-            $token = Auth::guard('api')->login($user);
-
-            $response = $this->respondWithToken($token, $user);
-            $data = $response->getData(true);
-            $data['data']['is_new_user'] = $isNewUser;
-            $response->setData($data);
-
-            return $response;
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Terjadi kesalahan saat login.',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    /**
-     * Ambil data dari endpoint Google dengan SSL verification dimatikan di local dev.
-     */
-    private function googleHttpGet(string $url, array $params = [])
-    {
-        return Http::withOptions([
-            'verify' => false,
-            'connect_timeout' => 15,
-            'timeout' => 20,
-        ])->get($url, $params);
-    }
-
-    /**
-     * Verify Google ID Token.
-     *
-     * Mendukung dua jenis token:
-     * - Token langsung dari google_sign_in (mobile): audience = Google Client ID
-     * - Token dari Firebase signInWithPopup (web): audience = Firebase Project ID
-     *
-     * @param string $idToken
-     * @return array|null
-     */
-    private function verifyGoogleToken($idToken)
-    {
-        try {
-            $firebaseResult = $this->verifyFirebaseToken($idToken);
-            if ($firebaseResult) {
-                return $firebaseResult;
-            }
-
-            $response = $this->googleHttpGet('https://oauth2.googleapis.com/tokeninfo', [
-                'id_token' => $idToken,
-            ]);
-
-            if ($response->failed()) {
-                return null;
-            }
-
-            $payload = $response->json();
-            if (!is_array($payload) || !isset($payload['email'])) {
-                return null;
-            }
-
-            $googleClientId = env('GOOGLE_CLIENT_ID');
-            $firebaseProjectId = env('FIREBASE_PROJECT_ID');
-            $tokenAud = $payload['aud'] ?? '';
-
-            if (($googleClientId || $firebaseProjectId) && $tokenAud !== $googleClientId && $tokenAud !== $firebaseProjectId) {
-                \Log::warning('Google token audience mismatch', [
-                    'expected_google' => $googleClientId,
-                    'expected_firebase' => $firebaseProjectId,
-                    'got' => $tokenAud,
-                ]);
-            }
-
-            if (isset($payload['exp']) && $payload['exp'] < time()) {
-                return null;
-            }
-
-            return [
-                'sub' => $payload['sub'] ?? '',
-                'email' => $payload['email'],
-                'name' => $payload['name'] ?? '',
-                'picture' => $payload['picture'] ?? null,
-                'email_verified' => $payload['email_verified'] ?? false,
-            ];
-        } catch (\Exception $e) {
-            \Log::error('Google token verification failed: ' . $e->getMessage());
-            return null;
-        }
-    }
-
-    /**
-     * Verify Firebase ID Token menggunakan Google Public Keys (JWKS).
-     * Token ini diterbitkan oleh Firebase saat signInWithPopup di Web.
-     *
-     * @param string $idToken
-     * @return array|null
-     */
-    private function verifyFirebaseToken($idToken)
-    {
-        try {
-            $keysResponse = $this->googleHttpGet('https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com');
-            if ($keysResponse->failed()) {
-                \Log::warning('Firebase: failed to fetch public keys', ['status' => $keysResponse->status()]);
-                return null;
-            }
-
-            $publicKeys = $keysResponse->json();
-            if (!is_array($publicKeys)) {
-                \Log::warning('Firebase: public keys response invalid');
-                return null;
-            }
-
-            $parts = explode('.', $idToken);
-            if (count($parts) !== 3) {
-                \Log::warning('Firebase: token bukan JWT valid', ['parts_count' => count($parts)]);
-                return null;
-            }
-
-            $headerB64 = str_replace(['-', '_'], ['+', '/'], $parts[0]);
-            $headerB64 .= str_repeat('=', (4 - strlen($headerB64) % 4) % 4);
-            $header = json_decode(base64_decode($headerB64, true), true);
-            $kid = $header['kid'] ?? null;
-
-            if (!$kid) {
-                \Log::warning('Firebase: kid not found in header', ['header' => $header]);
-                return null;
-            }
-            if (!isset($publicKeys[$kid])) {
-                \Log::warning('Firebase: kid not found in public keys', ['kid' => $kid, 'available_keys' => array_keys($publicKeys)]);
-                return null;
-            }
-
-            $payloadB64 = str_replace(['-', '_'], ['+', '/'], $parts[1]);
-            $payloadB64 .= str_repeat('=', (4 - strlen($payloadB64) % 4) % 4);
-            $payloadJson = base64_decode($payloadB64, true);
-            if ($payloadJson === false) {
-                \Log::warning('Firebase: token payload decode failed');
-                return null;
-            }
-
-            $payload = json_decode($payloadJson, true);
-            if (!is_array($payload) || !isset($payload['email'])) {
-                \Log::warning('Firebase: email not found in payload', ['payload' => $payload]);
-                return null;
-            }
-
-            $projectId = env('FIREBASE_PROJECT_ID');
-            $expectedIssuer = $projectId ? 'https://securetoken.google.com/' . $projectId : null;
-            if ($expectedIssuer && ($payload['iss'] ?? '') !== $expectedIssuer) {
-                \Log::warning('Firebase: issuer mismatch', ['expected' => $expectedIssuer, 'got' => $payload['iss'] ?? 'null']);
-                return null;
-            }
-
-            $aud = $payload['aud'] ?? '';
-            $webClientId = env('GOOGLE_CLIENT_ID');
-            $allowedAudiences = array_filter([$projectId, $webClientId]);
-            if (!empty($allowedAudiences) && !in_array($aud, $allowedAudiences, true)) {
-                \Log::warning('Firebase: audience mismatch', ['expected' => $allowedAudiences, 'got' => $aud]);
-                return null;
-            }
-
-            if (($payload['exp'] ?? 0) < time()) {
-                \Log::warning('Firebase: token expired', ['exp' => $payload['exp'], 'now' => time()]);
-                return null;
-            }
-
-            return [
-                'sub' => $payload['sub'] ?? $payload['user_id'] ?? '',
-                'email' => $payload['email'],
-                'name' => $payload['name'] ?? '',
-                'picture' => $payload['picture'] ?? null,
-                'email_verified' => $payload['email_verified'] ?? false,
-            ];
-        } catch (\Exception $e) {
-            \Log::error('Firebase token verification error: ' . $e->getMessage());
-            return null;
-        }
-    }
-
-    /**
-     * Generate unique username from email
-     *
-     * @param string $email
-     * @return string
-     */
-    private function generateUsername($email)
-    {
-        $base = explode('@', $email)[0];
-        $base = preg_replace('/[^a-zA-Z0-9_]/', '', $base);
-        $username = strtolower($base);
-
-        // Check if username exists, add number suffix
-        $counter = 1;
-        $original = $username;
-        while (User::where('username', $username)->exists()) {
-            $username = $original . $counter;
-            $counter++;
-        }
-
-        return $username;
+        return response()->json([
+            'status' => false,
+            'message' => 'Provider belum didukung.',
+        ], 400);
     }
 
     /**
@@ -763,5 +566,84 @@ class AuthController extends Controller
                 'message' => 'Gagal mengirim kode verifikasi.',
             ], 400),
         };
+    }
+
+    /**
+     * Request a 6-digit password reset code sent asynchronously via Queue/Job.
+     */
+    public function forgotPassword(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|string|email',
+        ], [
+            'email.required' => 'Alamat email wajib diisi.',
+            'email.email' => 'Format alamat email tidak valid.',
+        ]);
+
+        $result = $this->authService->requestPasswordReset((string) $request->email);
+
+        return match ($result['outcome'] ?? 'error') {
+            'success' => response()->json([
+                'status' => true,
+                'message' => 'Jika alamat email terdaftar, kode reset kata sandi telah dikirim ke email Anda.',
+            ]),
+            'rate_limited' => response()->json([
+                'status' => false,
+                'message' => 'Mohon tunggu sebentar sebelum meminta kode reset kata sandi baru.',
+                'error_code' => 'password_reset_rate_limited',
+            ], 429),
+            'service_unavailable' => response()->json([
+                'status' => false,
+                'message' => 'Layanan autentikasi sedang tidak dapat dijangkau. Silakan coba beberapa saat lagi.',
+            ], 503),
+            default => response()->json([
+                'status' => false,
+                'message' => $result['message'] ?? 'Gagal memproses permintaan reset kata sandi.',
+            ], $result['status'] ?? 422),
+        };
+    }
+
+    /**
+     * Confirm password reset with 6-digit OTP code and update credentials in users_api.
+     */
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|string|email',
+            'code' => 'required|string|size:6|regex:/^[0-9]{6}$/',
+            'password' => 'required|string|min:8|confirmed',
+        ], [
+            'email.required' => 'Alamat email wajib diisi.',
+            'email.email' => 'Format alamat email tidak valid.',
+            'code.required' => 'Kode reset kata sandi wajib diisi.',
+            'code.size' => 'Kode reset kata sandi harus 6 digit angka.',
+            'code.regex' => 'Kode reset kata sandi harus berupa 6 digit angka.',
+            'password.required' => 'Kata sandi baru wajib diisi.',
+            'password.min' => 'Kata sandi baru minimal 8 karakter.',
+            'password.confirmed' => 'Konfirmasi kata sandi tidak cocok.',
+        ]);
+
+        $result = $this->authService->confirmPasswordReset(
+            (string) $request->email,
+            (string) $request->code,
+            (string) $request->password,
+            (string) $request->password_confirmation,
+            (string) $request->ip(),
+            (string) $request->userAgent()
+        );
+
+        if ($result['success']) {
+            return response()->json([
+                'status' => true,
+                'message' => $result['message'] ?? 'Kata sandi berhasil diatur ulang. Silakan masuk dengan kata sandi baru Anda.',
+            ]);
+        }
+
+        return response()->json([
+            'status' => false,
+            'message' => $result['message'] ?? 'Gagal mengatur ulang kata sandi.',
+            'error_code' => $result['error_code'] ?? 'reset_password_failed',
+            'errors' => $result['errors'] ?? null,
+        ], $result['status'] ?? 422);
     }
 }

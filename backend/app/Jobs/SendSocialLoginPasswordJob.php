@@ -7,12 +7,17 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\SocialLoginPasswordMail;
 
 class SendSocialLoginPasswordJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    public int $tries = 3;
+    public array $backoff = [10, 60];
+    public int $timeout = 30;
 
     protected $email;
     protected $password;
@@ -32,5 +37,16 @@ class SendSocialLoginPasswordJob implements ShouldQueue
     public function handle(): void
     {
         Mail::to($this->email)->send(new SocialLoginPasswordMail($this->email, $this->password));
+    }
+
+    /**
+     * Record permanent mail failure in logs.
+     */
+    public function failed(\Throwable $e): void
+    {
+        Log::error('SendSocialLoginPasswordJob permanently failed', [
+            'email' => $this->email,
+            'error' => $e->getMessage(),
+        ]);
     }
 }

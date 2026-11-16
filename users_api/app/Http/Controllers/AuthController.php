@@ -110,6 +110,7 @@ class AuthController
                     'phone' => $user->phone,
                     'full_name' => $user->full_name,
                     'avatar_url' => $user->avatar_url,
+                    'is_email_verified' => false,
                 ],
                 'tokens' => $tokens,
             ],
@@ -174,6 +175,27 @@ class AuthController
             ], 401);
         }
 
+        if (!$credential->is_email_verified) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Email Anda belum diverifikasi.',
+                'error_code' => 'email_not_verified',
+                'data' => [
+                    'email' => $user->email,
+                    'user' => [
+                        'id' => $user->id,
+                        'username' => $user->username,
+                        'email' => $user->email,
+                        'phone' => $user->phone,
+                        'full_name' => $user->full_name,
+                        'display_name' => $user->display_name,
+                        'avatar_url' => $user->avatar_url,
+                        'is_email_verified' => false,
+                    ],
+                ],
+            ], 403);
+        }
+
         // Reset failed login attempts & update last login
         $credential->update(['failed_login_attempts' => 0]);
         $user->update(['last_login_at' => now()]);
@@ -211,6 +233,7 @@ class AuthController
                     'full_name' => $user->full_name,
                     'display_name' => $user->display_name,
                     'avatar_url' => $user->avatar_url,
+                    'is_email_verified' => true,
                     'is_kyc_verified' => $user->kyc?->status === 'approved',
                 ],
                 'tokens' => $tokens,
@@ -450,6 +473,7 @@ class AuthController
                         'phone' => $user->phone,
                         'full_name' => $user->full_name,
                         'avatar_url' => $user->avatar_url,
+                        'is_email_verified' => true,
                         'is_kyc_verified' => $user->kyc?->status === 'approved',
                     ],
                     'tokens' => $tokens,
@@ -465,13 +489,18 @@ class AuthController
     }
 
     /**
-     * Verify Google ID Token via Google's tokeninfo API.
+     * Verify Google ID Token (supports Google tokeninfo & Firebase RS256 ID tokens).
      */
     private function verifyGoogleToken(string $idToken): ?array
     {
         try {
+            $firebasePayload = $this->verifyFirebaseIdToken($idToken);
+            if ($firebasePayload) {
+                return $firebasePayload;
+            }
+
             $response = \Illuminate\Support\Facades\Http::withOptions([
-                'verify' => false,
+                'verify' => !app()->environment('local'),
                 'timeout' => 15,
             ])->get('https://oauth2.googleapis.com/tokeninfo', [
                 'id_token' => $idToken,
@@ -488,5 +517,83 @@ class AuthController
         }
 
         return null;
+    }
+
+    /**
+     * Verify Firebase ID Token signature against Google's x509 public keys.
+     */
+    private function verifyFirebaseIdToken(string $idToken): ?array
+    {
+        $parts = explode('.', $idToken);
+        if (count($parts) !== 3) {
+            return null;
+        }
+
+        try {
+            $decodeSegment = static function (string $segment): ?string {
+                $b64 = strtr($segment, '-_', '+/');
+                $b64 .= str_repeat('=', (4 - strlen($b64) % 4) % 4);
+                $decoded = base64_decode($b64, true);
+                return $decoded === false ? null : $decoded;
+            };
+
+            $headerJson = $decodeSegment($parts[0]);
+            $payloadJson = $decodeSegment($parts[1]);
+            $signature = $decodeSegment($parts[2]);
+
+            if ($headerJson === null || $payloadJson === null || $signature === null) {
+                return null;
+            }
+
+            $header = json_decode($headerJson, true);
+            $payload = json_decode($payloadJson, true);
+            $kid = $header['kid'] ?? null;
+
+            if (!is_array($header) || !is_array($payload) || !$kid || empty($payload['email'])) {
+                return null;
+            }
+
+            if (!str_starts_with((string) ($payload['iss'] ?? ''), 'https://securetoken.google.com/')) {
+                return null;
+            }
+
+            $projectId = env('FIREBASE_PROJECT_ID');
+            if ($projectId && ($payload['aud'] ?? '') !== $projectId) {
+                return null;
+            }
+
+            if (($payload['exp'] ?? 0) < time()) {
+                return null;
+            }
+
+            $keysResponse = \Illuminate\Support\Facades\Http::withOptions([
+                'verify' => !app()->environment('local'),
+                'timeout' => 15,
+            ])->get('https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com');
+
+            if ($keysResponse->failed()) {
+                return null;
+            }
+
+            $certs = $keysResponse->json();
+            if (!is_array($certs) || empty($certs[$kid])) {
+                return null;
+            }
+
+            $verified = openssl_verify($parts[0] . '.' . $parts[1], $signature, $certs[$kid], OPENSSL_ALGO_SHA256);
+            if ($verified !== 1) {
+                return null;
+            }
+
+            return [
+                'sub' => $payload['sub'] ?? $payload['user_id'] ?? '',
+                'email' => $payload['email'],
+                'name' => $payload['name'] ?? '',
+                'picture' => $payload['picture'] ?? null,
+                'email_verified' => $payload['email_verified'] ?? false,
+            ];
+        } catch (\Throwable) {
+            return null;
+        }
     }
 }

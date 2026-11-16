@@ -80,4 +80,8 @@ Route::prefix('v1')->middleware(['client.app'])->group(function () {
 // Internal Machine-to-Machine (S2S) Endpoints from trusted ecosystem backends
 Route::prefix('internal/v1')->middleware(['internal.s2s'])->group(function () {
     Route::put('users/profile', [ProfileController::class, 'internalUpdateProfile']);
+    Route::post('users/verify-email', [ProfileController::class, 'internalVerifyEmail']);
+    Route::post('users/set-password', [ProfileController::class, 'internalSetPassword']);
+    Route::post('auth/password-reset/request', [\App\Http\Controllers\PasswordResetController::class, 'requestReset']);
+    Route::post('auth/password-reset/confirm', [\App\Http\Controllers\PasswordResetController::class, 'confirmReset']);
 });

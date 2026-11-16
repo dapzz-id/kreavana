@@ -82,6 +82,8 @@ Route::prefix('auth')->withoutMiddleware(\App\Http\Middleware\ValidateJti::class
     Route::post('social', [AuthController::class, 'socialLogin'])->middleware('throttle:auth-login');
     Route::post('verify-email', [AuthController::class, 'verifyEmail'])->middleware('throttle:auth-verify-email');
     Route::post('resend-verification', [AuthController::class, 'resendVerificationCode'])->middleware('throttle:auth-resend-verification');
+    Route::post('forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:auth-forgot-password');
+    Route::post('reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:auth-reset-password');
 });
 
 // Auth & Protected Routes

@@ -41,4 +41,32 @@ interface AuthServiceInterface
      * @return string 'success' | error identifier
      */
     public function resendVerificationCode(string $email): string;
+
+    /**
+     * Request a 6-digit password reset code via email queue.
+     *
+     * @param string $email
+     * @return array{status: int, outcome: string}
+     */
+    public function requestPasswordReset(string $email): array;
+
+    /**
+     * Confirm password reset with 6-digit OTP code via users_api.
+     *
+     * @param string $email
+     * @param string $code
+     * @param string $password
+     * @param string $passwordConfirmation
+     * @param string $ip
+     * @param string $userAgent
+     * @return array
+     */
+    public function confirmPasswordReset(
+        string $email,
+        string $code,
+        string $password,
+        string $passwordConfirmation,
+        string $ip = '',
+        string $userAgent = ''
+    ): array;
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../app/theme.dart';
 import '../../../services/theme_transition_service.dart';
 import '../services/google_auth_service.dart';
@@ -81,22 +82,25 @@ class _LoginScreenState extends State<LoginScreen>
             } catch (_) {}
           });
         } else {
-          setState(() {
-            _isLoading = false;
-            final errorCode = result['error_code']?.toString() ?? '';
-            if (errorCode == 'email_not_verified') {
-              final email =
-                  result['data']?['email']?.toString() ??
-                  _usernameOrEmailController.text.trim();
-              AuthService.resendVerificationCode(email: email);
+          final errorCode = result['error_code']?.toString() ?? '';
+          if (errorCode == 'email_not_verified') {
+            final email =
+                result['data']?['email']?.toString() ??
+                _usernameOrEmailController.text.trim();
+            setState(() => _isLoading = false);
+            await AuthService.resendVerificationCode(email: email);
+            if (mounted) {
               context.go(
                 AppRoutes.verifyEmail,
                 extra: {'email': email, 'autoResend': true},
               );
-            } else {
-              _errorMessage = AppErrors.messageFromResult(result);
             }
-          });
+          } else {
+            setState(() {
+              _isLoading = false;
+              _errorMessage = AppErrors.messageFromResult(result);
+            });
+          }
         }
       }
     }
@@ -148,54 +152,21 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   void _showForgotPasswordDialog() {
-    final emailCtrl = TextEditingController();
+    final prefilled = _usernameOrEmailController.text.trim();
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text(
-          'Reset Kata Sandi',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Masukkan email Anda. Kami akan mengirimkan instruksi reset kata sandi.',
-              style: TextStyle(fontSize: 13),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: emailCtrl,
-              keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(
-                labelText: 'Alamat Email',
-                prefixIcon: Icon(Icons.email_outlined),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final email = emailCtrl.text.trim();
-              if (email.isNotEmpty) {
-                AuthService.forgotPassword(email: email);
-                Navigator.pop(ctx);
-                AppSweetAlert.success(
-                  context,
-                  'Link reset kata sandi telah dikirim ke $email',
-                  title: 'Email Terkirim',
-                );
-              }
-            },
-            child: const Text('Kirim Link'),
-          ),
-        ],
+      barrierDismissible: false,
+      builder: (_) => _ForgotPasswordDialog(
+        initialEmail: prefilled.contains('@') ? prefilled : '',
+        onResetSuccess: (email, message) {
+          if (!mounted) return;
+          _usernameOrEmailController.text = email;
+          AppSweetAlert.success(
+            context,
+            message,
+            title: 'Kata Sandi Diperbarui',
+          );
+        },
       ),
     );
   }
@@ -967,6 +938,323 @@ class _ThemeToggleButton extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+}
+
+class _ForgotPasswordDialog extends StatefulWidget {
+  final String initialEmail;
+  final void Function(String email, String message) onResetSuccess;
+
+  const _ForgotPasswordDialog({
+    required this.initialEmail,
+    required this.onResetSuccess,
+  });
+
+  @override
+  State<_ForgotPasswordDialog> createState() => _ForgotPasswordDialogState();
+}
+
+class _ForgotPasswordDialogState extends State<_ForgotPasswordDialog> {
+  late final TextEditingController _emailCtrl;
+  final TextEditingController _otpCtrl = TextEditingController();
+  final TextEditingController _newPasswordCtrl = TextEditingController();
+  final TextEditingController _confirmPasswordCtrl = TextEditingController();
+
+  bool _codeSent = false;
+  bool _isSubmitting = false;
+  bool _obscureNew = true;
+  bool _obscureConfirm = true;
+  String? _error;
+  String? _info;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailCtrl = TextEditingController(text: widget.initialEmail);
+  }
+
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    _otpCtrl.dispose();
+    _newPasswordCtrl.dispose();
+    _confirmPasswordCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleSendCode() async {
+    final email = _emailCtrl.text.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      setState(() => _error = 'Masukkan alamat email yang valid.');
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+      _error = null;
+      _info = null;
+    });
+
+    final res = await AuthService.forgotPassword(email: email);
+    if (!mounted) return;
+
+    if (res['status'] == true) {
+      setState(() {
+        _isSubmitting = false;
+        _codeSent = true;
+        _info =
+            res['message']?.toString() ??
+            'Kode reset kata sandi 6 digit telah dikirim ke $email.';
+      });
+    } else {
+      setState(() {
+        _isSubmitting = false;
+        _error = AppErrors.messageFromResult(
+          res,
+          fallback: 'Gagal mengirim kode reset kata sandi.',
+        );
+      });
+    }
+  }
+
+  Future<void> _handleConfirmReset() async {
+    final email = _emailCtrl.text.trim();
+    final code = _otpCtrl.text.trim();
+    final pass = _newPasswordCtrl.text;
+    final confirmPass = _confirmPasswordCtrl.text;
+
+    if (code.length != 6) {
+      setState(() => _error = 'Masukkan kode verifikasi 6 digit angka.');
+      return;
+    }
+    if (pass.length < 8) {
+      setState(() => _error = 'Kata sandi baru minimal 8 karakter.');
+      return;
+    }
+    if (pass != confirmPass) {
+      setState(() => _error = 'Konfirmasi kata sandi tidak cocok.');
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+      _error = null;
+    });
+
+    final res = await AuthService.resetPassword(
+      email: email,
+      code: code,
+      password: pass,
+      passwordConfirmation: confirmPass,
+    );
+    if (!mounted) return;
+
+    if (res['status'] == true) {
+      final msg =
+          res['message']?.toString() ??
+          'Kata sandi berhasil diatur ulang. Silakan masuk dengan kata sandi baru Anda.';
+      Navigator.pop(context);
+      widget.onResetSuccess(email, msg);
+    } else {
+      setState(() {
+        _isSubmitting = false;
+        _error = AppErrors.messageFromResult(
+          res,
+          fallback: 'Gagal mengatur ulang kata sandi.',
+        );
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return AlertDialog(
+      backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      title: Row(
+        children: [
+          const Icon(
+            Icons.lock_reset_rounded,
+            color: Color(0xFF2563EB),
+            size: 22,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              _codeSent ? 'Verifikasi Kode & Sandi Baru' : 'Reset Kata Sandi',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+          ),
+        ],
+      ),
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _codeSent
+                    ? 'Masukkan kode 6 digit yang dikirim ke ${_emailCtrl.text.trim()} beserta kata sandi baru Anda.'
+                    : 'Masukkan email akun terdaftar Anda. Kami akan mengirimkan kode verifikasi 6 digit untuk mereset kata sandi.',
+                style: const TextStyle(fontSize: 13, height: 1.4),
+              ),
+              const SizedBox(height: 14),
+              if (_info != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Text(
+                    _info!,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF059669),
+                    ),
+                  ),
+                ),
+              ],
+              if (_error != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: const Color(0xFFEF4444).withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Text(
+                    _error!,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFFEF4444),
+                    ),
+                  ),
+                ),
+              ],
+              if (!_codeSent)
+                TextField(
+                  controller: _emailCtrl,
+                  enabled: !_isSubmitting,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(
+                    labelText: 'Alamat Email',
+                    hintText: 'nama@email.com',
+                    prefixIcon: const Icon(Icons.email_outlined),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                )
+              else ...[
+                TextField(
+                  controller: _otpCtrl,
+                  enabled: !_isSubmitting,
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(6),
+                  ],
+                  decoration: InputDecoration(
+                    labelText: 'Kode Verifikasi (6 Digit)',
+                    counterText: '',
+                    prefixIcon: const Icon(Icons.pin_outlined),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _newPasswordCtrl,
+                  enabled: !_isSubmitting,
+                  obscureText: _obscureNew,
+                  decoration: InputDecoration(
+                    labelText: 'Kata Sandi Baru (Min. 8 karakter)',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscureNew
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                      ),
+                      onPressed: () =>
+                          setState(() => _obscureNew = !_obscureNew),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _confirmPasswordCtrl,
+                  enabled: !_isSubmitting,
+                  obscureText: _obscureConfirm,
+                  decoration: InputDecoration(
+                    labelText: 'Konfirmasi Kata Sandi Baru',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscureConfirm
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                      ),
+                      onPressed: () =>
+                          setState(() => _obscureConfirm = !_obscureConfirm),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isSubmitting ? null : () => Navigator.pop(context),
+          child: const Text('Batal'),
+        ),
+        if (_codeSent)
+          TextButton(
+            onPressed: _isSubmitting ? null : _handleSendCode,
+            child: const Text('Kirim Ulang Kode'),
+          ),
+        ElevatedButton(
+          onPressed: _isSubmitting
+              ? null
+              : (_codeSent ? _handleConfirmReset : _handleSendCode),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF2563EB),
+            foregroundColor: Colors.white,
+          ),
+          child: _isSubmitting
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(_codeSent ? 'Simpan Kata Sandi' : 'Kirim Kode'),
+        ),
+      ],
     );
   }
 }

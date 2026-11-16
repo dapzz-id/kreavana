@@ -136,6 +136,8 @@ class UsersApiClient
                 'success' => false,
                 'status' => $statusCode,
                 'message' => $json['message'] ?? 'Kredensial tidak valid.',
+                'error_code' => $json['error_code'] ?? null,
+                'data' => $json['data'] ?? null,
                 'errors' => $json['errors'] ?? null,
             ];
         } catch (\Throwable $e) {
@@ -407,6 +409,108 @@ class UsersApiClient
     }
 
     /**
+     * Synchronize email verification status to users_api via authenticated S2S endpoint.
+     */
+    public static function markEmailVerified(User $user): array
+    {
+        return self::postInternal('/api/internal/v1/users/verify-email', [
+            'user_id' => $user->id,
+            'current_email' => $user->email,
+            'current_username' => $user->username,
+        ], 'UsersApiClient::markEmailVerified');
+    }
+
+    /**
+     * Synchronize or set password in users_api UserCredential via authenticated S2S endpoint.
+     */
+    public static function setUserPassword(User $user, string $password): array
+    {
+        return self::postInternal('/api/internal/v1/users/set-password', [
+            'user_id' => $user->id,
+            'current_email' => $user->email,
+            'current_username' => $user->username,
+            'password' => $password,
+        ], 'UsersApiClient::setUserPassword');
+    }
+
+    /**
+     * Request a 6-digit password reset OTP from users_api via authenticated S2S endpoint.
+     */
+    public static function requestPasswordReset(string $email): array
+    {
+        return self::postInternal('/api/internal/v1/auth/password-reset/request', [
+            'email' => strtolower(trim($email)),
+        ], 'UsersApiClient::requestPasswordReset');
+    }
+
+    /**
+     * Confirm 6-digit password reset OTP and persist new password in users_api.
+     */
+    public static function confirmPasswordReset(
+        string $email,
+        string $code,
+        string $password,
+        string $passwordConfirmation
+    ): array {
+        return self::postInternal('/api/internal/v1/auth/password-reset/confirm', [
+            'email' => strtolower(trim($email)),
+            'code' => $code,
+            'password' => $password,
+            'password_confirmation' => $passwordConfirmation,
+        ], 'UsersApiClient::confirmPasswordReset');
+    }
+
+    /**
+     * Shared authenticated S2S POST caller to users_api.
+     */
+    protected static function postInternal(string $path, array $payload, string $logLabel): array
+    {
+        $url = self::getBaseUrl() . $path;
+        $correlationId = (string) \Illuminate\Support\Str::uuid();
+
+        try {
+            $response = self::httpClient(null, $payload, $correlationId)->post($url, $payload);
+            $statusCode = $response->status();
+            $json = $response->json() ?? [];
+
+            if ($response->successful()) {
+                return [
+                    'success' => true,
+                    'status' => $statusCode,
+                    'message' => $json['message'] ?? 'Operasi berhasil.',
+                    'data' => $json['data'] ?? [],
+                ];
+            }
+
+            $errors = is_array($json['errors'] ?? null)
+                ? self::formatValidationErrors($json['errors'])
+                : null;
+
+            return [
+                'success' => false,
+                'status' => $statusCode,
+                'message' => $json['message'] ?? 'Permintaan ke Universal Identity gagal.',
+                'error_code' => $json['error_code'] ?? null,
+                'errors' => $errors,
+                'data' => $json['data'] ?? null,
+            ];
+        } catch (\Throwable $e) {
+            Log::error($logLabel . ' failed: ' . $e->getMessage(), [
+                'url' => $url,
+                'correlation_id' => $correlationId,
+            ]);
+
+            return [
+                'success' => false,
+                'status' => 503,
+                'message' => 'Layanan Universal Identity sedang tidak dapat dijangkau.',
+                'error_code' => 'service_unavailable',
+                'error' => env('APP_DEBUG') ? $e->getMessage() : null,
+            ];
+        }
+    }
+
+    /**
      * Format raw validation errors returned by users_api into clear Indonesian messages.
      */
     public static function formatValidationErrors(array $errors): array
@@ -433,8 +537,10 @@ class UsersApiClient
                     return $label . ' wajib diisi.';
                 }
                 if (str_contains($strMsg, 'validation.min')) {
+                    if ($field === 'password') {
+                        return 'Kata sandi minimal 8 karakter.';
+                    }
                     $label = match ($field) {
-                        'password' => 'Kata sandi',
                         'full_name', 'name' => 'Nama lengkap',
                         default => ucfirst($field),
                     };
@@ -469,6 +575,11 @@ class UsersApiClient
         $hasPhone = array_key_exists('phone', $userApiData);
         $phone = $hasPhone ? (trim((string) ($userApiData['phone'] ?? '')) ?: null) : null;
 
+        $hasEmailVerifiedFlag = array_key_exists('is_email_verified', $userApiData);
+        $isEmailVerified = $hasEmailVerifiedFlag
+            ? filter_var($userApiData['is_email_verified'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)
+            : null;
+
         // Find existing user by ID, Email, or Username (case-insensitive)
         $user = null;
         if ($id) {
@@ -496,7 +607,7 @@ class UsersApiClient
             $user->avatar_url = $avatarUrl;
             $user->role = RoleType::User;
             $user->is_creator_approved = 0;
-            $user->email_verified_at = now();
+            $user->email_verified_at = ($isEmailVerified === false) ? null : now();
             $user->balance = 0.00;
             $user->save();
         } else {
@@ -532,7 +643,12 @@ class UsersApiClient
                 $user->phone = $phone;
                 $dirty = true;
             }
-            if ($user->email_verified_at === null) {
+            if ($isEmailVerified === false) {
+                if ($user->email_verified_at !== null) {
+                    $user->email_verified_at = null;
+                    $dirty = true;
+                }
+            } elseif ($user->email_verified_at === null) {
                 $user->email_verified_at = now();
                 $dirty = true;
             }
