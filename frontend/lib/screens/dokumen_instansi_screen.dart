@@ -5,6 +5,7 @@ import '../models/user_model.dart';
 import '../services/api_service.dart';
 import '../widgets/app_sweet_alert.dart';
 import '../widgets/desktop_sidebar_layout.dart';
+import '../widgets/official_document_viewer_dialog.dart';
 import 'institution_workspace_screen.dart';
 
 class DokumenInstansiScreen extends StatefulWidget {
@@ -345,12 +346,15 @@ class _DokumenInstansiScreenState extends State<DokumenInstansiScreen> {
                           const SizedBox(width: 10),
                           ElevatedButton.icon(
                             onPressed: () async {
-                              final rawUrl = (d['file_url'] ?? d['url'] ?? '').toString().trim();
+                              final meta = d['metadata'] is Map<String, dynamic>
+                                  ? d['metadata'] as Map<String, dynamic>
+                                  : <String, dynamic>{};
+                              final rawUrl = (d['file_url'] ?? d['url'] ?? meta['file_url'] ?? meta['url'] ?? '').toString().trim();
                               if (rawUrl.isEmpty) {
-                                AppSweetAlert.warning(
+                                OfficialDocumentViewerDialog.show(
                                   context,
-                                  'Berkas dokumen asli tidak tersedia.',
-                                  title: 'Berkas Tidak Tersedia',
+                                  document: d,
+                                  isGovernment: _isGovernment,
                                 );
                                 return;
                               }

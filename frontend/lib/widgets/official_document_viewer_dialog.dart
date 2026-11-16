@@ -84,9 +84,11 @@ class OfficialDocumentViewerDialog extends StatelessWidget {
   }
 
   String get _author {
-    final a = _meta['author'] ??
+    final a = _meta['authority'] ??
+        _meta['author'] ??
         _meta['penandatangan'] ??
         _meta['partner_name'] ??
+        _meta['corporate_name'] ??
         _meta['institution_name'] ??
         document['author'] ??
         document['institution_name'];
@@ -607,12 +609,24 @@ class OfficialDocumentViewerDialog extends StatelessWidget {
         if (_meta.containsKey('sk_number') ||
             _meta.containsKey('grade') ||
             _meta.containsKey('edition') ||
-            _meta.containsKey('pages')) ...[
+            _meta.containsKey('pages') ||
+            _meta.containsKey('agreed_price_formatted') ||
+            _meta.containsKey('client_name') ||
+            _meta.containsKey('creator_name') ||
+            _meta.containsKey('project_title')) ...[
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
             runSpacing: 6,
             children: [
+              if (_meta['project_title'] != null && _meta['project_title'].toString().trim().isNotEmpty)
+                _buildInfoTag('Proyek: ${_meta['project_title']}'),
+              if (_meta['agreed_price_formatted'] != null && _meta['agreed_price_formatted'].toString().trim().isNotEmpty)
+                _buildInfoTag('Nilai: ${_meta['agreed_price_formatted']}'),
+              if (_meta['client_name'] != null && _meta['client_name'].toString().trim().isNotEmpty)
+                _buildInfoTag('Pihak I: ${_meta['client_name']}'),
+              if (_meta['creator_name'] != null && _meta['creator_name'].toString().trim().isNotEmpty)
+                _buildInfoTag('Pihak II: ${_meta['creator_name']}'),
               if (_meta['sk_number'] != null)
                 _buildInfoTag('No. SK: ${_meta['sk_number']}'),
               if (_meta['grade'] != null)
@@ -623,6 +637,22 @@ class OfficialDocumentViewerDialog extends StatelessWidget {
                 _buildInfoTag('${_meta['pages']} Halaman'),
             ],
           ),
+        ],
+        if (_meta['dynamic_terms'] is List && (_meta['dynamic_terms'] as List).isNotEmpty) ...[
+          const SizedBox(height: 14),
+          const Text(
+            'Ketentuan & Klausul Perjanjian:',
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
+          ),
+          const SizedBox(height: 6),
+          for (int i = 0; i < (_meta['dynamic_terms'] as List).length; i++)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                '${i + 1}. ${(_meta['dynamic_terms'] as List)[i]}',
+                style: const TextStyle(fontSize: 11.5, height: 1.45, color: Colors.black87),
+              ),
+            ),
         ],
       ],
     );

@@ -5,10 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../services/api_service.dart';
+import '../services/app_router.dart';
 import '../widgets/desktop_sidebar_layout.dart';
 import '../widgets/app_sweet_alert.dart';
 import '../widgets/official_document_viewer_dialog.dart';
@@ -1118,7 +1120,7 @@ class _InstitutionWorkspaceScreenState
       return;
     }
 
-    if (widget.resourceType == 'reports') {
+    if (widget.resourceType == 'reports' || widget.resourceType == 'documents') {
       if (!mounted) return;
       OfficialDocumentViewerDialog.show(
         context,
@@ -3121,11 +3123,35 @@ class _InstitutionWorkspaceScreenState
     final titleLower = title.toLowerCase();
     final accentColor = _resolvedAccentColor;
 
-    // 1. Resolve Document Category & Icon
+    // 1. Resolve Document Category & Icon (prefer explicit metadata from synced partner/project docs)
+    final explicitCategory = (meta['category'] ?? '').toString().trim();
+    final sourceType = (meta['source_type'] ?? '').toString().trim();
+    final isLinkedProject = record['is_linked_project_document'] == true ||
+        sourceType.startsWith('project_');
+    final partnerResourceId = (meta['partner_resource_id'] ?? '').toString().trim();
+    final isLinkedPartner = partnerResourceId.isNotEmpty;
+    final linkedOppId = (meta['opportunity_id'] ?? '').toString().trim();
+
     final String category;
     final IconData catIcon;
 
-    if (titleLower.contains('akreditasi') || titleLower.contains('ban-pt')) {
+    if (explicitCategory.isNotEmpty) {
+      category = explicitCategory;
+      final catLower = explicitCategory.toLowerCase();
+      if (catLower.contains('akreditasi')) {
+        catIcon = Icons.verified_outlined;
+      } else if (catLower.contains('mou') || catLower.contains('kemitraan')) {
+        catIcon = Icons.handshake_outlined;
+      } else if (catLower.contains('kontrak') || catLower.contains('spk')) {
+        catIcon = Icons.assignment_turned_in_outlined;
+      } else if (catLower.contains('surat')) {
+        catIcon = Icons.mark_email_read_outlined;
+      } else if (catLower.contains('proyek') || catLower.contains('hasil')) {
+        catIcon = Icons.work_outline_rounded;
+      } else {
+        catIcon = Icons.gavel_outlined;
+      }
+    } else if (titleLower.contains('akreditasi') || titleLower.contains('ban-pt')) {
       category = 'Akreditasi Institusi (BAN-PT)';
       catIcon = Icons.verified_outlined;
     } else if (titleLower.contains('mou') || titleLower.contains('perjanjian') || titleLower.contains('kemitraan')) {
@@ -3135,13 +3161,22 @@ class _InstitutionWorkspaceScreenState
       category = 'Pedoman Teknis PKL & MBKM';
       catIcon = Icons.menu_book_outlined;
     } else {
-      category = meta['category']?.toString() ?? 'Dokumen Resmi Legalitas';
+      category = 'Dokumen Resmi Legalitas';
       catIcon = Icons.gavel_outlined;
     }
 
-    // 2. Resolve Official Authority Name
+    // 2. Resolve Official Authority Name (prefer explicit metadata before title heuristics)
+    final explicitAuthority = [
+      meta['authority'],
+      meta['partner_name'],
+      meta['corporate_name'],
+      meta['author'],
+    ].map((e) => (e ?? '').toString().trim()).firstWhere((e) => e.isNotEmpty, orElse: () => '');
+
     final String authority;
-    if (titleLower.contains('ban-pt') || titleLower.contains('akreditasi')) {
+    if (explicitAuthority.isNotEmpty) {
+      authority = explicitAuthority;
+    } else if (titleLower.contains('ban-pt') || titleLower.contains('akreditasi')) {
       authority = 'Badan Akreditasi Nasional Perguruan Tinggi (BAN-PT)';
     } else if (titleLower.contains('kampus merdeka') || titleLower.contains('dudi') || titleLower.contains('mou')) {
       authority = 'Kementerian Pendidikan, Kebudayaan, Riset, & Teknologi (DUDI)';
@@ -3352,6 +3387,46 @@ class _InstitutionWorkspaceScreenState
                                   ],
                                 ),
                               ),
+                              if (isLinkedProject || isLinkedPartner)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: isLinkedProject
+                                        ? const Color(0xFFEFF6FF)
+                                        : const Color(0xFFF5F3FF),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: isLinkedProject
+                                          ? const Color(0xFFBFDBFE)
+                                          : const Color(0xFFDDD6FE),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        isLinkedProject
+                                            ? Icons.work_outline_rounded
+                                            : Icons.handshake_outlined,
+                                        size: 11.5,
+                                        color: isLinkedProject
+                                            ? const Color(0xFF1D4ED8)
+                                            : const Color(0xFF6D28D9),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        isLinkedProject ? 'Proyek Saya' : 'Mitra Industri',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: isLinkedProject
+                                              ? const Color(0xFF1D4ED8)
+                                              : const Color(0xFF6D28D9),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                             ],
                           ),
                           const SizedBox(height: 8),
@@ -3432,7 +3507,8 @@ class _InstitutionWorkspaceScreenState
                     const SizedBox(width: 12),
                     // Action Popup Menu (lock edit for approved synced MoUs and incoming records)
                     Builder(builder: (_) {
-                      final isLockedMou = (meta['partner_resource_id']?.toString().trim().isNotEmpty ?? false) ||
+                      final isLockedMou = isLinkedProject ||
+                          isLinkedPartner ||
                           meta['locked_after_approval'] == true;
                       final myDocUserId = widget.user.id.toString();
                       final docTargetId = meta['target_user_id']?.toString() ?? '';
@@ -3456,6 +3532,14 @@ class _InstitutionWorkspaceScreenState
                         onSelected: (value) {
                           if (value == 'open') {
                             _openOfficialDocument(record);
+                          } else if (value == 'go_project') {
+                            if (linkedOppId.isNotEmpty) {
+                              context.go('/proyek/$linkedOppId');
+                            } else {
+                              context.go(AppRoutes.proyek);
+                            }
+                          } else if (value == 'go_partner') {
+                            context.go(AppRoutes.mitraIndustri);
                           } else if (value == 'edit') {
                             _openEditor(record);
                           } else if (value == 'delete') {
@@ -3472,6 +3556,30 @@ class _InstitutionWorkspaceScreenState
                               color: accentColor,
                             ),
                           ];
+                          if (isLinkedProject) {
+                            items.add(_buildPopupDivider());
+                            items.add(
+                              _buildPopupActionItem(
+                                value: 'go_project',
+                                icon: Icons.work_outline_rounded,
+                                label: linkedOppId.isNotEmpty ? 'Buka Proyek Terkait' : 'Lihat di Proyek Saya',
+                                isDark: isDark,
+                                color: const Color(0xFF2563EB),
+                              ),
+                            );
+                          }
+                          if (isLinkedPartner) {
+                            items.add(_buildPopupDivider());
+                            items.add(
+                              _buildPopupActionItem(
+                                value: 'go_partner',
+                                icon: Icons.handshake_outlined,
+                                label: 'Lihat Mitra Industri',
+                                isDark: isDark,
+                                color: const Color(0xFF7C3AED),
+                              ),
+                            );
+                          }
                           if (canEditDoc) {
                             items.add(_buildPopupDivider());
                             items.add(
@@ -3600,43 +3708,46 @@ class _InstitutionWorkspaceScreenState
                 child: Row(
                   children: [
                     // File specs & Digital seal pill
-                    Wrap(
-                      spacing: 10,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.description_outlined, size: 14, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
-                            const SizedBox(width: 5),
-                            Text(
-                              '$fileFormat • $fileSize',
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w500,
-                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                    Expanded(
+                      child: Wrap(
+                        spacing: 10,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.description_outlined, size: 14, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                              const SizedBox(width: 5),
+                              Text(
+                                '$fileFormat • $fileSize',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.verified_outlined, size: 13, color: Color(0xFF059669)),
-                            const SizedBox(width: 4),
-                            const Text(
-                              'Terverifikasi Instansi',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: Color(0xFF059669),
+                            ],
+                          ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.verified_outlined, size: 13, color: Color(0xFF059669)),
+                              const SizedBox(width: 4),
+                              const Text(
+                                'Terverifikasi Instansi',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF059669),
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                    const Spacer(),
+                    const SizedBox(width: 8),
                     // Primary Interactive CTA Button
                     Material(
                       color: Colors.transparent,
@@ -6444,7 +6555,7 @@ class _InstitutionWorkspaceScreenState
                       _search.isNotEmpty || _statusFilter != 'Semua'
                           ? 'Coba sesuaikan kata kunci pencarian atau ubah filter status.'
                           : (widget.resourceType == 'documents'
-                              ? 'Berkas dokumen MoU otomatis terbit di sini setelah pengajuan kemitraan di menu "Mitra Industri" disetujui oleh Corporate.'
+                              ? 'Berkas dokumen dan MoU akan tampil otomatis dari kemitraan di menu "Mitra Industri" yang disetujui maupun dari kontrak, MoU, dan berkas pada "Proyek Saya".'
                               : 'Tambahkan data pertama Anda untuk dikelola dan dipublikasikan secara resmi.'),
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 13, color: Colors.grey.shade600),

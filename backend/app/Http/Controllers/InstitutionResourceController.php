@@ -607,9 +607,29 @@ class InstitutionResourceController extends Controller
             })->values();
         }
 
+        $linkedDocService = app(\App\Services\LinkedProjectDocumentService::class);
+        if (in_array($type, ['documents', null], true)) {
+            $resources = $linkedDocService->filterOrphanedPartnerDocuments($resources);
+        }
+
         // Batch-hydrate counterpart user (with live DB phone) and viewer direction flags
         if (in_array($type, ['partners', 'documents', null], true) && $resources->isNotEmpty()) {
             $this->hydrateCounterpartyUsers($resources, $request, $ownerId, $ctx);
+        }
+
+        $canIncludeLinkedProjectDocs = $ownerId
+            && ($type === 'documents' || (empty($type) && (!$isStaff || in_array('dokumen_institusi', $ctx['permissions'], true))));
+
+        if ($canIncludeLinkedProjectDocs) {
+            $linkedProjectDocs = $linkedDocService->collectForUser((string) $ownerId, $ownerUser);
+            if ($linkedProjectDocs->isNotEmpty()) {
+                $merged = collect($resources->toArray())
+                    ->concat($linkedProjectDocs)
+                    ->sortByDesc(fn (array $item) => $item['published_at'] ?? $item['created_at'] ?? '')
+                    ->values();
+
+                return $this->successResponse('Data instansi berhasil diambil.', $merged);
+            }
         }
 
         return $this->successResponse('Data instansi berhasil diambil.', $resources);
@@ -1013,6 +1033,9 @@ class InstitutionResourceController extends Controller
     public function update(Request $request, string $id)
     {
         $this->ensureInstitutionAccount($request);
+        if (str_starts_with($id, 'project-')) {
+            return $this->errorResponse('Dokumen yang terhubung dari Proyek Saya tidak dapat diubah dari menu ini. Silakan kelola melalui menu Proyek Saya.', 403);
+        }
         $ctx = $this->resolveInstitutionContext($request);
         $ownerId = $ctx['owner_id'] ?: $request->user()->id;
         $isStaff = $ctx['is_staff'];
@@ -1253,6 +1276,9 @@ class InstitutionResourceController extends Controller
     public function destroy(Request $request, string $id)
     {
         $this->ensureInstitutionAccount($request);
+        if (str_starts_with($id, 'project-')) {
+            return $this->errorResponse('Dokumen yang terhubung dari Proyek Saya mengikuti data proyek terkait. Hapus atau ubah langsung dari menu Proyek Saya.', 403);
+        }
         $ctx = $this->resolveInstitutionContext($request);
         $ownerId = $ctx['owner_id'] ?: $request->user()->id;
         $isStaff = $ctx['is_staff'];
@@ -1289,6 +1315,21 @@ class InstitutionResourceController extends Controller
                 ]);
                 app(\App\Services\RefreshTokenRepository::class)->revokeAllForUser($subAccount->user_id);
             }
+        }
+
+        if ($resource->resource_type === 'partners') {
+            $partnerMeta = is_array($resource->metadata) ? $resource->metadata : [];
+            $linkedDocId = $partnerMeta['linked_document_id'] ?? null;
+
+            InstitutionResource::query()
+                ->where('resource_type', 'documents')
+                ->where(function ($q) use ($resource, $linkedDocId) {
+                    $q->where('metadata->partner_resource_id', $resource->id);
+                    if (!empty($linkedDocId)) {
+                        $q->orWhere('id', $linkedDocId);
+                    }
+                })
+                ->delete();
         }
 
         $resource->delete();

@@ -2,8 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ContractStatus;
 use App\Enums\RoleType;
+use App\Enums\WorkStatus;
 use App\Models\InstitutionResource;
+use App\Models\JobContract;
 use App\Models\Opportunity;
 use App\Models\OpportunityApplication;
 use App\Models\OpportunityRequirement;
@@ -611,5 +614,203 @@ class InstitutionResourceTest extends TestCase
         $this->actingAsApi($corporate)
             ->postJson("/api/institution/resources/{$partnerId}/reject")
             ->assertStatus(422);
+    }
+
+    public function test_documents_include_live_project_contracts_wet_mou_letters_and_uploaded_files_without_duplicates(): void
+    {
+        $institution = User::factory()->create([
+            'role' => RoleType::User,
+            'sub_role' => 'institution',
+            'name' => 'SMK Telekomunikasi Telesandi',
+            'username' => 'smk_telesandi',
+        ]);
+        $creator = User::factory()->create([
+            'role' => RoleType::Creator,
+            'sub_role' => 'videographer',
+            'name' => 'Kreator Video',
+            'username' => 'videographer_demo',
+        ]);
+        $otherInstitution = User::factory()->create([
+            'role' => RoleType::User,
+            'sub_role' => 'institution',
+            'name' => 'Sekolah Lain',
+        ]);
+
+        // Project owned by institution with wet-signature MoU, official letter, submitted docs & deliverables
+        $opp = Opportunity::create([
+            'title' => 'Riset Kolaborasi Preservasi Budaya Digital',
+            'description' => 'Pembuatan arsip 3D photogrammetry.',
+            'sub_role_slug' => 'videographer',
+            'type' => 'project',
+            'status' => 'open',
+            'wet_signature_document_url' => 'https://example.test/mou_ttd_basah.pdf',
+            'wet_signature_verified_at' => now(),
+            'official_acceptance_letter_url' => 'https://example.test/surat_resmi.pdf',
+            'official_acceptance_letter_name' => 'Surat_Resmi_Riset.pdf',
+            'official_acceptance_letter_uploaded_at' => now(),
+            'posted_by' => $institution->id,
+            'created_at' => now(),
+        ]);
+
+        $contract = JobContract::create([
+            'contract_number' => 'KRV/CTR/2026/001',
+            'client_id' => $institution->id,
+            'creator_id' => $creator->id,
+            'opportunity_id' => $opp->id,
+            'title' => $opp->title,
+            'description' => 'Kontrak riset kolaborasi digital.',
+            'agreed_price' => 65000000,
+            'escrow_amount' => 65000000,
+            'contract_status' => ContractStatus::Active,
+            'work_status' => WorkStatus::InProgress,
+            'client_approved' => true,
+            'creator_approved' => true,
+            'deliverables' => [
+                [
+                    'title' => 'Laporan Hasil Kerja Final.pdf',
+                    'url' => 'https://example.test/hasil_kerja_final.pdf',
+                    'type' => 'document',
+                ],
+            ],
+        ]);
+
+        OpportunityApplication::create([
+            'opportunity_id' => $opp->id,
+            'creator_id' => $creator->id,
+            'sub_role_slug' => 'videographer',
+            'pitch_message' => 'Proposal dan hasil kerja proyek.',
+            'contract_number' => 'KRV/CTR/2026/001',
+            'status' => 'approved',
+            'submitted_documents' => [
+                [
+                    'title' => 'Proposal Teknis Lapangan.pdf',
+                    'url' => 'https://example.test/proposal_teknis.pdf',
+                    'type' => 'document',
+                ],
+            ],
+            // Duplicate URL matching JobContract.deliverables should be deduplicated
+            'submitted_deliverables' => [
+                [
+                    'title' => 'Laporan Hasil Kerja Final.pdf',
+                    'url' => 'https://example.test/hasil_kerja_final.pdf',
+                    'type' => 'document',
+                ],
+            ],
+        ]);
+
+        // Unrelated other institution project must never leak
+        $unrelatedOpp = Opportunity::create([
+            'title' => 'Proyek Rahasia Sekolah Lain',
+            'sub_role_slug' => 'editor',
+            'type' => 'project',
+            'status' => 'open',
+            'wet_signature_document_url' => 'https://example.test/secret_other.pdf',
+            'posted_by' => $otherInstitution->id,
+            'created_at' => now(),
+        ]);
+
+        $res = $this->actingAsApi($institution)
+            ->getJson('/api/institution/resources?type=documents')
+            ->assertOk();
+
+        $docs = collect($res->json('data'));
+        $titles = $docs->pluck('title')->all();
+
+        $this->assertContains('Kontrak Proyek - Riset Kolaborasi Preservasi Budaya Digital', $titles);
+        $this->assertContains('MoU Tanda Tangan Basah - Riset Kolaborasi Preservasi Budaya Digital', $titles);
+        $this->assertContains('Surat Resmi Penerimaan - Riset Kolaborasi Preservasi Budaya Digital', $titles);
+        $this->assertContains('Proposal Teknis Lapangan.pdf — Riset Kolaborasi Preservasi Budaya Digital', $titles);
+        $this->assertContains('Laporan Hasil Kerja Final.pdf — Riset Kolaborasi Preservasi Budaya Digital', $titles);
+        $this->assertCount(5, $docs);
+        $this->assertNull($docs->firstWhere('id', 'project-wet-mou-' . $unrelatedOpp->id));
+
+        // Guard against Postgres UUID 22P02 when mutating or deleting linked project IDs via institution endpoint
+        $this->actingAsApi($institution)
+            ->putJson("/api/institution/resources/project-contract-{$contract->id}", ['title' => 'Edit'])
+            ->assertStatus(403);
+        $this->actingAsApi($institution)
+            ->deleteJson("/api/institution/resources/project-contract-{$contract->id}")
+            ->assertStatus(403);
+
+        // When project & contract are deleted, linked documents vanish automatically
+        $contract->delete();
+        OpportunityApplication::where('opportunity_id', $opp->id)->delete();
+        $opp->delete();
+
+        $afterDelete = $this->actingAsApi($institution)
+            ->getJson('/api/institution/resources?type=documents')
+            ->assertOk();
+        $this->assertCount(0, $afterDelete->json('data'));
+    }
+
+    public function test_deleting_partner_removes_synced_mou_document_and_excludes_orphaned_partner_documents(): void
+    {
+        $institution = User::factory()->create([
+            'role' => RoleType::User,
+            'sub_role' => 'institution',
+            'name' => 'SMK Telekomunikasi Telesandi',
+        ]);
+        $corporate = User::factory()->create([
+            'role' => RoleType::User,
+            'sub_role' => 'corporate',
+            'name' => 'CV Transforma Alam Kreasi',
+        ]);
+
+        // Pending partner owned by institution can be deleted via API alongside any linked doc
+        $pendingPartner = InstitutionResource::create([
+            'user_id' => $institution->id,
+            'resource_type' => 'partners',
+            'title' => 'PT Mitra Pending',
+            'description' => 'Kerjasama magang pending.',
+            'status' => 'pending',
+        ]);
+        $pendingLinkedDoc = InstitutionResource::create([
+            'user_id' => $institution->id,
+            'resource_type' => 'documents',
+            'title' => 'Perjanjian Kerjasama (MoU) - PT Mitra Pending',
+            'status' => 'published',
+            'metadata' => ['partner_resource_id' => $pendingPartner->id],
+        ]);
+
+        $this->actingAsApi($institution)
+            ->deleteJson("/api/institution/resources/{$pendingPartner->id}")
+            ->assertOk();
+
+        $this->assertDatabaseMissing('institution_resources', ['id' => $pendingPartner->id]);
+        $this->assertDatabaseMissing('institution_resources', ['id' => $pendingLinkedDoc->id]);
+
+        // Approved partner deleted directly in DB -> its orphaned synced MoU is automatically excluded
+        $createRes = $this->actingAsApi($institution)
+            ->postJson('/api/institution/resources', [
+                'resource_type' => 'partners',
+                'title' => $corporate->name,
+                'description' => 'Kerjasama resmi industri.',
+                'metadata' => [
+                    'corporate_user_id' => $corporate->id,
+                    'mou_files' => [
+                        ['url' => 'https://example.test/mou_corp.pdf', 'filename' => 'mou_corp.pdf'],
+                    ],
+                ],
+            ])
+            ->assertStatus(201);
+
+        $partnerId = $createRes->json('data.id');
+        $approveRes = $this->actingAsApi($corporate)
+            ->postJson("/api/institution/resources/{$partnerId}/approve")
+            ->assertOk();
+        $syncedDocId = $approveRes->json('data.document.id');
+
+        $this->assertNotNull(
+            collect($this->actingAsApi($institution)->getJson('/api/institution/resources?type=documents')->json('data'))
+                ->firstWhere('id', $syncedDocId)
+        );
+
+        // Simulate direct SQL DELETE FROM institution_resources WHERE resource_type = 'partners'
+        InstitutionResource::where('id', $partnerId)->delete();
+
+        $docsAfterDirectDelete = collect(
+            $this->actingAsApi($institution)->getJson('/api/institution/resources?type=documents')->assertOk()->json('data')
+        );
+        $this->assertNull($docsAfterDirectDelete->firstWhere('id', $syncedDocId));
     }
 }
