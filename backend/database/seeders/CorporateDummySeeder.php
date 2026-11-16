@@ -158,7 +158,7 @@ class CorporateDummySeeder extends Seeder
             [
                 'resource_type' => 'tenders',
                 'title' => 'RFP-2026-001: Pengadaan Sistem Dokumentasi & Multi-Camera RUPS',
-                'description' => 'Tender terbuka pengadaan vendor dokumentasi, broadcast multi-kamera, dan live switcher untuk RUPS PT Kreavana Nusantara.',
+                'description' => 'Tender terbuka pengadaan vendor dokumentasi, broadcast multi-kamera, dan live switcher untuk RUPS Transforma Alam.',
                 'status' => 'open',
                 'metadata' => [
                     'category' => 'Broadcast & Media',

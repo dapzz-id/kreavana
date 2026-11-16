@@ -32,8 +32,8 @@ class UserSeeder extends Seeder
             [
                 'email' => 'corporate@kreavana.id',
                 'username' => 'corporate_demo',
-                'full_name' => 'PT Kreavana Nusantara Korporat',
-                'display_name' => 'Kreavana Corporate',
+                'full_name' => 'Transforma Alam',
+                'display_name' => 'Transforma Alam',
             ],
             // 4. Creator Biasa
             [

@@ -74,6 +74,7 @@ class User extends Authenticatable implements JWTSubject
         return in_array($subRole, $keywords)
             || in_array($role, $keywords)
             || $this->username === 'corporate_demo'
+            || $this->username === 'transforma_alam'
             || str_starts_with($this->email ?? '', 'corporate@');
     }
 

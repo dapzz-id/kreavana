@@ -147,7 +147,7 @@ void main() {
       expect(find.text('Reza Pratama'), findsNothing);
     });
 
-    testWidgets('Toggle status Buka/Tutup Pendaftaran updates state and button label',
+    testWidgets('Closing registration requires confirmation and hides the button once closed',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(1280, 1000));
 
@@ -168,8 +168,18 @@ void main() {
       await tester.tap(toggleBtn);
       await tester.pumpAndSettle();
 
-      // Now button switches to 'Buka Pendaftaran'
-      expect(find.text('Buka Pendaftaran'), findsOneWidget);
+      // Confirmation dialog must appear
+      expect(find.text('Tutup Pendaftaran Program?'), findsOneWidget);
+      expect(find.text('Ya, Tutup Pendaftaran'), findsOneWidget);
+
+      // Confirm closing
+      await tester.tap(find.text('Ya, Tutup Pendaftaran'));
+      await tester.pumpAndSettle();
+
+      // Once closed, button disappears completely per requirement
+      expect(find.text('Tutup Pendaftaran'), findsNothing);
+      expect(find.text('Buka Pendaftaran'), findsNothing);
+      expect(find.text('Pendaftaran Ditutup'), findsWidgets);
     });
 
     testWidgets('Groups applicants by institution and shows Setujui and Tolak buttons',
@@ -204,6 +214,13 @@ void main() {
       // Click Setujui on SMKN 4 Bandung
       await tester.ensureVisible(approveBtn);
       await tester.tap(approveBtn);
+      await tester.pumpAndSettle();
+
+      // Confirmation dialog should appear
+      expect(find.text('Setujui Kemitraan Institusi?'), findsOneWidget);
+      expect(find.text('Ya, Setujui Kemitraan'), findsOneWidget);
+
+      await tester.tap(find.text('Ya, Setujui Kemitraan'));
       await tester.pumpAndSettle();
 
       // Verify status badge updated to Disetujui

@@ -274,6 +274,7 @@ Kembalikan HANYA format JSON valid tanpa tanda petik pembuka markdown atau backt
                 ->orWhereIn('role', $keywords)
                 ->orWhereHas('userSubRoles', fn($sq) => $sq->whereIn('sub_role_slug', $keywords)->where('is_active', true))
                 ->orWhere('username', 'corporate_demo')
+                ->orWhere('username', 'transforma_alam')
                 ->orWhere('email', 'like', 'corporate%@%');
         });
     }

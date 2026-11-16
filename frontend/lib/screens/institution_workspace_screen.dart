@@ -793,6 +793,68 @@ class _InstitutionWorkspaceScreenState
   }
 
   Future<void> _approvePartnerProposal(Map<String, dynamic> record) async {
+    final meta = (record['metadata'] is Map<String, dynamic>)
+        ? record['metadata'] as Map<String, dynamic>
+        : <String, dynamic>{};
+    final ownerMap = (record['user'] is Map<String, dynamic>)
+        ? record['user'] as Map<String, dynamic>
+        : (record['owner'] is Map<String, dynamic>
+            ? record['owner'] as Map<String, dynamic>
+            : <String, dynamic>{});
+    final partnerName = (ownerMap['name']?.toString() ??
+            meta['corporate_name']?.toString() ??
+            record['title']?.toString() ??
+            'Mitra')
+        .trim();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFDCFCE7),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.check_circle_outline_rounded, color: Color(0xFF16A34A), size: 22),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Setujui Pengajuan Kemitraan?',
+                style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Anda yakin ingin menyetujui pengajuan kemitraan dari "$partnerName"?\n\n'
+          'Setelah disetujui, kemitraan akan berstatus aktif dan dokumen MoU resmi otomatis diterbitkan.',
+          style: const TextStyle(fontSize: 13.5, height: 1.45),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF059669),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            icon: const Icon(Icons.check_rounded, size: 16),
+            label: const Text('Ya, Setujui Kemitraan'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
     final id = record['id'];
     try {
       final res = await ApiService.post('institution/resources/$id/approve', {});
@@ -815,6 +877,67 @@ class _InstitutionWorkspaceScreenState
   }
 
   Future<void> _rejectPartnerProposal(Map<String, dynamic> record) async {
+    final meta = (record['metadata'] is Map<String, dynamic>)
+        ? record['metadata'] as Map<String, dynamic>
+        : <String, dynamic>{};
+    final ownerMap = (record['user'] is Map<String, dynamic>)
+        ? record['user'] as Map<String, dynamic>
+        : (record['owner'] is Map<String, dynamic>
+            ? record['owner'] as Map<String, dynamic>
+            : <String, dynamic>{});
+    final partnerName = (ownerMap['name']?.toString() ??
+            meta['corporate_name']?.toString() ??
+            record['title']?.toString() ??
+            'Mitra')
+        .trim();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEE2E2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.cancel_outlined, color: Color(0xFFDC2626), size: 22),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Tolak Pengajuan Kemitraan?',
+                style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Anda yakin ingin menolak pengajuan kemitraan dari "$partnerName"?\n\nTindakan ini tidak dapat dibatalkan.',
+          style: const TextStyle(fontSize: 13.5, height: 1.45),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            icon: const Icon(Icons.close_rounded, size: 16),
+            label: const Text('Ya, Tolak'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
     final id = record['id'];
     try {
       final res = await ApiService.post('institution/resources/$id/reject', {});
