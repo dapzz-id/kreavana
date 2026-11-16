@@ -266,6 +266,7 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
       if (res['status'] == true && res['data'] != null) {
         final data = res['data'];
         final updatedOpp = _currentVacancy.opportunity?.copyWith(
+          status: 'closed',
           officialAcceptanceLetterUrl: data['official_acceptance_letter_url']?.toString(),
           officialAcceptanceLetterName: data['official_acceptance_letter_name']?.toString() ?? file.name,
           officialAcceptanceLetterUploadedAt: data['official_acceptance_letter_uploaded_at']?.toString(),
@@ -274,6 +275,25 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
         setState(() {
           if (updatedOpp != null) {
             _currentVacancy = CorporateVacancyItem.fromOpportunity(updatedOpp);
+          } else {
+            _currentVacancy = CorporateVacancyItem(
+              id: _currentVacancy.id,
+              title: _currentVacancy.title,
+              description: _currentVacancy.description,
+              category: _currentVacancy.category,
+              categoryLabel: _currentVacancy.categoryLabel,
+              status: 'closed',
+              statusLabel: 'Pendaftaran Ditutup',
+              statusBadgeColor: const Color(0xFF64748B),
+              statusBadgeBg: const Color(0xFFF1F5F9),
+              registrationPeriod: _currentVacancy.registrationPeriod,
+              quotaText: _currentVacancy.quotaText,
+              allowance: _currentVacancy.allowance,
+              requirements: _currentVacancy.requirements,
+              applicantsCount: _currentVacancy.applicantsCount,
+              applicants: _currentVacancy.applicants,
+              opportunity: _currentVacancy.opportunity,
+            );
           }
         });
 
@@ -402,6 +422,61 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
       return 'approved';
     }
     return 'pending';
+  }
+
+  Future<void> _confirmApproveInstitution(String instName) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDCFCE7),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.check_circle_outline_rounded, color: Color(0xFF16A34A), size: 22),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Setujui Kemitraan Institusi?',
+                  style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'Anda yakin ingin menyetujui kemitraan dengan institusi "$instName"?\n\n'
+            'Setelah disetujui, status siswa yang diajukan akan berpindah ke tahap review dan Anda dapat menerima berkas siswa.',
+            style: const TextStyle(fontSize: 13.5, height: 1.45),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Batal'),
+            ),
+            FilledButton.icon(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF16A34A),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              icon: const Icon(Icons.check_rounded, size: 16),
+              label: const Text('Ya, Setujui Kemitraan'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      await _approveInstitution(instName);
+    }
   }
 
   Future<void> _approveInstitution(String instName) async {
@@ -545,6 +620,103 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
       );
       return;
     }
+
+    if (newStatus == 'Diterima') {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDCFCE7),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.check_circle_outline_rounded, color: Color(0xFF16A34A), size: 22),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Terima Peserta Magang / Kerja?',
+                  style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'Anda yakin ingin menerima berkas ${app.name} (${app.role}) untuk program magang ini?',
+            style: const TextStyle(fontSize: 13.5, height: 1.45),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Batal'),
+            ),
+            FilledButton.icon(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF16A34A),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              icon: const Icon(Icons.check_rounded, size: 16),
+              label: const Text('Ya, Terima'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    } else if (newStatus == 'Ditolak') {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEE2E2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.cancel_outlined, color: Color(0xFFDC2626), size: 22),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Tolak Berkas Peserta?',
+                  style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'Anda yakin ingin menolak berkas pendaftaran ${app.name} (${app.role})?',
+            style: const TextStyle(fontSize: 13.5, height: 1.45),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Batal'),
+            ),
+            FilledButton.icon(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFDC2626),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              icon: const Icon(Icons.close_rounded, size: 16),
+              label: const Text('Ya, Tolak'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+
     setState(() {
       _applicants[index] = _applicants[index].copyWith(status: newStatus);
       if (newStatus == 'Diterima') {
@@ -583,6 +755,56 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
     final isCurrentlyOpen = _currentVacancy.status.toLowerCase() == 'open';
     final targetStatus = isCurrentlyOpen ? 'closed' : 'open';
 
+    if (isCurrentlyOpen) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEE2E2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.pause_circle_outline_rounded, color: Color(0xFFDC2626), size: 22),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Tutup Pendaftaran Program?',
+                  style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800),
+                ),
+              ),
+            ],
+          ),
+          content: const Text(
+            'Anda yakin ingin menutup pendaftaran untuk program ini?\n\n'
+            'Setelah pendaftaran ditutup, institusi dan pelamar tidak dapat lagi mengajukan pendaftaran baru.',
+            style: TextStyle(fontSize: 13.5, height: 1.45),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Batal'),
+            ),
+            FilledButton.icon(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFDC2626),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              icon: const Icon(Icons.lock_outline_rounded, size: 16),
+              label: const Text('Ya, Tutup Pendaftaran'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+
     final oppId = _currentVacancy.opportunity?.id ?? _currentVacancy.id;
     if (oppId.isNotEmpty &&
         !oppId.startsWith('corp_magang_') &&
@@ -618,7 +840,7 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
         requirements: _currentVacancy.requirements,
         applicantsCount: _currentVacancy.applicantsCount,
         applicants: _applicants,
-        opportunity: _currentVacancy.opportunity,
+        opportunity: _currentVacancy.opportunity?.copyWith(status: targetStatus),
       );
     });
     AppSweetAlert.success(
@@ -743,28 +965,21 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
-                    FilledButton.icon(
-                      onPressed: _toggleVacancyStatus,
-                      icon: Icon(
-                        _currentVacancy.status.toLowerCase() == 'open'
-                            ? Icons.pause_circle_outline_rounded
-                            : Icons.play_circle_outline_rounded,
-                        size: 16,
+                    if (_currentVacancy.status.toLowerCase() == 'open')
+                      FilledButton.icon(
+                        onPressed: _toggleVacancyStatus,
+                        icon: const Icon(
+                          Icons.pause_circle_outline_rounded,
+                          size: 16,
+                        ),
+                        label: const Text('Tutup Pendaftaran'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFFDC2626),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
                       ),
-                      label: Text(
-                        _currentVacancy.status.toLowerCase() == 'open'
-                            ? 'Tutup Pendaftaran'
-                            : 'Buka Pendaftaran',
-                      ),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: _currentVacancy.status.toLowerCase() == 'open'
-                            ? const Color(0xFFDC2626)
-                            : const Color(0xFF16A34A),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                    ),
                   ],
                 ),
               ],
@@ -967,27 +1182,31 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
           const SizedBox(height: 8),
 
           // Corporate Entity info
-          Row(
-            children: [
-              const Icon(Icons.business_rounded, size: 16, color: Color(0xFF2563EB)),
-              const SizedBox(width: 6),
-              const Text(
-                'PT Kreavana Industri Kreatif Nusantara',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF2563EB),
+          Builder(builder: (context) {
+            final posterName = _currentVacancy.opportunity?.poster?.name.trim();
+            final companyName = (posterName != null && posterName.isNotEmpty) ? posterName : 'Transforma Alam';
+            return Row(
+              children: [
+                const Icon(Icons.business_rounded, size: 16, color: Color(0xFF2563EB)),
+                const SizedBox(width: 6),
+                Text(
+                  companyName,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2563EB),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.verified_rounded, size: 14, color: Color(0xFF2563EB)),
-              const SizedBox(width: 8),
-              Text(
-                '• Terverifikasi Resmi',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-              ),
-            ],
-          ),
+                const SizedBox(width: 8),
+                const Icon(Icons.verified_rounded, size: 14, color: Color(0xFF2563EB)),
+                const SizedBox(width: 8),
+                Text(
+                  '• Terverifikasi Resmi',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                ),
+              ],
+            );
+          }),
           const SizedBox(height: 14),
 
           // Description
@@ -1793,7 +2012,7 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
                       if (instStatus == 'pending') ...[
                         OutlinedButton.icon(
                           key: ValueKey('btn_approve_inst_$instName'),
-                          onPressed: () => _approveInstitution(instName),
+                          onPressed: () => _confirmApproveInstitution(instName),
                           icon: const Icon(Icons.check_circle_outline_rounded, size: 16),
                           label: const Text('Setujui'),
                           style: OutlinedButton.styleFrom(

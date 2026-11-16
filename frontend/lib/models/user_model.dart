@@ -97,6 +97,8 @@ class UserModel {
     return corporateKeywords.contains(r) ||
         corporateKeywords.contains(s) ||
         username.toLowerCase() == 'corporate_demo' ||
+        username.toLowerCase() == 'transforma_alam' ||
+        username.toLowerCase().contains('transforma') ||
         email.toLowerCase().startsWith('corporate@');
   }
 

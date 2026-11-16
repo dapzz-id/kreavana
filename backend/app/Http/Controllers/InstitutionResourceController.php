@@ -191,6 +191,7 @@ class InstitutionResourceController extends Controller
                     $sub->whereIn('sub_role', self::CORPORATE_SUBROLES)
                         ->orWhereIn('role', self::CORPORATE_SUBROLES)
                         ->orWhere('username', 'corporate_demo')
+                        ->orWhere('username', 'transforma_alam')
                         ->orWhereRaw('LOWER(email) LIKE ?', ['corporate%@%']);
                     return;
                 }

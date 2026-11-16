@@ -65,7 +65,7 @@ class UserSeeder extends Seeder
         $corp = User::updateOrCreate(
             ['email' => 'corporate@kreavana.id'],
             [
-                'name' => 'PT Kreavana Nusantara Korporat',
+                'name' => 'Transforma Alam',
                 'username' => 'corporate_demo',
                 'role' => RoleType::User,
                 'sub_role' => 'corporate',

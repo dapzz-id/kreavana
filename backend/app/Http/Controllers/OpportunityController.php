@@ -682,9 +682,12 @@ class OpportunityController extends Controller
             $opp->official_acceptance_letter_url = $letterUrl;
             $opp->official_acceptance_letter_name = $letterName ?: 'Surat_Resmi_Penerimaan.pdf';
             $opp->official_acceptance_letter_uploaded_at = now();
+            // Once the official acceptance letter is uploaded, the registration is officially closed permanently
+            $opp->status = 'closed';
             $opp->save();
 
             return $this->successResponse('Surat resmi penerimaan berhasil diunggah.', [
+                'status' => $opp->status,
                 'official_acceptance_letter_url' => $opp->official_acceptance_letter_url,
                 'official_acceptance_letter_name' => $opp->official_acceptance_letter_name,
                 'official_acceptance_letter_uploaded_at' => $opp->official_acceptance_letter_uploaded_at?->toIso8601String(),
