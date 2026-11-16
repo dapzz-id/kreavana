@@ -201,6 +201,7 @@ Route::middleware(['auth:api', 'user.not_suspended'])->group(function () {
         Route::post('applications/{id}/approve', [OpportunityController::class, 'approveApplication']);
         Route::post('applications/{id}/reject', [OpportunityController::class, 'rejectApplication']);
         Route::post('applications/{id}/consider', [OpportunityController::class, 'considerApplication']);
+        Route::post('applications/{id}/review', [OpportunityController::class, 'considerApplication']);
         Route::post('applications/{id}/respond-counter-offer', [OpportunityController::class, 'respondCounterOffer']);
         Route::post('{id}/start-event', [OpportunityController::class, 'startEvent']);
         Route::post('{id}/sign-contract', [OpportunityController::class, 'signContract']);
