@@ -2175,41 +2175,55 @@ class OpportunityService extends BaseService
                     'is_read' => false,
                     'created_at' => now(),
                 ]);
-            } elseif ($decision === 'consider') {
+            } elseif ($decision === 'consider' || $decision === 'review') {
                 if ($application->counter_offer_status === 'accepted') {
                     abort(422, 'Pelamar telah menyetujui tawaran negosiasi dana. Anda tidak dapat melakukan negosiasi ulang, silakan pilih Setujui Lamaran (Deal) atau Tolak.');
                 }
 
-                if (!$counterOfferPrice || $counterOfferPrice <= 0) {
-                    abort(422, 'Nominal tawaran dana pertimbangan harus diisi dan lebih dari 0.');
-                }
-
                 $application->status = 'under_consideration';
-                $application->counter_offer_price = $counterOfferPrice;
-                $application->counter_offer_notes = $counterOfferNotes ?? $reason;
-                $application->counter_offer_status = 'pending';
-                if (\Illuminate\Support\Facades\Schema::hasColumn('opportunity_applications', 'counter_offer_by')) {
-                    $application->counter_offer_by = 'client';
-                }
                 $application->reviewed_at = now();
+
+                if ($counterOfferPrice && $counterOfferPrice > 0) {
+                    $application->counter_offer_price = $counterOfferPrice;
+                    $application->counter_offer_notes = $counterOfferNotes ?? $reason;
+                    $application->counter_offer_status = 'pending';
+                    if (\Illuminate\Support\Facades\Schema::hasColumn('opportunity_applications', 'counter_offer_by')) {
+                        $application->counter_offer_by = 'client';
+                    }
+                }
                 $application->save();
 
-                // Notify creator about counter-offer
-                $this->notificationRepo->create([
-                    'user_id' => $application->creator_id,
-                    'title' => 'Tawaran Nego Dana dari Pemilik Proyek',
-                    'message' => 'Pemilik proyek "' . $opp->title . '" memperbarui tawaran dana menjadi Rp ' . number_format($counterOfferPrice, 0, ',', '.') . '. Silakan tinjau dan respon tawaran ini.',
-                    'type' => 'project',
-                    'data' => [
-                        'opportunity_id' => $opp->id,
-                        'application_id' => $application->id,
-                        'counter_offer_price' => $counterOfferPrice,
-                    ],
-                    'is_read' => false,
-                    'created_at' => now(),
-                ]);
+                // Notify creator
+                if ($counterOfferPrice && $counterOfferPrice > 0) {
+                    $this->notificationRepo->create([
+                        'user_id' => $application->creator_id,
+                        'title' => 'Tawaran Nego Dana dari Pemilik Proyek',
+                        'message' => 'Pemilik proyek "' . $opp->title . '" memperbarui tawaran dana menjadi Rp ' . number_format($counterOfferPrice, 0, ',', '.') . '. Silakan tinjau dan respon tawaran ini.',
+                        'type' => 'project',
+                        'data' => [
+                            'opportunity_id' => $opp->id,
+                            'application_id' => $application->id,
+                            'counter_offer_price' => $counterOfferPrice,
+                        ],
+                        'is_read' => false,
+                        'created_at' => now(),
+                    ]);
+                } else {
+                    $this->notificationRepo->create([
+                        'user_id' => $application->creator_id,
+                        'title' => 'Status Lamaran Ditinjau',
+                        'message' => 'Lamaran Anda / siswa Anda untuk "' . $opp->title . '" sedang dalam tahap peninjauan (review) oleh perusahaan.',
+                        'type' => 'project',
+                        'data' => [
+                            'opportunity_id' => $opp->id,
+                            'application_id' => $application->id,
+                        ],
+                        'is_read' => false,
+                        'created_at' => now(),
+                    ]);
+                }
             } else {
-                abort(422, 'Keputusan tidak valid. Pilihan: approve, reject, atau consider.');
+                abort(422, 'Keputusan tidak valid. Pilihan: approve, reject, consider, atau review.');
             }
 
             return [

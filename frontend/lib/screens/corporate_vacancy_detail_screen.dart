@@ -94,10 +94,20 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
         if (apps.isNotEmpty) {
           final mapped = apps.map((a) {
             final statusLower = a.status.toLowerCase();
-            String statusLabel = 'Menunggu Review';
-            if (statusLower == 'approved') statusLabel = 'Diterima';
-            if (statusLower == 'rejected') statusLabel = 'Ditolak';
-            if (statusLower == 'interview') statusLabel = 'Interview';
+            String statusLabel = 'Pending';
+            if (statusLower == 'approved') {
+              statusLabel = 'Diterima';
+            } else if (statusLower == 'rejected') {
+              statusLabel = 'Ditolak';
+            } else if (statusLower == 'interview') {
+              statusLabel = 'Interview';
+            } else if (statusLower == 'under_consideration' ||
+                statusLower == 'review' ||
+                statusLower == 'in_review') {
+              statusLabel = 'Menunggu Review';
+            } else {
+              statusLabel = 'Pending';
+            }
 
             String studentName = '';
             String studentMajor = '';
@@ -207,7 +217,8 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
 
           for (final item in mapped) {
             final instBase = _getInstitutionBaseName(item.institution);
-            if (item.status == 'Diterima' && !_institutionStatuses.containsKey(instBase)) {
+            if ((item.status == 'Diterima' || item.status == 'Menunggu Review') &&
+                !_institutionStatuses.containsKey(instBase)) {
               _institutionStatuses[instBase] = 'approved';
             }
           }
@@ -418,7 +429,8 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
     final instApps = _applicants
         .where((a) => _getInstitutionBaseName(a.institution) == instName)
         .toList();
-    if (instApps.isNotEmpty && instApps.any((a) => a.status == 'Diterima')) {
+    if (instApps.isNotEmpty &&
+        instApps.any((a) => a.status == 'Diterima' || a.status == 'Menunggu Review')) {
       return 'approved';
     }
     return 'pending';
@@ -494,17 +506,23 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
     final instApps = _applicants
         .where((a) => _getInstitutionBaseName(a.institution) == instName)
         .toList();
+    final List<Future<Map<String, dynamic>>> futures = [];
     for (final app in instApps) {
       if (app.id != null &&
           app.id!.isNotEmpty &&
           !app.id!.startsWith('corp_app_') &&
           !app.id!.startsWith('test_')) {
-        try {
-          await OpportunityService.reviewApplication(
-            applicationId: app.id!,
-            decision: 'consider',
-          );
-        } catch (_) {}
+        futures.add(OpportunityService.reviewApplication(
+          applicationId: app.id!,
+          decision: 'consider',
+        ));
+      }
+    }
+    if (futures.isNotEmpty) {
+      try {
+        await Future.wait(futures);
+      } catch (e) {
+        debugPrint('Error approving institution applications: $e');
       }
     }
 
@@ -857,8 +875,14 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
       if (_getInstitutionStatus(inst) == 'rejected') {
         return false;
       }
-      if (_selectedApplicantFilter != 'Semua' && app.status != _selectedApplicantFilter) {
-        return false;
+      if (_selectedApplicantFilter != 'Semua') {
+        if (_selectedApplicantFilter == 'Menunggu Review') {
+          if (app.status != 'Menunggu Review' && app.status != 'Pending') {
+            return false;
+          }
+        } else if (app.status != _selectedApplicantFilter) {
+          return false;
+        }
       }
       if (query.isNotEmpty) {
         final matchName = app.name.toLowerCase().contains(query);
@@ -2498,6 +2522,12 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
         bg = const Color(0xFFEDE9FE);
         fg = const Color(0xFF7C3AED);
         icon = Icons.hourglass_top_rounded;
+        break;
+      case 'Pending':
+        bg = const Color(0xFFFEF3C7);
+        fg = const Color(0xFFD97706);
+        icon = Icons.hourglass_top_rounded;
+        displayLabel = 'Pending';
         break;
       case 'Menunggu Review':
       default:

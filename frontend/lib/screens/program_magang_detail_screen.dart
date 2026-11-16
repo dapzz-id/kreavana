@@ -277,9 +277,23 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
       final apps = results[1] as List<OpportunityApplicationModel>;
       final effectiveOpp = freshOpp ?? widget.opportunity;
 
-      final currentSchoolId = _currentUser?.id;
-      final schoolApps = currentSchoolId != null && currentSchoolId.isNotEmpty
-          ? apps.where((a) => a.creatorId == currentSchoolId).toList()
+      final currentSchoolId = _currentUser?.id?.trim().toLowerCase() ?? '';
+      final currentSchoolName = _currentUser?.name.trim().toLowerCase() ?? '';
+      final currentUsername = _currentUser?.username.trim().toLowerCase() ?? '';
+
+      final matchedSchoolApps = currentSchoolId.isNotEmpty
+          ? apps.where((a) {
+              final cid = a.creatorId.trim().toLowerCase();
+              if (cid.isNotEmpty && cid == currentSchoolId) return true;
+              final cname = a.creator?.name.trim().toLowerCase() ?? '';
+              final cuser = a.creator?.username.trim().toLowerCase() ?? '';
+              if (currentSchoolName.isNotEmpty && (cname == currentSchoolName || cuser == currentSchoolName)) return true;
+              if (currentUsername.isNotEmpty && (cname == currentUsername || cuser == currentUsername)) return true;
+              return false;
+            }).toList()
+          : apps;
+      final schoolApps = (matchedSchoolApps.isNotEmpty || currentSchoolId.isEmpty)
+          ? matchedSchoolApps
           : apps;
 
       final hasApprovedStudent =
@@ -287,9 +301,8 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
 
       final isSchoolApprovedByOpp = effectiveOpp.approvedCreators.any(
         (c) =>
-            (currentSchoolId != null &&
-                currentSchoolId.isNotEmpty &&
-                c.id == currentSchoolId) ||
+            (currentSchoolId.isNotEmpty &&
+                c.id.toLowerCase() == currentSchoolId) ||
             (_currentUser?.name.isNotEmpty == true &&
                 c.name.toLowerCase() == _currentUser!.name.toLowerCase()),
       );

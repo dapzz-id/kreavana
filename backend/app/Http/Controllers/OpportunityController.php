@@ -227,8 +227,12 @@ class OpportunityController extends Controller
         $counterOfferPrice = $request->input('counter_offer_price');
         $notes = $request->input('notes') ?? $request->input('reason');
 
-        if (!$counterOfferPrice || !is_numeric($counterOfferPrice) || (float) $counterOfferPrice <= 0) {
-            return $this->errorResponse('Nominal tawaran dana harus berupa angka lebih dari 0.', 422);
+        $price = null;
+        if ($counterOfferPrice !== null && $counterOfferPrice !== '') {
+            if (!is_numeric($counterOfferPrice) || (float) $counterOfferPrice <= 0) {
+                return $this->errorResponse('Nominal tawaran dana harus berupa angka lebih dari 0.', 422);
+            }
+            $price = (float) $counterOfferPrice;
         }
 
         try {
@@ -237,10 +241,13 @@ class OpportunityController extends Controller
                 $user->id,
                 'consider',
                 null,
-                (float) $counterOfferPrice,
+                $price,
                 $notes
             );
-            return $this->successResponse('Lamaran dialihkan ke status pertimbangan dengan tawaran dana baru.', $result);
+            $msg = $price !== null
+                ? 'Lamaran dialihkan ke status pertimbangan dengan tawaran dana baru.'
+                : 'Lamaran dialihkan ke status peninjauan (review).';
+            return $this->successResponse($msg, $result);
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
             return $this->errorResponse($e->getMessage(), $e->getStatusCode());
         } catch (\Exception $e) {

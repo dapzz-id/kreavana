@@ -399,7 +399,32 @@ class OpportunityApplicationWorkflowTest extends TestCase
         // Creator gets notification
         $this->assertDatabaseHas('notifications', [
             'user_id' => $this->creator1->id,
-            'title' => 'Lamaran Proyek Disetujui!',
+            'title' => 'Lamaran Disetujui — Lengkapi Kontrak Digital',
+        ]);
+    }
+
+    public function test_owner_can_consider_application_without_counter_offer_price()
+    {
+        $app = OpportunityApplication::create([
+            'opportunity_id' => $this->opportunity->id,
+            'creator_id' => $this->creator1->id,
+            'sub_role_slug' => 'wedding_organizer',
+            'pitch_message' => 'Proposal Magang / Proyek.',
+            'status' => 'pending',
+        ]);
+
+        $response = $this->actingAsApi($this->owner)
+            ->postJson("/api/opportunities/applications/{$app->id}/consider", []);
+
+        $response->assertStatus(200);
+        $app->refresh();
+        $this->assertEquals('under_consideration', $app->status);
+        $this->assertNull($app->counter_offer_price);
+
+        // Creator gets under review notification
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $this->creator1->id,
+            'title' => 'Status Lamaran Ditinjau',
         ]);
     }
 
