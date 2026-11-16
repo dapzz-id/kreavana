@@ -2111,9 +2111,11 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
   // ── Individual Applicant Card ───────────────────────────────────────────────
   Widget _buildApplicantCard(CorporateApplicant app, bool isDark) {
     final inst = _getInstitutionBaseName(app.institution);
-    if (_getInstitutionStatus(inst) == 'rejected') {
+    final instStatus = _getInstitutionStatus(inst);
+    if (instStatus == 'rejected') {
       return const SizedBox.shrink();
     }
+    final isInstitutionApproved = instStatus == 'approved';
     final rawIdx = _applicants.indexOf(app);
     final isAccepted = app.status == 'Diterima' || app.status.toLowerCase().contains('diterima');
     final isRejected = app.status == 'Ditolak';
@@ -2305,7 +2307,7 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
               ],
 
               // Quick approval buttons for replacement student
-              if (isPendingCorporate && rawIdx != -1) ...[
+              if (isInstitutionApproved && isPendingCorporate && rawIdx != -1) ...[
                 FilledButton.icon(
                   onPressed: () => _updateApplicantStatus(rawIdx, 'Diterima'),
                   icon: const Icon(Icons.check_rounded, size: 14),
@@ -2332,8 +2334,9 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
                 ),
               ],
 
-              // Ubah Status dropdown HANYA muncul jika siswa belum berstatus Diterima dan belum Ditolak
-              if (!isAccepted && !isRejected) ...[
+              // Ubah Status dropdown HANYA muncul jika institusi sudah disetujui corporate,
+              // serta siswa belum berstatus Diterima dan belum Ditolak
+              if (isInstitutionApproved && !isAccepted && !isRejected) ...[
                 PopupMenuButton<String>(
                   key: ValueKey('popup_status_${app.name}'),
                   onSelected: (val) {
@@ -2343,7 +2346,6 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
                   },
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   itemBuilder: (ctx) => [
-                    const PopupMenuItem(value: 'Interview', child: Text('Jadwalkan Interview')),
                     PopupMenuItem(
                       value: 'Diterima',
                       child: Text(_currentVacancy.category == 'magang'

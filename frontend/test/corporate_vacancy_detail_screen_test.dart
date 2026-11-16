@@ -211,6 +211,9 @@ void main() {
       expect(approveBtn, findsOneWidget);
       expect(rejectBtn, findsOneWidget);
 
+      // Before approval, student Dimas Aditya's Ubah Status dropdown is HIDDEN
+      expect(find.byKey(const ValueKey('popup_status_Dimas Aditya')), findsNothing);
+
       // Click Setujui on SMKN 4 Bandung
       await tester.ensureVisible(approveBtn);
       await tester.tap(approveBtn);
@@ -225,6 +228,9 @@ void main() {
 
       // Verify status badge updated to Disetujui
       expect(find.text('Disetujui'), findsWidgets);
+
+      // Once institution is approved, Dimas Aditya's Ubah Status dropdown is now VISIBLE
+      expect(find.byKey(const ValueKey('popup_status_Dimas Aditya')), findsOneWidget);
 
       // Verify that once approved, Setujui and Tolak buttons are removed/hidden
       expect(find.byKey(const ValueKey('btn_approve_inst_SMKN 4 Bandung')), findsNothing);
@@ -510,11 +516,12 @@ void main() {
       await tester.tap(rianPopup);
       await tester.pumpAndSettle();
 
-      // Ensure dropdown options contain Jadwalkan Interview, Terima Magang, Tolak Berkas, but NO Menunggu Review
-      expect(find.text('Jadwalkan Interview'), findsOneWidget);
+      // Ensure dropdown options contain Terima Magang, Tolak Berkas, but NO Menunggu Review and NO Jadwalkan Interview
+      expect(find.text('Jadwalkan Interview'), findsNothing);
       expect(find.text('Terima Magang'), findsOneWidget);
       expect(find.text('Tolak Berkas'), findsOneWidget);
       expect(find.widgetWithText(PopupMenuItem<String>, 'Menunggu Review'), findsNothing);
+      expect(find.widgetWithText(PopupMenuItem<String>, 'Jadwalkan Interview'), findsNothing);
 
       // Close the popup by tapping outside / back
       await tester.tapAt(const Offset(10, 10));
