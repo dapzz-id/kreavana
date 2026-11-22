@@ -67,6 +67,7 @@ jobs:
         env:
           SSH_PRIVATE_KEY: ${{ secrets.KREAVANA_DEV_CI_PRIVATE_KEY }}
           SSH_PASSPHRASE: ${{ secrets.KREAVANA_DEV_CI_PASSPHRASE }}
+          GIT_SSH_PASSPHRASE: ${{ secrets.KREAVANA_DEV_GIT_PASSPHRASE }}
           VPS_HOST: ${{ secrets.KREAVANA_DEV_VPS_HOST }}
           VPS_PORT: ${{ secrets.KREAVANA_DEV_VPS_PORT }}
           VPS_USER: ${{ secrets.KREAVANA_DEV_VPS_USER }}
@@ -103,9 +104,6 @@ jobs:
 
           ssh-add -l -E sha256
 
-          echo "Expected fingerprint:"
-          echo "SHA256:vuY9P5qkaMQrGrR2KieMA7Vz0Y+6LNX9chlVuXteQR8"
-
           echo "============================================================"
           echo "PREPARING KNOWN HOSTS"
           echo "============================================================"
@@ -129,18 +127,39 @@ jobs:
           echo "UPDATE DEV SOURCE CODE"
           echo "============================================================"
 
-          ssh \
-            -o PreferredAuthentications=publickey \
-            -o PasswordAuthentication=no \
-            -o StrictHostKeyChecking=yes \
-            -p "$VPS_PORT" \
-            "$VPS_USER@$VPS_HOST" \
-            "DEPLOY_SHA='$DEPLOY_SHA' bash -s" <<'REMOTE_SCRIPT'
+          {
+            printf 'GIT_SSH_PASSPHRASE_B64=%q\n' "$(printf '%s' "${GIT_SSH_PASSPHRASE:-}" | base64 -w0)"
+            cat <<'REMOTE_SCRIPT'
 
           set -euo pipefail
 
           PROJECT="/var/www/kreavana-dev"
           BACKEND="$PROJECT/backend"
+          ASKPASS_FILE=""
+
+          cleanup_git_ssh_agent() {
+              [ -n "${ASKPASS_FILE:-}" ] && rm -f "$ASKPASS_FILE" || true
+              [ -n "${SSH_AGENT_PID:-}" ] && ssh-agent -k >/dev/null 2>&1 || true
+          }
+          trap cleanup_git_ssh_agent EXIT
+
+          # Unlock encrypted GitHub deploy key (/root/.ssh/kreavana_dev) in ephemeral RAM ssh-agent
+          if [ -n "${GIT_SSH_PASSPHRASE_B64:-}" ] && [ -f /root/.ssh/kreavana_dev ]; then
+              eval "$(ssh-agent -s)" >/dev/null
+              ASKPASS_FILE=$(mktemp /dev/shm/git_askpass.XXXXXX)
+              chmod 700 "$ASKPASS_FILE"
+              cat > "$ASKPASS_FILE" <<'ASKPASS_EOF'
+          #!/bin/sh
+          printf '%s\n' "$GIT_SSH_PASSPHRASE_B64" | base64 -d
+          ASKPASS_EOF
+              export GIT_SSH_PASSPHRASE_B64
+              DISPLAY=:0 SSH_ASKPASS="$ASKPASS_FILE" SSH_ASKPASS_REQUIRE=force \
+                ssh-add /root/.ssh/kreavana_dev </dev/null >/dev/null
+              rm -f "$ASKPASS_FILE"
+              ASKPASS_FILE=""
+              unset GIT_SSH_PASSPHRASE_B64
+              echo "Encrypted deploy key unlocked in temporary ssh-agent."
+          fi
 
           echo "Project: $PROJECT"
           echo "Target commit: $DEPLOY_SHA"
@@ -309,6 +328,13 @@ jobs:
           fi
 
           REMOTE_SCRIPT
+          } | ssh \
+            -o PreferredAuthentications=publickey \
+            -o PasswordAuthentication=no \
+            -o StrictHostKeyChecking=yes \
+            -p "$VPS_PORT" \
+            "$VPS_USER@$VPS_HOST" \
+            "DEPLOY_SHA='$DEPLOY_SHA' bash -s"
 
           echo "============================================================"
           echo "PREPARE TEMPORARY FLUTTER BUILD DIRECTORY"
