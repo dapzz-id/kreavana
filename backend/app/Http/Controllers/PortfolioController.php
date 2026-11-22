@@ -139,7 +139,7 @@ class PortfolioController extends Controller
      */
     public function showAsset(Request $request, string $file)
     {
-        if (!preg_match('/^[a-zA-Z0-9_\-\.]+\.(jpg|jpeg|png|gif|webp|svg|heic)$/i', $file)) {
+        if (str_contains($file, '..') || !preg_match('/^[a-zA-Z0-9_\-\.]+\.(jpg|jpeg|png|gif|webp|heic)$/i', $file)) {
             abort(404);
         }
 

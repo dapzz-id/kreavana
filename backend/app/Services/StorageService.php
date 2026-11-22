@@ -17,7 +17,91 @@ use Exception;
 class StorageService extends BaseService
 {
     /**
-     * Store a file centrally with quota enforcement.
+     * Strictly blocked executable / web-script extensions (anti-webshell / anti-RCE).
+     */
+    private const DANGEROUS_EXTENSIONS = [
+        'php', 'phtml', 'phar', 'php3', 'php4', 'php5', 'php7', 'php8', 'phps', 'pht',
+        'htaccess', 'htpasswd', 'sh', 'bash', 'zsh', 'csh', 'ksh',
+        'exe', 'bat', 'cmd', 'com', 'msi', 'dll', 'so', 'elf', 'bin',
+        'cgi', 'pl', 'py', 'rb', 'jsp', 'jspx', 'asp', 'aspx', 'asa', 'asax', 'cer',
+        'swf', 'svg', 'svgz', 'html', 'htm', 'xhtml', 'js', 'mjs', 'cjs', 'vbs', 'ps1', 'scr',
+    ];
+
+    /**
+     * Allowed safe upload extensions.
+     */
+    private const ALLOWED_EXTENSIONS = [
+        'jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'avif',
+        'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv',
+        'mp3', 'm4a', 'wav', 'ogg', 'aac', 'webm',
+        'mp4', 'mov', 'avi', 'mkv',
+        'zip', 'rar', '7z',
+    ];
+
+    /**
+     * Blocked MIME types that indicate executable scripts or HTML/SVG XSS payloads.
+     */
+    private const BLOCKED_MIME_PREFIXES = [
+        'text/x-php',
+        'application/x-httpd-php',
+        'application/x-php',
+        'text/x-shellscript',
+        'application/x-sh',
+        'application/x-executable',
+        'application/x-dosexec',
+        'application/x-sharedlib',
+        'image/svg+xml',
+        'text/html',
+        'application/javascript',
+        'text/javascript',
+    ];
+
+    /**
+     * Validate uploaded file against RCE / webshell / polyglot payloads.
+     */
+    private function assertSafeUpload(UploadedFile $file, string $extension): void
+    {
+        $ext = strtolower(trim($extension));
+
+        if ($ext === '' || in_array($ext, self::DANGEROUS_EXTENSIONS, true) || !in_array($ext, self::ALLOWED_EXTENSIONS, true)) {
+            throw new Exception("Tipe file '.{$ext}' tidak diizinkan demi keamanan sistem.", 422);
+        }
+
+        // Reject dangerous multi-extension names like shell.php.jpg or evil.phtml.png
+        $originalName = strtolower((string) $file->getClientOriginalName());
+        if (preg_match('/\.(php\d?|phtml|phar|htaccess|sh|exe|jsp|aspx?)(\.|$)/i', $originalName)) {
+            throw new Exception("Nama file mengandung ekstensi berbahaya dan ditolak.", 422);
+        }
+
+        $realPath = $file->getRealPath();
+        if (!$realPath || !is_file($realPath)) {
+            throw new Exception("File unggahan tidak valid.", 422);
+        }
+
+        // Inspect actual MIME type from magic bytes (never trust client-provided MIME alone)
+        $detectedMime = strtolower((string) ($file->getMimeType() ?: ''));
+        foreach (self::BLOCKED_MIME_PREFIXES as $blocked) {
+            if ($detectedMime !== '' && str_starts_with($detectedMime, $blocked)) {
+                throw new Exception("Konten file tidak diizinkan ({$detectedMime}).", 422);
+            }
+        }
+
+        // Inspect header bytes for embedded PHP tags, shell shebangs, or ELF binaries (polyglot guard)
+        if (!in_array($ext, ['zip', 'rar', '7z'], true)) {
+            $sample = (string) @file_get_contents($realPath, false, null, 0, 8192);
+            if (
+                str_starts_with($sample, "\x7fELF") ||
+                str_starts_with($sample, '#!/') ||
+                preg_match('/<\?(php|=|\s)/i', $sample) ||
+                preg_match('/<script\s+language\s*=\s*["\']?php/i', $sample)
+            ) {
+                throw new Exception("File terdeteksi mengandung skrip/biner berbahaya dan ditolak.", 422);
+            }
+        }
+    }
+
+    /**
+     * Store a file centrally with quota enforcement and anti-RCE validation.
      */
     public function store(User $user, UploadedFile $file, string $category, string $visibility = 'private', ?string $customDisk = null): StorageFile
     {
@@ -26,8 +110,12 @@ class StorageService extends BaseService
             throw new Exception("Unable to determine file size.", 422);
         }
 
-        $mimeType = $file->getClientMimeType();
-        $originalName = $file->getClientOriginalName();
+        $safeCategory = preg_replace('/[^a-zA-Z0-9_\-]/', '', $category) ?: 'uploads';
+        $extension = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', (string) $file->getClientOriginalExtension()));
+        $this->assertSafeUpload($file, $extension);
+
+        $mimeType = $file->getMimeType() ?: $file->getClientMimeType();
+        $originalName = basename((string) $file->getClientOriginalName());
         
         // Determine target disk:
         // 1. Explicit customDisk if provided.
@@ -46,11 +134,10 @@ class StorageService extends BaseService
 
         $uuid = (string) Str::uuid();
         
-        $extension = $file->getClientOriginalExtension();
         $storedName = $uuid . ($extension ? '.' . $extension : '');
-        $path = $category . '/' . $storedName;
+        $path = $safeCategory . '/' . $storedName;
 
-        return DB::transaction(function () use ($user, $file, $category, $visibility, $size, $mimeType, $originalName, $disk, $path, $storedName) {
+        return DB::transaction(function () use ($user, $file, $safeCategory, $visibility, $size, $mimeType, $originalName, $disk, $path, $storedName) {
             // Lock user row for update to prevent concurrent quota race condition
             $lockedUser = User::where('id', $user->id)->lockForUpdate()->first();
             $limit = $lockedUser->storage_limit_bytes ?: (512 * 1024 * 1024);
@@ -68,7 +155,7 @@ class StorageService extends BaseService
                 $checksum = hash_file('sha256', $file->getRealPath());
 
                 // Store file physically
-                $storedPath = $file->storeAs($category, $storedName, $disk);
+                $storedPath = $file->storeAs($safeCategory, $storedName, $disk);
                 if (!$storedPath) {
                     throw new Exception("Failed to store file physically.");
                 }
@@ -80,7 +167,7 @@ class StorageService extends BaseService
                     'stored_name' => $storedName,
                     'disk' => $disk,
                     'path' => $storedPath,
-                    'category' => $category,
+                    'category' => $safeCategory,
                     'visibility' => $visibility,
                     'mime_type' => $mimeType,
                     'size' => $size,

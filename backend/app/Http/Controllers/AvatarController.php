@@ -15,7 +15,7 @@ class AvatarController extends Controller
      */
     public function show(Request $request, string $file): BinaryFileResponse
     {
-        if (!preg_match('/^[a-zA-Z0-9_\-\.]+\.(jpg|jpeg|png|gif|webp|svg|heic)$/i', $file)) {
+        if (str_contains($file, '..') || !preg_match('/^[a-zA-Z0-9_\-\.]+\.(jpg|jpeg|png|gif|webp|heic)$/i', $file)) {
             abort(404);
         }
 
@@ -51,6 +51,7 @@ class AvatarController extends Controller
         return response()->file($path, [
             'Content-Type' => $mime,
             'Cache-Control' => 'public, max-age=31536000',
+            'X-Content-Type-Options' => 'nosniff',
         ]);
     }
 }

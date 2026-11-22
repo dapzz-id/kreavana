@@ -459,7 +459,7 @@ class AdminSystemSettingController extends Controller
         $validated = $request->validate([
             'admin_name' => 'required|string|max:150',
             'admin_title' => 'nullable|string|max:150',
-            'signature_image' => 'nullable',
+            'signature_image' => 'nullable|file|mimes:jpg,jpeg,png,webp|max:5120',
         ]);
 
         SystemSetting::set('admin_contract_signer_name', $validated['admin_name'], 'contracts');
@@ -471,23 +471,35 @@ class AdminSystemSettingController extends Controller
 
         if ($request->hasFile('signature_image')) {
             $file = $request->file('signature_image');
-            $filename = 'admin_sig_' . time() . '.' . $file->getClientOriginalExtension();
-            $path = $file->storeAs('signatures', $filename, $diskName);
+            $ext = strtolower((string) $file->getClientOriginalExtension());
+            if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true)) {
+                return response()->json(['status' => false, 'message' => 'Format tanda tangan harus JPG, PNG, atau WEBP.'], 422);
+            }
+            $filename = 'admin_sig_' . time() . '.' . $ext;
+            $file->storeAs('signatures', $filename, $diskName);
             $signatureUrl = \Illuminate\Support\Facades\Storage::disk($diskName)->url('signatures/' . $filename);
             SystemSetting::set('admin_contract_signature_image', $signatureUrl, 'contracts');
         } elseif ($request->filled('signature_image_base64')) {
-            $raw = $request->input('signature_image_base64');
-            if (preg_match('/^data:image\/(\w+);base64,/', $raw, $type)) {
-                $raw = substr($raw, strpos($raw, ',') + 1);
-                $type = strtolower($type[1]);
-                $image = base64_decode($raw);
-                if ($image !== false) {
-                    $filename = 'admin_sig_' . time() . '.' . $type;
-                    \Illuminate\Support\Facades\Storage::disk($diskName)->put('signatures/' . $filename, $image);
-                    $signatureUrl = \Illuminate\Support\Facades\Storage::disk($diskName)->url('signatures/' . $filename);
-                    SystemSetting::set('admin_contract_signature_image', $signatureUrl, 'contracts');
-                }
+            $raw = (string) $request->input('signature_image_base64');
+            if (!preg_match('/^data:image\/(jpg|jpeg|png|webp);base64,/i', $raw, $type)) {
+                return response()->json(['status' => false, 'message' => 'Format tanda tangan base64 harus JPG, PNG, atau WEBP.'], 422);
             }
+            $raw = substr($raw, strpos($raw, ',') + 1);
+            $ext = strtolower($type[1]);
+            if ($ext === 'jpeg') $ext = 'jpg';
+            $image = base64_decode($raw, true);
+            if ($image === false || strlen($image) > 5 * 1024 * 1024) {
+                return response()->json(['status' => false, 'message' => 'Data tanda tangan tidak valid.'], 422);
+            }
+            $finfo = new \finfo(FILEINFO_MIME_TYPE);
+            $detectedMime = strtolower((string) $finfo->buffer($image));
+            if (!in_array($detectedMime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
+                return response()->json(['status' => false, 'message' => 'Konten berkas tanda tangan bukan gambar yang valid.'], 422);
+            }
+            $filename = 'admin_sig_' . time() . '.' . $ext;
+            \Illuminate\Support\Facades\Storage::disk($diskName)->put('signatures/' . $filename, $image);
+            $signatureUrl = \Illuminate\Support\Facades\Storage::disk($diskName)->url('signatures/' . $filename);
+            SystemSetting::set('admin_contract_signature_image', $signatureUrl, 'contracts');
         } elseif ($request->filled('signature_url')) {
             SystemSetting::set('admin_contract_signature_image', $request->input('signature_url'), 'contracts');
         }

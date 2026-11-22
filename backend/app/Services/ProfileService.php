@@ -68,28 +68,40 @@ class ProfileService extends BaseService
         if ($hasAvatarUpdate) {
             $avatarUrl = (string) $data['avatar_url'];
             if (str_starts_with($avatarUrl, 'data:image')) {
-                if (preg_match('/^data:image\/([a-zA-Z0-9\+\-]+);base64,/', $avatarUrl, $type)) {
-                    $imageData = substr($avatarUrl, strpos($avatarUrl, ',') + 1);
-                    $ext = strtolower($type[1]);
-                    if ($ext === 'jpeg') $ext = 'jpg';
-                    if ($ext === 'svg+xml') $ext = 'svg';
+                if (!preg_match('/^data:image\/(jpg|jpeg|png|gif|webp);base64,/i', $avatarUrl, $type)) {
+                    throw new Exception('Format gambar avatar tidak diizinkan. Gunakan JPG, PNG, GIF, atau WEBP.', 422);
+                }
 
-                    $imageData = str_replace(' ', '+', $imageData);
-                    $decoded = base64_decode($imageData);
-                    if ($decoded !== false) {
-                        $fileName = 'avatar_' . $user->id . '_' . time() . '.' . $ext;
-                        $tempPath = sys_get_temp_dir() . '/' . $fileName;
-                        file_put_contents($tempPath, $decoded);
+                $imageData = substr($avatarUrl, strpos($avatarUrl, ',') + 1);
+                $ext = strtolower($type[1]);
+                if ($ext === 'jpeg') $ext = 'jpg';
 
-                        $uploadedFile = new \Illuminate\Http\UploadedFile($tempPath, $fileName, 'image/' . $ext, null, true);
+                $imageData = str_replace(' ', '+', $imageData);
+                $decoded = base64_decode($imageData, true);
+                if ($decoded === false || strlen($decoded) > 5 * 1024 * 1024) {
+                    throw new Exception('Data gambar avatar tidak valid atau melebihi batas 5 MB.', 422);
+                }
 
-                        /** @var \App\Services\StorageService $storageService */
-                        $storageService = app(\App\Services\StorageService::class);
-                        $storageFile = $storageService->store($user, $uploadedFile, 'avatar', 'public');
+                $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                $detectedMime = strtolower((string) $finfo->buffer($decoded));
+                if (!in_array($detectedMime, ['image/jpeg', 'image/png', 'image/gif', 'image/webp'], true)) {
+                    throw new Exception('Konten berkas avatar bukan gambar yang valid.', 422);
+                }
 
-                        $resolvedAvatarUrl = $storageFile->url;
-                        @unlink($tempPath);
-                    }
+                $fileName = 'avatar_' . $user->id . '_' . time() . '.' . $ext;
+                $tempPath = sys_get_temp_dir() . '/' . $fileName;
+                file_put_contents($tempPath, $decoded);
+
+                try {
+                    $uploadedFile = new \Illuminate\Http\UploadedFile($tempPath, $fileName, $detectedMime, null, true);
+
+                    /** @var \App\Services\StorageService $storageService */
+                    $storageService = app(\App\Services\StorageService::class);
+                    $storageFile = $storageService->store($user, $uploadedFile, 'avatar', 'public');
+
+                    $resolvedAvatarUrl = $storageFile->url;
+                } finally {
+                    @unlink($tempPath);
                 }
             } else {
                 $resolvedAvatarUrl = $avatarUrl;

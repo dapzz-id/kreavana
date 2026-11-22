@@ -236,19 +236,18 @@ class StorageController extends Controller
         }
 
         if ($storageFile->visibility === 'private') {
+            if (!$user) {
+                return response()->json(['message' => 'Autentikasi diperlukan untuk mengunduh file privat.'], 401);
+            }
+
             if ($storageFile->category === 'chat_attachment') {
-                $hasAccess = false;
-                if ($user) {
-                    $hasAccess = $storageFile->user_id === $user->id || \App\Models\Message::where('media_url', 'like', '%' . $storageFile->id . '%')
-                        ->whereHas('chat.participants', fn($q) => $q->where('user_id', $user->id))
-                        ->exists();
-                } else {
-                    $hasAccess = \App\Models\Message::where('media_url', 'like', '%' . $storageFile->id . '%')->exists();
-                }
+                $hasAccess = $storageFile->user_id === $user->id || \App\Models\Message::where('media_url', 'like', '%' . $storageFile->id . '%')
+                    ->whereHas('chat.participants', fn($q) => $q->where('user_id', $user->id))
+                    ->exists();
                 if (!$hasAccess) {
                     return response()->json(['message' => 'Anda tidak memiliki izin untuk mengunduh file ini.'], 403);
                 }
-            } elseif (!$user || $storageFile->user_id !== $user->id) {
+            } elseif ($storageFile->user_id !== $user->id) {
                 return response()->json(['message' => 'Anda tidak memiliki izin untuk mengunduh file ini.'], 403);
             }
         }

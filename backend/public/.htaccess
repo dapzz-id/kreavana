@@ -5,6 +5,12 @@
 
     RewriteEngine On
 
+    # Block direct HTTP access to hidden/sensitive dotfiles (.env, .git, etc.)
+    RewriteRule (^|/)\. - [F,L]
+
+    # Block PHP/script execution inside uploaded directories (anti-webshell / anti-RCE)
+    RewriteRule ^(storage|uploads|avatars)/.*\.(php\d?|phtml|phar|sh|cgi|pl|py|jsp|aspx?)$ - [F,NC,L]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

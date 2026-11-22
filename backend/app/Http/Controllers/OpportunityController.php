@@ -601,7 +601,7 @@ class OpportunityController extends Controller
             'url' => 'nullable|string|max:1000',
             'title' => 'required|string|max:200',
             'notes' => 'nullable|string|max:1000',
-            'file' => 'nullable|file|max:51200', // Max 50MB
+            'file' => 'nullable|file|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,mp4,mov,webm,mp3,wav,m4a|max:51200', // Max 50MB
         ]);
 
         try {
@@ -658,7 +658,7 @@ class OpportunityController extends Controller
         }
 
         $validated = $request->validate([
-            'file' => 'nullable|file|max:20480',
+            'file' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png,webp|max:20480',
             'letter_url' => 'nullable|string|max:500',
             'letter_name' => 'nullable|string|max:255',
         ]);

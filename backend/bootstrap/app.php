@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->api(append: [
+            \App\Http\Middleware\SecurityHeaders::class,
             \App\Http\Middleware\ApiPerformanceBudget::class,
             \App\Http\Middleware\EnsureHttpsForApi::class,
             \App\Http\Middleware\ValidateJti::class,
@@ -54,7 +55,7 @@ return Application::configure(basePath: dirname(__DIR__))
                     return null;
                 }
 
-                $debugMessage = app()->environment(['local', 'testing']) || env('APP_DEBUG')
+                $debugMessage = (app()->environment(['local', 'testing']) && config('app.debug'))
                     ? $e->getMessage()
                     : null;
 

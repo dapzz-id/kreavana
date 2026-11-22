@@ -233,7 +233,7 @@ class InstitutionResourceController extends Controller
     public function uploadMou(Request $request)
     {
         $request->validate([
-            'mou_file' => 'required|file|max:15360',
+            'mou_file' => 'required|file|mimes:pdf,doc,docx|max:15360',
         ]);
 
         $file = $request->file('mou_file');
