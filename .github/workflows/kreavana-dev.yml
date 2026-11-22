@@ -12,7 +12,7 @@ on:
         required: false
         default: true
       flutter_runner:
-        description: 'Runner untuk Flutter Web (auto mengikuti repo variable FLUTTER_RUNNER)'
+        description: 'Runner untuk Flutter Web (auto: VINNZ online -> VINNZ, VINNZ offline -> ubuntu-latest)'
         type: choice
         required: false
         default: auto
@@ -42,6 +42,7 @@ jobs:
         shell: bash
     outputs:
       build_flutter: ${{ steps.changes.outputs.build_flutter }}
+      flutter_runner_json: ${{ steps.runner.outputs.runner_json }}
 
     steps:
       - name: Checkout
@@ -74,6 +75,91 @@ jobs:
             echo "Fallback -> will trigger Flutter Web job."
           fi
 
+      - name: Select Flutter Runner (Auto)
+        id: runner
+        env:
+          BUILD_FLUTTER: ${{ steps.changes.outputs.build_flutter }}
+          INPUT_RUNNER: ${{ github.event.inputs.flutter_runner }}
+          VAR_RUNNER: ${{ vars.FLUTTER_RUNNER }}
+          RUNNER_STATUS_TOKEN: ${{ secrets.RUNNER_STATUS_TOKEN }}
+          GITHUB_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          SELF_HOSTED_JSON='["self-hosted","flutter-builder"]'
+          CLOUD_JSON='"ubuntu-latest"'
+
+          if [ "$BUILD_FLUTTER" != "true" ]; then
+            echo "runner_json=$SELF_HOSTED_JSON" >> "$GITHUB_OUTPUT"
+            echo "Flutter build skipped -> no runner selection needed."
+            exit 0
+          fi
+
+          # 1. Manual override via workflow_dispatch input
+          if [ "$INPUT_RUNNER" = "ubuntu-latest" ]; then
+            echo "runner_json=$CLOUD_JSON" >> "$GITHUB_OUTPUT"
+            echo "Manual override (workflow_dispatch) -> ubuntu-latest"
+            exit 0
+          elif [ "$INPUT_RUNNER" = "self-hosted" ]; then
+            echo "runner_json=$SELF_HOSTED_JSON" >> "$GITHUB_OUTPUT"
+            echo "Manual override (workflow_dispatch) -> [self-hosted, flutter-builder]"
+            exit 0
+          fi
+
+          # 2. Optional override via repository variable FLUTTER_RUNNER
+          CLEAN_VAR=$(printf '%s' "${VAR_RUNNER:-}" | tr -d '\r\n ')
+          if [ "$CLEAN_VAR" = "ubuntu-latest" ]; then
+            echo "runner_json=$CLOUD_JSON" >> "$GITHUB_OUTPUT"
+            echo "Repo variable override (FLUTTER_RUNNER=ubuntu-latest) -> ubuntu-latest"
+            exit 0
+          elif [ "$CLEAN_VAR" = "self-hosted" ]; then
+            echo "runner_json=$SELF_HOSTED_JSON" >> "$GITHUB_OUTPUT"
+            echo "Repo variable override (FLUTTER_RUNNER=self-hosted) -> [self-hosted, flutter-builder]"
+            exit 0
+          fi
+
+          # 3. AUTO mode: cek apakah runner berlabel 'flutter-builder' (mis. VINNZ) sedang online
+          CLEAN_TOKEN=$(printf '%s' "${RUNNER_STATUS_TOKEN:-}" | tr -d '\r\n')
+          if [ -z "$CLEAN_TOKEN" ]; then
+            echo "runner_json=$SELF_HOSTED_JSON" >> "$GITHUB_OUTPUT"
+            echo "AUTO: RUNNER_STATUS_TOKEN belum diset -> default ke [self-hosted, flutter-builder]."
+            exit 0
+          fi
+
+          API_RESP=$(curl -fsSL \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $CLEAN_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPO}/actions/runners?per_page=100" 2>/dev/null || true)
+          unset CLEAN_TOKEN
+
+          if [ -z "$API_RESP" ]; then
+            echo "runner_json=$SELF_HOSTED_JSON" >> "$GITHUB_OUTPUT"
+            echo "AUTO: Gagal menghubungi GitHub Runners API -> fallback ke [self-hosted, flutter-builder]."
+            exit 0
+          fi
+
+          ONLINE_RUNNER=$(printf '%s' "$API_RESP" | python3 -c '
+          import json, sys
+          try:
+              data = json.load(sys.stdin)
+              for r in data.get("runners", []):
+                  labels = {l.get("name", "") for l in r.get("labels", [])}
+                  if r.get("status") == "online" and "flutter-builder" in labels:
+                      print(r.get("name", "self-hosted"))
+                      break
+          except Exception:
+              pass
+          ')
+
+          if [ -n "$ONLINE_RUNNER" ]; then
+            echo "runner_json=$SELF_HOSTED_JSON" >> "$GITHUB_OUTPUT"
+            echo "AUTO: Runner flutter-builder ($ONLINE_RUNNER) ONLINE -> pakai self-hosted (0 menit kuota GitHub)."
+          else
+            echo "runner_json=$CLOUD_JSON" >> "$GITHUB_OUTPUT"
+            echo "AUTO: Runner flutter-builder OFFLINE -> otomatis fallback ke ubuntu-latest (24/7 cloud)."
+          fi
+
       - name: Deploy Backend & Users API on VPS
         env:
           GIT_SSH_PASSPHRASE: ${{ secrets.KREAVANA_DEV_GIT_PASSPHRASE }}
@@ -92,15 +178,16 @@ jobs:
 
   # ============================================================
   # JOB 2: BUILD & UPLOAD FLUTTER WEB (HANYA JIKA frontend/ BERUBAH)
-  # Switchable via GitHub Repo Variable FLUTTER_RUNNER:
-  # - kosong / self-hosted -> [self-hosted, flutter-builder] (PC lokal)
-  # - ubuntu-latest        -> GitHub Cloud (saat kuota bulanan tersedia)
+  # Mode AUTO (default):
+  # - Runner berlabel 'flutter-builder' (VINNZ) ONLINE  -> pakai VINNZ (gratis, 0 kuota)
+  # - Runner berlabel 'flutter-builder' (VINNZ) OFFLINE -> otomatis pakai ubuntu-latest (24/7 cloud)
+  # Tetap bisa di-override via workflow_dispatch atau repo variable FLUTTER_RUNNER.
   # ============================================================
   deploy-frontend:
     name: Build & Deploy Flutter Web
     needs: deploy-backend
     if: needs.deploy-backend.outputs.build_flutter == 'true'
-    runs-on: ${{ fromJSON((github.event.inputs.flutter_runner == 'ubuntu-latest' || (github.event.inputs.flutter_runner != 'self-hosted' && vars.FLUTTER_RUNNER == 'ubuntu-latest')) && '"ubuntu-latest"' || '["self-hosted", "flutter-builder"]') }}
+    runs-on: ${{ fromJSON(needs.deploy-backend.outputs.flutter_runner_json || '["self-hosted","flutter-builder"]') }}
     defaults:
       run:
         shell: bash
