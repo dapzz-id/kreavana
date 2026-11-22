@@ -139,18 +139,28 @@ jobs:
           echo "PREPARING EPHEMERAL SSH (SELF-HOSTED SAFE)"
           echo "============================================================"
 
-          printf '%s\n' "$SSH_PRIVATE_KEY" > "$KEY_FILE"
+          printf '%s\n' "$SSH_PRIVATE_KEY" | tr -d '\r' > "$KEY_FILE"
           chmod 600 "$KEY_FILE"
 
-          printf '%s\n' "$KNOWN_HOSTS_ENTRY" > "$KNOWN_HOSTS_FILE"
+          printf '%s\n' "$KNOWN_HOSTS_ENTRY" | tr -d '\r' > "$KNOWN_HOSTS_FILE"
           chmod 600 "$KNOWN_HOSTS_FILE"
+
+          VPS_HOST=$(printf '%s' "$VPS_HOST" | tr -d '\r\n')
+          VPS_PORT=$(printf '%s' "$VPS_PORT" | tr -d '\r\n')
+          VPS_USER=$(printf '%s' "$VPS_USER" | tr -d '\r\n')
 
           eval "$(ssh-agent -s)" >/dev/null
 
           # Decrypt ephemeral copy in-place (works identically on Windows Git Bash & Linux without TTY/SSH_ASKPASS hangs)
-          if [ -n "${SSH_PASSPHRASE:-}" ]; then
-            ssh-keygen -q -p -P "$SSH_PASSPHRASE" -N "" -f "$KEY_FILE"
+          CLEAN_SSH_PASSPHRASE=$(printf '%s' "${SSH_PASSPHRASE:-}" | tr -d '\r\n')
+          if [ -n "$CLEAN_SSH_PASSPHRASE" ]; then
+            if ! ssh-keygen -q -p -P "$CLEAN_SSH_PASSPHRASE" -N "" -f "$KEY_FILE"; then
+              echo "ERROR: Gagal mendekripsi KREAVANA_DEV_CI_PRIVATE_KEY."
+              echo "Pastikan secret KREAVANA_DEV_CI_PASSPHRASE cocok dengan KREAVANA_DEV_CI_PRIVATE_KEY (tanpa spasi tambahan)."
+              exit 1
+            fi
           fi
+          unset CLEAN_SSH_PASSPHRASE
           ssh-add "$KEY_FILE" </dev/null >/dev/null
           rm -f "$KEY_FILE"
 
@@ -175,7 +185,7 @@ jobs:
           echo "============================================================"
 
           {
-            printf 'GIT_SSH_PASSPHRASE_B64=%q\n' "$(printf '%s' "${GIT_SSH_PASSPHRASE:-}" | base64 | tr -d '\r\n')"
+            printf 'GIT_SSH_PASSPHRASE_B64=%q\n' "$(printf '%s' "${GIT_SSH_PASSPHRASE:-}" | tr -d '\r\n' | base64 | tr -d '\r\n')"
             cat <<'REMOTE_SCRIPT'
 
           set -euo pipefail
