@@ -122,13 +122,15 @@ jobs:
           set -euo pipefail
 
           TEMP_DIR="${RUNNER_TEMP:-/tmp}"
+          if command -v cygpath >/dev/null 2>&1; then
+            TEMP_DIR=$(cygpath -u "$TEMP_DIR")
+          fi
           mkdir -p "$TEMP_DIR"
           KEY_FILE=$(mktemp "$TEMP_DIR/kreavana_dev_ci.XXXXXX")
           KNOWN_HOSTS_FILE=$(mktemp "$TEMP_DIR/known_hosts.XXXXXX")
-          LOCAL_ASKPASS=$(mktemp "$TEMP_DIR/local_askpass.XXXXXX")
 
           cleanup_local_ssh() {
-            rm -f "$KEY_FILE" "$KNOWN_HOSTS_FILE" "$LOCAL_ASKPASS" || true
+            rm -f "$KEY_FILE" "$KNOWN_HOSTS_FILE" || true
             [ -n "${SSH_AGENT_PID:-}" ] && ssh-agent -k >/dev/null 2>&1 || true
           }
           trap cleanup_local_ssh EXIT
@@ -145,18 +147,11 @@ jobs:
 
           eval "$(ssh-agent -s)" >/dev/null
 
+          # Decrypt ephemeral copy in-place (works identically on Windows Git Bash & Linux without TTY/SSH_ASKPASS hangs)
           if [ -n "${SSH_PASSPHRASE:-}" ]; then
-            cat > "$LOCAL_ASKPASS" <<'LOCAL_ASKPASS_EOF'
-          #!/bin/sh
-          printf '%s\n' "$SSH_PASSPHRASE"
-          LOCAL_ASKPASS_EOF
-            chmod 700 "$LOCAL_ASKPASS"
-            DISPLAY=:0 SSH_ASKPASS="$LOCAL_ASKPASS" SSH_ASKPASS_REQUIRE=force \
-              ssh-add "$KEY_FILE" </dev/null >/dev/null
-            rm -f "$LOCAL_ASKPASS"
-          else
-            ssh-add "$KEY_FILE" </dev/null >/dev/null
+            ssh-keygen -q -p -P "$SSH_PASSPHRASE" -N "" -f "$KEY_FILE"
           fi
+          ssh-add "$KEY_FILE" </dev/null >/dev/null
           rm -f "$KEY_FILE"
 
           echo "SSH key loaded successfully into ephemeral ssh-agent."
