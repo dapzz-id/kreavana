@@ -14,6 +14,7 @@
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
+        "laravel/boost": "^2.10",
         "mockery/mockery": "^1.6",
         "phpunit/phpunit": "^12.5.12"
     },
