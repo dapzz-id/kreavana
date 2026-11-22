@@ -11,6 +11,15 @@ on:
         type: boolean
         required: false
         default: true
+      flutter_runner:
+        description: 'Runner untuk Flutter Web (auto mengikuti repo variable FLUTTER_RUNNER)'
+        type: choice
+        required: false
+        default: auto
+        options:
+          - auto
+          - self-hosted
+          - ubuntu-latest
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -22,25 +31,24 @@ permissions:
   contents: read
 
 jobs:
-  build-and-update:
-    name: Build & Update Kreavana DEV
-    runs-on: self-hosted
+  # ============================================================
+  # JOB 1: DEPLOY BACKEND & USERS_API (24/7 DI VPS, 0 KUOTA GITHUB)
+  # ============================================================
+  deploy-backend:
+    name: Deploy Backend & Users API (VPS 24/7)
+    runs-on: [self-hosted, vps-backend]
     defaults:
       run:
         shell: bash
+    outputs:
+      build_flutter: ${{ steps.changes.outputs.build_flutter }}
 
     steps:
-      # ============================================================
-      # 1. CHECKOUT
-      # ============================================================
       - name: Checkout
         uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
-      # ============================================================
-      # 1B. DETECT FRONTEND CHANGES (skip Flutter build jika hanya backend/users_api berubah)
-      # ============================================================
       - name: Detect Frontend Changes
         id: changes
         run: |
@@ -56,43 +64,65 @@ jobs:
           elif git rev-parse HEAD~1 >/dev/null 2>&1; then
             if git diff --name-only HEAD~1 HEAD | grep -q '^frontend/'; then
               echo "build_flutter=true" >> "$GITHUB_OUTPUT"
-              echo "Frontend changes detected -> will build Flutter Web."
+              echo "Frontend changes detected -> will trigger Flutter Web job."
             else
               echo "build_flutter=false" >> "$GITHUB_OUTPUT"
-              echo "No frontend changes -> skipping Flutter Web build."
+              echo "No frontend changes -> Flutter Web job will be skipped."
             fi
           else
             echo "build_flutter=true" >> "$GITHUB_OUTPUT"
-            echo "Fallback -> will build Flutter Web."
+            echo "Fallback -> will trigger Flutter Web job."
           fi
 
-      # ============================================================
-      # 2. SETUP FLUTTER (hanya jika frontend berubah)
-      # ============================================================
+      - name: Deploy Backend & Users API on VPS
+        env:
+          GIT_SSH_PASSPHRASE: ${{ secrets.KREAVANA_DEV_GIT_PASSPHRASE }}
+          DEPLOY_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          echo "============================================================"
+          echo "DEPLOY KREAVANA DEV BACKEND & USERS_API (LOCAL VPS 24/7)"
+          echo "============================================================"
+          GIT_PASS_B64=$(printf '%s' "${GIT_SSH_PASSPHRASE:-}" | tr -d '\r\n' | base64 | tr -d '\r\n')
+          printf '%s\n' "$GIT_PASS_B64" | sudo -n /usr/local/sbin/ci-deploy-kreavana-dev-backend.sh "$DEPLOY_SHA"
+          unset GIT_PASS_B64
+          echo "============================================================"
+          echo "BACKEND & USERS_API DEPLOY COMPLETED"
+          echo "============================================================"
+
+  # ============================================================
+  # JOB 2: BUILD & UPLOAD FLUTTER WEB (HANYA JIKA frontend/ BERUBAH)
+  # Switchable via GitHub Repo Variable FLUTTER_RUNNER:
+  # - kosong / self-hosted -> [self-hosted, flutter-builder] (PC lokal)
+  # - ubuntu-latest        -> GitHub Cloud (saat kuota bulanan tersedia)
+  # ============================================================
+  deploy-frontend:
+    name: Build & Deploy Flutter Web
+    needs: deploy-backend
+    if: needs.deploy-backend.outputs.build_flutter == 'true'
+    runs-on: ${{ fromJSON((github.event.inputs.flutter_runner == 'ubuntu-latest' || (github.event.inputs.flutter_runner != 'self-hosted' && vars.FLUTTER_RUNNER == 'ubuntu-latest')) && '"ubuntu-latest"' || '["self-hosted", "flutter-builder"]') }}
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
       - name: Setup Flutter
-        if: steps.changes.outputs.build_flutter == 'true'
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
 
       - name: Flutter version
-        if: steps.changes.outputs.build_flutter == 'true'
         run: flutter --version
 
-      # ============================================================
-      # 3. FLUTTER PUB GET
-      # ============================================================
       - name: Flutter pub get
-        if: steps.changes.outputs.build_flutter == 'true'
         working-directory: frontend
         run: flutter pub get
 
-      # ============================================================
-      # 4. BUILD FLUTTER WEB - STAGING
-      # ============================================================
       - name: Build Flutter Web Staging
-        if: steps.changes.outputs.build_flutter == 'true'
         working-directory: frontend
         run: |
           flutter build web \
@@ -100,24 +130,14 @@ jobs:
             --dart-define=ENV=staging \
             --no-wasm-dry-run
 
-      # ============================================================
-      # 5. UPDATE KREVANA DEV VPS
-      #
-      # SSH AGENT + SSH + SCP BERADA DALAM SATU STEP
-      # memakai RUNNER_TEMP agar tidak menyentuh ~/.ssh milik host runner.
-      # ============================================================
-      - name: Update Krevana DEV VPS
+      - name: Upload & Update Flutter Web on VPS
         env:
           SSH_PRIVATE_KEY: ${{ secrets.KREAVANA_DEV_CI_PRIVATE_KEY }}
           SSH_PASSPHRASE: ${{ secrets.KREAVANA_DEV_CI_PASSPHRASE }}
-          GIT_SSH_PASSPHRASE: ${{ secrets.KREAVANA_DEV_GIT_PASSPHRASE }}
           VPS_HOST: ${{ secrets.KREAVANA_DEV_VPS_HOST }}
           VPS_PORT: ${{ secrets.KREAVANA_DEV_VPS_PORT }}
           VPS_USER: ${{ secrets.KREAVANA_DEV_VPS_USER }}
           KNOWN_HOSTS_ENTRY: ${{ secrets.KREAVANA_DEV_KNOWN_HOST }}
-          DEPLOY_SHA: ${{ github.sha }}
-          BUILD_FLUTTER: ${{ steps.changes.outputs.build_flutter }}
-
         run: |
           set -euo pipefail
 
@@ -136,7 +156,7 @@ jobs:
           trap cleanup_local_ssh EXIT
 
           echo "============================================================"
-          echo "PREPARING EPHEMERAL SSH (SELF-HOSTED SAFE)"
+          echo "PREPARING EPHEMERAL SSH FOR FLUTTER WEB UPLOAD"
           echo "============================================================"
 
           printf '%s\n' "$SSH_PRIVATE_KEY" | tr -d '\r' > "$KEY_FILE"
@@ -151,12 +171,12 @@ jobs:
 
           eval "$(ssh-agent -s)" >/dev/null
 
-          # Decrypt ephemeral copy in-place (works identically on Windows Git Bash & Linux without TTY/SSH_ASKPASS hangs)
+          # Decrypt ephemeral copy in-place (works identically on Windows Git Bash & Linux)
           CLEAN_SSH_PASSPHRASE=$(printf '%s' "${SSH_PASSPHRASE:-}" | tr -d '\r\n')
           if [ -n "$CLEAN_SSH_PASSPHRASE" ]; then
             if ! ssh-keygen -q -p -P "$CLEAN_SSH_PASSPHRASE" -N "" -f "$KEY_FILE"; then
               echo "ERROR: Gagal mendekripsi KREAVANA_DEV_CI_PRIVATE_KEY."
-              echo "Pastikan secret KREAVANA_DEV_CI_PASSPHRASE cocok dengan KREAVANA_DEV_CI_PRIVATE_KEY (tanpa spasi tambahan)."
+              echo "Pastikan secret KREAVANA_DEV_CI_PASSPHRASE cocok dengan KREAVANA_DEV_CI_PRIVATE_KEY."
               exit 1
             fi
           fi
@@ -175,164 +195,22 @@ jobs:
           )
 
           echo "============================================================"
-          echo "TEST SSH CONNECTION"
-          echo "============================================================"
-
-          ssh "${SSH_OPTS[@]}" -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "echo 'SSH_AUTH_OK'"
-
-          echo "============================================================"
-          echo "UPDATE DEV SOURCE CODE"
-          echo "============================================================"
-
-          {
-            printf 'GIT_SSH_PASSPHRASE_B64=%q\n' "$(printf '%s' "${GIT_SSH_PASSPHRASE:-}" | tr -d '\r\n' | base64 | tr -d '\r\n')"
-            cat <<'REMOTE_SCRIPT'
-
-          set -euo pipefail
-
-          PROJECT="/var/www/kreavana-dev"
-          BACKEND="$PROJECT/backend"
-          ASKPASS_FILE=""
-
-          cleanup_git_ssh_agent() {
-              [ -n "${ASKPASS_FILE:-}" ] && rm -f "$ASKPASS_FILE" || true
-              [ -n "${SSH_AGENT_PID:-}" ] && ssh-agent -k >/dev/null 2>&1 || true
-          }
-          trap cleanup_git_ssh_agent EXIT
-
-          # Unlock encrypted GitHub deploy key (/root/.ssh/kreavana_dev) in ephemeral RAM ssh-agent
-          if [ -n "${GIT_SSH_PASSPHRASE_B64:-}" ] && [ -f /root/.ssh/kreavana_dev ]; then
-              eval "$(ssh-agent -s)" >/dev/null
-              ASKPASS_FILE=$(mktemp /dev/shm/git_askpass.XXXXXX)
-              chmod 700 "$ASKPASS_FILE"
-              cat > "$ASKPASS_FILE" <<'ASKPASS_EOF'
-          #!/bin/sh
-          printf '%s\n' "$GIT_SSH_PASSPHRASE_B64" | base64 -d
-          ASKPASS_EOF
-              export GIT_SSH_PASSPHRASE_B64
-              DISPLAY=:0 SSH_ASKPASS="$ASKPASS_FILE" SSH_ASKPASS_REQUIRE=force \
-                ssh-add /root/.ssh/kreavana_dev </dev/null >/dev/null
-              rm -f "$ASKPASS_FILE"
-              ASKPASS_FILE=""
-              unset GIT_SSH_PASSPHRASE_B64
-              echo "Encrypted deploy key unlocked in temporary ssh-agent."
-          fi
-
-          echo "Project: $PROJECT"
-          echo "Target commit: $DEPLOY_SHA"
-
-          cd "$PROJECT"
-          git config --global --add safe.directory "$PROJECT"
-
-          echo "Current commit: $(git rev-parse HEAD || true)"
-          git fetch --prune origin main
-
-          if ! git cat-file -e "${DEPLOY_SHA}^{commit}" 2>/dev/null; then
-              git fetch origin "$DEPLOY_SHA"
-          fi
-
-          if ! git cat-file -e "${DEPLOY_SHA}^{commit}" 2>/dev/null; then
-              echo "ERROR: Deploy commit $DEPLOY_SHA could not be found."
-              exit 1
-          fi
-
-          git reset --hard "$DEPLOY_SHA"
-
-          if [ "$(git rev-parse HEAD)" != "$DEPLOY_SHA" ]; then
-              echo "ERROR: Deployed commit does not match workflow commit."
-              exit 1
-          fi
-
-          echo "Commit verification OK: $(git rev-parse HEAD)"
-
-          echo "============================================================"
-          echo "UPDATE LARAVEL DEPENDENCIES (BACKEND)"
-          echo "============================================================"
-
-          cd "$BACKEND"
-
-          COMPOSER_ALLOW_SUPERUSER=1 php8.4 /usr/bin/composer install \
-            --no-interaction \
-            --prefer-dist \
-            --optimize-autoloader
-
-          php8.4 artisan migrate --force
-          php8.4 artisan optimize:clear
-          php8.4 artisan config:cache
-          php8.4 artisan route:cache
-          php8.4 artisan view:cache
-          php8.4 artisan queue:restart || true
-          php8.4 artisan --version
-
-          echo "DEV backend update completed."
-
-          # ============================================================
-          # UPDATE KREAVANA DEV AUTH (USERS_API)
-          # ============================================================
-          AUTH_PROJECT="/var/www/kreavana-dev-auth"
-          AUTH_API="$AUTH_PROJECT/users_api"
-
-          if [ -d "$AUTH_PROJECT" ]; then
-              echo "============================================================"
-              echo "UPDATING USERS_API IN $AUTH_PROJECT"
-              echo "============================================================"
-              cd "$AUTH_PROJECT"
-              git config --global --add safe.directory "$AUTH_PROJECT"
-
-              git fetch origin main
-              git reset --hard origin/main
-
-              cd "$AUTH_API"
-
-              COMPOSER_ALLOW_SUPERUSER=1 php8.4 /usr/bin/composer install \
-                --no-interaction \
-                --prefer-dist \
-                --optimize-autoloader
-
-              php8.4 artisan migrate --seed --force
-              php8.4 artisan optimize:clear
-              php8.4 artisan config:cache
-              php8.4 artisan route:cache
-
-              chown -R www-data:www-data "$AUTH_PROJECT"
-              echo "Kreavana DEV Auth (users_api) update completed."
-          fi
-
-          REMOTE_SCRIPT
-          } | ssh "${SSH_OPTS[@]}" -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
-            "DEPLOY_SHA='$DEPLOY_SHA' bash -s"
-
-          if [ "${BUILD_FLUTTER}" = "true" ]; then
-            echo "============================================================"
-            echo "UPLOAD & UPDATE FLUTTER WEB"
-            echo "============================================================"
-
-            ssh "${SSH_OPTS[@]}" -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
-              "rm -rf /var/www/kreavana-dev-build && mkdir -p /var/www/kreavana-dev-build"
-
-            scp "${SSH_OPTS[@]}" -P "$VPS_PORT" -r frontend/build/web/. \
-              "$VPS_USER@$VPS_HOST:/var/www/kreavana-dev-build/"
-
-            ssh "${SSH_OPTS[@]}" -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
-              "rm -rf /var/www/kreavana-dev/frontend/build/web && \
-               mkdir -p /var/www/kreavana-dev/frontend/build/web && \
-               cp -a /var/www/kreavana-dev-build/. /var/www/kreavana-dev/frontend/build/web/ && \
-               test -f /var/www/kreavana-dev/frontend/build/web/index.html && \
-               echo 'Kreavana DEV Web update OK'"
-          else
-            echo "Flutter Web build/upload skipped (no frontend/ changes)."
-          fi
-
-          echo "============================================================"
-          echo "VERIFY DEV SOURCE COMMIT"
+          echo "UPLOAD & UPDATE FLUTTER WEB"
           echo "============================================================"
 
           ssh "${SSH_OPTS[@]}" -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
-            "cd /var/www/kreavana-dev && \
-             echo 'DEPLOYED COMMIT:' && git rev-parse HEAD && \
-             echo 'DEPLOYED BRANCH:' && git branch --show-current && \
-             echo 'GIT STATUS:' && git status --short --branch"
+            "rm -rf /var/www/kreavana-dev-build && mkdir -p /var/www/kreavana-dev-build"
+
+          scp "${SSH_OPTS[@]}" -P "$VPS_PORT" -r frontend/build/web/. \
+            "$VPS_USER@$VPS_HOST:/var/www/kreavana-dev-build/"
+
+          ssh "${SSH_OPTS[@]}" -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
+            "rm -rf /var/www/kreavana-dev/frontend/build/web && \
+             mkdir -p /var/www/kreavana-dev/frontend/build/web && \
+             cp -a /var/www/kreavana-dev-build/. /var/www/kreavana-dev/frontend/build/web/ && \
+             test -f /var/www/kreavana-dev/frontend/build/web/index.html && \
+             echo 'Kreavana DEV Web update OK'"
 
           echo "============================================================"
-          echo "KREVANA DEV UPDATE COMPLETED"
+          echo "FLUTTER WEB DEPLOY COMPLETED"
           echo "============================================================"
