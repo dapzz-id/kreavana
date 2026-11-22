@@ -5,6 +5,12 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      build_flutter:
+        description: 'Build & deploy Flutter Web (frontend)'
+        type: boolean
+        required: false
+        default: true
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -18,7 +24,10 @@ permissions:
 jobs:
   build-and-update:
     name: Build & Update Kreavana DEV
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
+    defaults:
+      run:
+        shell: bash
 
     steps:
       # ============================================================
@@ -26,23 +35,56 @@ jobs:
       # ============================================================
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
 
       # ============================================================
-      # 2. SETUP FLUTTER
+      # 1B. DETECT FRONTEND CHANGES (skip Flutter build jika hanya backend/users_api berubah)
+      # ============================================================
+      - name: Detect Frontend Changes
+        id: changes
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ inputs.build_flutter }}" = "false" ]; then
+              echo "build_flutter=false" >> "$GITHUB_OUTPUT"
+              echo "Manual dispatch: Flutter Web build skipped."
+            else
+              echo "build_flutter=true" >> "$GITHUB_OUTPUT"
+              echo "Manual dispatch: Flutter Web build enabled."
+            fi
+          elif git rev-parse HEAD~1 >/dev/null 2>&1; then
+            if git diff --name-only HEAD~1 HEAD | grep -q '^frontend/'; then
+              echo "build_flutter=true" >> "$GITHUB_OUTPUT"
+              echo "Frontend changes detected -> will build Flutter Web."
+            else
+              echo "build_flutter=false" >> "$GITHUB_OUTPUT"
+              echo "No frontend changes -> skipping Flutter Web build."
+            fi
+          else
+            echo "build_flutter=true" >> "$GITHUB_OUTPUT"
+            echo "Fallback -> will build Flutter Web."
+          fi
+
+      # ============================================================
+      # 2. SETUP FLUTTER (hanya jika frontend berubah)
       # ============================================================
       - name: Setup Flutter
+        if: steps.changes.outputs.build_flutter == 'true'
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
 
       - name: Flutter version
+        if: steps.changes.outputs.build_flutter == 'true'
         run: flutter --version
 
       # ============================================================
       # 3. FLUTTER PUB GET
       # ============================================================
       - name: Flutter pub get
+        if: steps.changes.outputs.build_flutter == 'true'
         working-directory: frontend
         run: flutter pub get
 
@@ -50,6 +92,7 @@ jobs:
       # 4. BUILD FLUTTER WEB - STAGING
       # ============================================================
       - name: Build Flutter Web Staging
+        if: steps.changes.outputs.build_flutter == 'true'
         working-directory: frontend
         run: |
           flutter build web \
@@ -61,7 +104,7 @@ jobs:
       # 5. UPDATE KREVANA DEV VPS
       #
       # SSH AGENT + SSH + SCP BERADA DALAM SATU STEP
-      # sehingga SSH_AUTH_SOCK tetap tersedia.
+      # memakai RUNNER_TEMP agar tidak menyentuh ~/.ssh milik host runner.
       # ============================================================
       - name: Update Krevana DEV VPS
         env:
@@ -73,62 +116,71 @@ jobs:
           VPS_USER: ${{ secrets.KREAVANA_DEV_VPS_USER }}
           KNOWN_HOSTS_ENTRY: ${{ secrets.KREAVANA_DEV_KNOWN_HOST }}
           DEPLOY_SHA: ${{ github.sha }}
+          BUILD_FLUTTER: ${{ steps.changes.outputs.build_flutter }}
 
         run: |
           set -euo pipefail
 
-          echo "============================================================"
-          echo "PREPARING SSH"
-          echo "============================================================"
+          TEMP_DIR="${RUNNER_TEMP:-/tmp}"
+          mkdir -p "$TEMP_DIR"
+          KEY_FILE=$(mktemp "$TEMP_DIR/kreavana_dev_ci.XXXXXX")
+          KNOWN_HOSTS_FILE=$(mktemp "$TEMP_DIR/known_hosts.XXXXXX")
+          LOCAL_ASKPASS=$(mktemp "$TEMP_DIR/local_askpass.XXXXXX")
 
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-
-          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/kreavana_dev_ci
-          chmod 600 ~/.ssh/kreavana_dev_ci
-
-          echo "Starting SSH agent..."
-
-          eval "$(ssh-agent -s)"
-
-          echo "Loading DEV CI SSH key..."
-
-          printf '%s\n' "$SSH_PASSPHRASE" | \
-            ssh-add ~/.ssh/kreavana_dev_ci
-
-          echo "SSH key loaded successfully."
+          cleanup_local_ssh() {
+            rm -f "$KEY_FILE" "$KNOWN_HOSTS_FILE" "$LOCAL_ASKPASS" || true
+            [ -n "${SSH_AGENT_PID:-}" ] && ssh-agent -k >/dev/null 2>&1 || true
+          }
+          trap cleanup_local_ssh EXIT
 
           echo "============================================================"
-          echo "VERIFY SSH KEY"
+          echo "PREPARING EPHEMERAL SSH (SELF-HOSTED SAFE)"
           echo "============================================================"
 
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$KEY_FILE"
+          chmod 600 "$KEY_FILE"
+
+          printf '%s\n' "$KNOWN_HOSTS_ENTRY" > "$KNOWN_HOSTS_FILE"
+          chmod 600 "$KNOWN_HOSTS_FILE"
+
+          eval "$(ssh-agent -s)" >/dev/null
+
+          if [ -n "${SSH_PASSPHRASE:-}" ]; then
+            cat > "$LOCAL_ASKPASS" <<'LOCAL_ASKPASS_EOF'
+          #!/bin/sh
+          printf '%s\n' "$SSH_PASSPHRASE"
+          LOCAL_ASKPASS_EOF
+            chmod 700 "$LOCAL_ASKPASS"
+            DISPLAY=:0 SSH_ASKPASS="$LOCAL_ASKPASS" SSH_ASKPASS_REQUIRE=force \
+              ssh-add "$KEY_FILE" </dev/null >/dev/null
+            rm -f "$LOCAL_ASKPASS"
+          else
+            ssh-add "$KEY_FILE" </dev/null >/dev/null
+          fi
+          rm -f "$KEY_FILE"
+
+          echo "SSH key loaded successfully into ephemeral ssh-agent."
           ssh-add -l -E sha256
 
-          echo "============================================================"
-          echo "PREPARING KNOWN HOSTS"
-          echo "============================================================"
-
-          printf '%s\n' "$KNOWN_HOSTS_ENTRY" > ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
+          SSH_OPTS=(
+            -o PreferredAuthentications=publickey
+            -o PasswordAuthentication=no
+            -o StrictHostKeyChecking=yes
+            -o "UserKnownHostsFile=$KNOWN_HOSTS_FILE"
+          )
 
           echo "============================================================"
           echo "TEST SSH CONNECTION"
           echo "============================================================"
 
-          ssh \
-            -o PreferredAuthentications=publickey \
-            -o PasswordAuthentication=no \
-            -o StrictHostKeyChecking=yes \
-            -p "$VPS_PORT" \
-            "$VPS_USER@$VPS_HOST" \
-            "echo 'SSH_AUTH_OK'"
+          ssh "${SSH_OPTS[@]}" -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "echo 'SSH_AUTH_OK'"
 
           echo "============================================================"
           echo "UPDATE DEV SOURCE CODE"
           echo "============================================================"
 
           {
-            printf 'GIT_SSH_PASSPHRASE_B64=%q\n' "$(printf '%s' "${GIT_SSH_PASSPHRASE:-}" | base64 -w0)"
+            printf 'GIT_SSH_PASSPHRASE_B64=%q\n' "$(printf '%s' "${GIT_SSH_PASSPHRASE:-}" | base64 | tr -d '\r\n')"
             cat <<'REMOTE_SCRIPT'
 
           set -euo pipefail
@@ -165,38 +217,12 @@ jobs:
           echo "Target commit: $DEPLOY_SHA"
 
           cd "$PROJECT"
-
-          echo "============================================================"
-          echo "CONFIGURE GIT SAFE DIRECTORY"
-          echo "============================================================"
-
           git config --global --add safe.directory "$PROJECT"
 
-          echo "Git safe directory configured."
-
-          echo "============================================================"
-          echo "CURRENT DEV COMMIT"
-          echo "============================================================"
-
-          git rev-parse HEAD || true
-
-          echo "============================================================"
-          echo "FETCH ORIGIN MAIN"
-          echo "============================================================"
-
+          echo "Current commit: $(git rev-parse HEAD || true)"
           git fetch --prune origin main
 
-          echo "Origin main:"
-          git rev-parse origin/main
-
-          echo "============================================================"
-          echo "VERIFY DEPLOY COMMIT"
-          echo "============================================================"
-
           if ! git cat-file -e "${DEPLOY_SHA}^{commit}" 2>/dev/null; then
-              echo "Deploy commit is not available locally."
-              echo "Fetching target commit from origin..."
-
               git fetch origin "$DEPLOY_SHA"
           fi
 
@@ -205,92 +231,32 @@ jobs:
               exit 1
           fi
 
-          echo "Deploy commit exists."
-
-          echo "============================================================"
-          echo "UPDATE DEV SOURCE"
-          echo "============================================================"
-
           git reset --hard "$DEPLOY_SHA"
-
-          echo "DEV source updated."
-
-          echo "Updated commit:"
-          git rev-parse HEAD
-
-          echo "Expected commit:"
-          echo "$DEPLOY_SHA"
 
           if [ "$(git rev-parse HEAD)" != "$DEPLOY_SHA" ]; then
               echo "ERROR: Deployed commit does not match workflow commit."
               exit 1
           fi
 
-          echo "Commit verification OK."
+          echo "Commit verification OK: $(git rev-parse HEAD)"
 
           echo "============================================================"
-          echo "GIT REMOTE"
-          echo "============================================================"
-
-          git remote -v | head -2
-
-          echo "============================================================"
-          echo "GIT STATUS"
-          echo "============================================================"
-
-          git status --short --branch
-
-          echo "============================================================"
-          echo "UPDATE LARAVEL DEPENDENCIES"
+          echo "UPDATE LARAVEL DEPENDENCIES (BACKEND)"
           echo "============================================================"
 
           cd "$BACKEND"
 
-          php8.4 /usr/bin/composer install \
+          COMPOSER_ALLOW_SUPERUSER=1 php8.4 /usr/bin/composer install \
             --no-interaction \
             --prefer-dist \
             --optimize-autoloader
 
-          echo "Composer install completed."
-
-          echo "============================================================"
-          echo "RUN DATABASE MIGRATIONS"
-          echo "============================================================"
-
           php8.4 artisan migrate --force
-
-          echo "Database migrations completed."
-
-          echo "============================================================"
-          echo "CLEAR LARAVEL CACHE"
-          echo "============================================================"
-
           php8.4 artisan optimize:clear
-
-          echo "Laravel cache cleared."
-
-          echo "============================================================"
-          echo "REBUILD LARAVEL OPTIMIZED CACHE"
-          echo "============================================================"
-
           php8.4 artisan config:cache
           php8.4 artisan route:cache
           php8.4 artisan view:cache
-
-          echo "Laravel caches rebuilt."
-
-          echo "============================================================"
-          echo "RESTART QUEUE WORKERS"
-          echo "============================================================"
-
           php8.4 artisan queue:restart || true
-
-          echo "Queue restart signal sent."
-
-          echo "============================================================"
-          echo "VERIFY LARAVEL"
-          echo "============================================================"
-
           php8.4 artisan --version
 
           echo "DEV backend update completed."
@@ -313,7 +279,7 @@ jobs:
 
               cd "$AUTH_API"
 
-              php8.4 /usr/bin/composer install \
+              COMPOSER_ALLOW_SUPERUSER=1 php8.4 /usr/bin/composer install \
                 --no-interaction \
                 --prefer-dist \
                 --optimize-autoloader
@@ -328,90 +294,39 @@ jobs:
           fi
 
           REMOTE_SCRIPT
-          } | ssh \
-            -o PreferredAuthentications=publickey \
-            -o PasswordAuthentication=no \
-            -o StrictHostKeyChecking=yes \
-            -p "$VPS_PORT" \
-            "$VPS_USER@$VPS_HOST" \
+          } | ssh "${SSH_OPTS[@]}" -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
             "DEPLOY_SHA='$DEPLOY_SHA' bash -s"
 
-          echo "============================================================"
-          echo "PREPARE TEMPORARY FLUTTER BUILD DIRECTORY"
-          echo "============================================================"
+          if [ "${BUILD_FLUTTER}" = "true" ]; then
+            echo "============================================================"
+            echo "UPLOAD & UPDATE FLUTTER WEB"
+            echo "============================================================"
 
-          ssh \
-            -o PreferredAuthentications=publickey \
-            -o PasswordAuthentication=no \
-            -o StrictHostKeyChecking=yes \
-            -p "$VPS_PORT" \
-            "$VPS_USER@$VPS_HOST" \
-            "rm -rf /var/www/kreavana-dev-build && \
-             mkdir -p /var/www/kreavana-dev-build"
+            ssh "${SSH_OPTS[@]}" -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
+              "rm -rf /var/www/kreavana-dev-build && mkdir -p /var/www/kreavana-dev-build"
 
-          echo "Temporary directory prepared."
+            scp "${SSH_OPTS[@]}" -P "$VPS_PORT" -r frontend/build/web/. \
+              "$VPS_USER@$VPS_HOST:/var/www/kreavana-dev-build/"
 
-          echo "============================================================"
-          echo "UPLOAD FLUTTER WEB"
-          echo "============================================================"
-
-          scp \
-            -o PreferredAuthentications=publickey \
-            -o PasswordAuthentication=no \
-            -o StrictHostKeyChecking=yes \
-            -P "$VPS_PORT" \
-            -r frontend/build/web/. \
-            "$VPS_USER@$VPS_HOST:/var/www/kreavana-dev-build/"
-
-          echo "Flutter Web uploaded successfully."
-
-          echo "============================================================"
-          echo "UPDATE DEV WEB"
-          echo "============================================================"
-
-          ssh \
-            -o PreferredAuthentications=publickey \
-            -o PasswordAuthentication=no \
-            -o StrictHostKeyChecking=yes \
-            -p "$VPS_PORT" \
-            "$VPS_USER@$VPS_HOST" \
-            "rm -rf /var/www/kreavana-dev/frontend/build/web && \
-             mkdir -p /var/www/kreavana-dev/frontend/build/web && \
-             cp -a /var/www/kreavana-dev-build/. \
-             /var/www/kreavana-dev/frontend/build/web/"
-
-          echo "DEV Web files updated."
-
-          echo "============================================================"
-          echo "VERIFY DEV WEB"
-          echo "============================================================"
-
-          ssh \
-            -o PreferredAuthentications=publickey \
-            -o PasswordAuthentication=no \
-            -o StrictHostKeyChecking=yes \
-            -p "$VPS_PORT" \
-            "$VPS_USER@$VPS_HOST" \
-            "test -f /var/www/kreavana-dev/frontend/build/web/index.html && \
-             echo 'Krevana DEV Web update OK'"
+            ssh "${SSH_OPTS[@]}" -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
+              "rm -rf /var/www/kreavana-dev/frontend/build/web && \
+               mkdir -p /var/www/kreavana-dev/frontend/build/web && \
+               cp -a /var/www/kreavana-dev-build/. /var/www/kreavana-dev/frontend/build/web/ && \
+               test -f /var/www/kreavana-dev/frontend/build/web/index.html && \
+               echo 'Kreavana DEV Web update OK'"
+          else
+            echo "Flutter Web build/upload skipped (no frontend/ changes)."
+          fi
 
           echo "============================================================"
           echo "VERIFY DEV SOURCE COMMIT"
           echo "============================================================"
 
-          ssh \
-            -o PreferredAuthentications=publickey \
-            -o PasswordAuthentication=no \
-            -o StrictHostKeyChecking=yes \
-            -p "$VPS_PORT" \
-            "$VPS_USER@$VPS_HOST" \
+          ssh "${SSH_OPTS[@]}" -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
             "cd /var/www/kreavana-dev && \
-             echo 'DEPLOYED COMMIT:' && \
-             git rev-parse HEAD && \
-             echo 'DEPLOYED BRANCH:' && \
-             git branch --show-current && \
-             echo 'GIT STATUS:' && \
-             git status --short --branch"
+             echo 'DEPLOYED COMMIT:' && git rev-parse HEAD && \
+             echo 'DEPLOYED BRANCH:' && git branch --show-current && \
+             echo 'GIT STATUS:' && git status --short --branch"
 
           echo "============================================================"
           echo "KREVANA DEV UPDATE COMPLETED"
