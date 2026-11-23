@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../services/api_service.dart';
+import '../services/app_router.dart';
 import '../widgets/app_sweet_alert.dart';
 import '../widgets/desktop_sidebar_layout.dart';
 import '../widgets/app_pagination_bar.dart';
@@ -9,8 +11,16 @@ import '../widgets/app_pagination_bar.dart';
 class TimHakAksesScreen extends StatefulWidget {
   final UserModel? user;
   final ValueChanged<UserModel>? onUserUpdated;
+  final String? initialAction;
+  final String? initialItemId;
 
-  const TimHakAksesScreen({super.key, this.user, this.onUserUpdated});
+  const TimHakAksesScreen({
+    super.key,
+    this.user,
+    this.onUserUpdated,
+    this.initialAction,
+    this.initialItemId,
+  });
 
   @override
   State<TimHakAksesScreen> createState() => _TimHakAksesScreenState();
@@ -23,6 +33,8 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
   int _currentPage = 1;
   static const int _pageSize = 6;
   final TextEditingController _searchCtrl = TextEditingController();
+  bool _didHandleInitialAction = false;
+  bool _dialogOpen = false;
 
   @override
   void initState() {
@@ -32,6 +44,48 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
       setState(() {
         _currentPage = 1;
       });
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant TimHakAksesScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialAction != widget.initialAction ||
+        oldWidget.initialItemId != widget.initialItemId) {
+      _didHandleInitialAction = false;
+      if (!_isLoading && widget.initialAction != null) {
+        _maybeHandleInitialRouteAction();
+      }
+    }
+  }
+
+  void _maybeHandleInitialRouteAction() {
+    if (_didHandleInitialAction || _dialogOpen || widget.initialAction == null) {
+      return;
+    }
+    _didHandleInitialAction = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (widget.initialAction == 'create') {
+        _openInviteMemberDialog(syncUrl: false);
+      } else if (widget.initialAction == 'edit' &&
+          widget.initialItemId != null &&
+          widget.initialItemId!.isNotEmpty) {
+        final match = _tim.cast<Map<String, dynamic>?>().firstWhere(
+              (m) => m?['id']?.toString() == widget.initialItemId,
+              orElse: () => null,
+            );
+        if (match != null) {
+          _openEditMemberDialog(match, syncUrl: false);
+        } else {
+          GoRouter.maybeOf(context)?.go(AppRoutes.timHakAkses);
+          AppSweetAlert.warning(
+            context,
+            'Anggota tim dengan ID "${widget.initialItemId}" tidak ditemukan.',
+            title: 'Data Tidak Ditemukan',
+          );
+        }
+      }
     });
   }
 
@@ -153,6 +207,7 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
           _currentPage = 1;
           _isLoading = false;
         });
+        _maybeHandleInitialRouteAction();
       }
     } catch (_) {
       if (mounted) {
@@ -199,7 +254,14 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
     }).toList();
   }
 
-  void _openInviteMemberDialog() {
+  Future<void> _openInviteMemberDialog({bool syncUrl = true}) async {
+    if (_dialogOpen) return;
+    final router = GoRouter.maybeOf(context);
+    if (syncUrl && router != null) {
+      router.go(AppRoutes.timHakAksesCreate);
+      return;
+    }
+    _dialogOpen = true;
     final isMobile = MediaQuery.of(context).size.width < 640;
     final nameCtrl = TextEditingController();
     final emailCtrl = TextEditingController();
@@ -653,7 +715,7 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
     }
 
     if (isMobile) {
-      showModalBottomSheet(
+      await showModalBottomSheet(
         context: context,
         isScrollControlled: true,
         backgroundColor: Theme.of(context).brightness == Brightness.dark
@@ -670,7 +732,7 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
         ),
       );
     } else {
-      showDialog(
+      await showDialog(
         context: context,
         builder: (modalCtx) => Dialog(
           backgroundColor: Theme.of(context).brightness == Brightness.dark
@@ -686,17 +748,39 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
         ),
       );
     }
+    _dialogOpen = false;
+    if (mounted && router != null) {
+      final loc = GoRouterState.of(context).matchedLocation;
+      if (loc != AppRoutes.timHakAkses) {
+        router.go(AppRoutes.timHakAkses);
+      }
+    }
   }
 
-  void _openEditMemberDialog(Map<String, dynamic> member) {
+  Future<void> _openEditMemberDialog(
+    Map<String, dynamic> member, {
+    bool syncUrl = true,
+  }) async {
+    if (_dialogOpen) return;
     if (member['isOwner'] == true) {
       AppSweetAlert.warning(
         context,
         'Wewenang pemilik akun utama institusi tidak dapat diubah.',
         title: 'Aksi Dibatasi',
       );
+      if (!syncUrl) {
+        GoRouter.maybeOf(context)?.go(AppRoutes.timHakAkses);
+      }
       return;
     }
+
+    final router = GoRouter.maybeOf(context);
+    final memberId = member['id']?.toString() ?? '';
+    if (syncUrl && router != null && memberId.isNotEmpty) {
+      router.go(AppRoutes.timHakAksesEditPath(memberId));
+      return;
+    }
+    _dialogOpen = true;
 
     final isMobile = MediaQuery.of(context).size.width < 640;
     final deptCtrl = TextEditingController(text: member['department']?.toString() ?? '');
@@ -1092,7 +1176,7 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
     }
 
     if (isMobile) {
-      showModalBottomSheet(
+      await showModalBottomSheet(
         context: context,
         isScrollControlled: true,
         backgroundColor: Theme.of(context).brightness == Brightness.dark
@@ -1109,7 +1193,7 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
         ),
       );
     } else {
-      showDialog(
+      await showDialog(
         context: context,
         builder: (modalCtx) => Dialog(
           backgroundColor: Theme.of(context).brightness == Brightness.dark
@@ -1124,6 +1208,13 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
           ),
         ),
       );
+    }
+    _dialogOpen = false;
+    if (mounted && router != null) {
+      final loc = GoRouterState.of(context).matchedLocation;
+      if (loc != AppRoutes.timHakAkses) {
+        router.go(AppRoutes.timHakAkses);
+      }
     }
   }
 

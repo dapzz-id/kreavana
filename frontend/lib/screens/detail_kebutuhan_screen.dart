@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'dart:io' show File;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
+import '../services/app_router.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -747,38 +749,55 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
   }
 
   Future<void> _openChatWithUser(String userId, String? name) async {
+    final router = GoRouter.maybeOf(context);
     try {
       final result = await ChatService.startPersonalChat(userId);
       if (!mounted) return;
       final chatData = result['data'];
       if (chatData != null && chatData['id'] != null) {
+        final chatId = chatData['id'].toString();
         final chatMap = Map<String, dynamic>.from(chatData);
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => DirectMessageScreen(
-              chatId: chatData['id']?.toString(),
-              initialChat: chatMap,
-              targetUserId: userId,
+        if (router != null) {
+          router.push(
+            AppRoutes.pesanChatPath(chatId),
+            extra: {'initialChat': chatMap, 'targetUserId': userId},
+          );
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DirectMessageScreen(
+                chatId: chatId,
+                initialChat: chatMap,
+                targetUserId: userId,
+              ),
             ),
-          ),
-        );
+          );
+        }
       } else {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => DirectMessageScreen(targetUserId: userId),
-          ),
-        );
+        if (router != null) {
+          router.push(AppRoutes.pesanUserPath(userId));
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DirectMessageScreen(targetUserId: userId),
+            ),
+          );
+        }
       }
     } catch (_) {
       if (mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => DirectMessageScreen(targetUserId: userId),
-          ),
-        );
+        if (router != null) {
+          router.push(AppRoutes.pesanUserPath(userId));
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DirectMessageScreen(targetUserId: userId),
+            ),
+          );
+        }
       }
     }
   }
@@ -1001,15 +1020,20 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                 style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669)),
                 onPressed: () {
                   Navigator.pop(ctx);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => WalletScreen(
-                        user: widget.user!,
-                        onUserUpdated: (_) {},
+                  final router = GoRouter.maybeOf(context);
+                  if (router != null) {
+                    router.push(AppRoutes.walletTopup);
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => WalletScreen(
+                          user: widget.user!,
+                          onUserUpdated: (_) {},
+                        ),
                       ),
-                    ),
-                  );
+                    );
+                  }
                 },
                 icon: const Icon(Icons.add_card_rounded, size: 16, color: Colors.white),
                 label: const Text('Top Up Saldo Sekarang', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),

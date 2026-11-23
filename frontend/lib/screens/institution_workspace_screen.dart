@@ -38,12 +38,16 @@ class InstitutionWorkspaceScreen extends StatefulWidget {
   final UserModel user;
   final String resourceType;
   final ValueChanged<UserModel>? onUserUpdated;
+  final String? initialAction;
+  final String? initialItemId;
 
   const InstitutionWorkspaceScreen({
     super.key,
     required this.user,
     required this.resourceType,
     this.onUserUpdated,
+    this.initialAction,
+    this.initialItemId,
   });
 
   @override
@@ -61,6 +65,31 @@ class _InstitutionWorkspaceScreenState
   String _statusFilter = 'Semua';
   int _currentPage = 1;
   static const int _pageSize = 5;
+  bool _didHandleInitialAction = false;
+  bool _editorOpen = false;
+
+  String? get _baseRoutePath {
+    switch (widget.resourceType) {
+      case 'documents':
+        return AppRoutes.dokumenInstitusi;
+      case 'announcements':
+        return AppRoutes.pengumumanInstitusi;
+      case 'monitoring':
+        return AppRoutes.monitoringEvaluasi;
+      case 'reports':
+        return AppRoutes.laporanKegiatan;
+      case 'showcases':
+        return AppRoutes.karyaSiswa;
+      case 'partners':
+        return AppRoutes.mitraIndustri;
+      case 'tenders':
+        return AppRoutes.pengadaanVendor;
+      case 'budgets':
+        return AppRoutes.realisasiAnggaran;
+      default:
+        return null;
+    }
+  }
 
   String get _itemUnitName {
     switch (widget.resourceType) {
@@ -477,6 +506,7 @@ class _InstitutionWorkspaceScreenState
   void didUpdateWidget(covariant InstitutionWorkspaceScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.resourceType != widget.resourceType) {
+      _didHandleInitialAction = false;
       setState(() {
         _currentPage = 1;
         _search = '';
@@ -484,7 +514,49 @@ class _InstitutionWorkspaceScreenState
       });
       _searchController.clear();
       _loadRecords();
+      return;
     }
+    if (oldWidget.initialAction != widget.initialAction ||
+        oldWidget.initialItemId != widget.initialItemId) {
+      _didHandleInitialAction = false;
+      if (!_isLoading && widget.initialAction != null) {
+        _maybeHandleInitialRouteAction();
+      }
+    }
+  }
+
+  void _maybeHandleInitialRouteAction() {
+    if (_didHandleInitialAction || _editorOpen || widget.initialAction == null) {
+      return;
+    }
+    _didHandleInitialAction = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (widget.initialAction == 'create') {
+        _openEditor(null, false);
+      } else if (widget.initialAction == 'edit' &&
+          widget.initialItemId != null &&
+          widget.initialItemId!.isNotEmpty) {
+        final match = _records.cast<Map<String, dynamic>?>().firstWhere(
+              (r) => r?['id']?.toString() == widget.initialItemId,
+              orElse: () => null,
+            );
+        if (match != null) {
+          _openEditor(match, false);
+        } else {
+          final base = _baseRoutePath;
+          final router = GoRouter.maybeOf(context);
+          if (base != null && router != null) {
+            router.go(base);
+          }
+          AppSweetAlert.warning(
+            context,
+            'Data dengan ID "${widget.initialItemId}" tidak ditemukan.',
+            title: 'Data Tidak Ditemukan',
+          );
+        }
+      }
+    });
   }
 
   @override
@@ -524,6 +596,7 @@ class _InstitutionWorkspaceScreenState
           : response['message']?.toString() ?? 'Data gagal dimuat dari server.';
       _isLoading = false;
     });
+    _maybeHandleInitialRouteAction();
   }
 
 
@@ -666,7 +739,12 @@ class _InstitutionWorkspaceScreenState
     return true;
   }
 
-  Future<void> _openEditor([Map<String, dynamic>? existing]) async {
+  Future<void> _openEditor([
+    Map<String, dynamic>? existing,
+    bool syncUrl = true,
+  ]) async {
+    if (_editorOpen) return;
+
     if (existing != null) {
       final exStatus = existing['status']?.toString().toLowerCase() ?? '';
       final exMeta = _metadata(existing);
@@ -684,11 +762,21 @@ class _InstitutionWorkspaceScreenState
           'Kemitraan dan berkas MoU yang telah disetujui tidak dapat diubah lagi.',
           title: 'Dokumen Terkunci',
         );
+        final base = _baseRoutePath;
+        final router = GoRouter.maybeOf(context);
+        if (!syncUrl && base != null && router != null) {
+          router.go(base);
+        }
         return;
       }
     }
 
     if (existing == null && !_canCreateResource) {
+      final base = _baseRoutePath;
+      final router = GoRouter.maybeOf(context);
+      if (!syncUrl && base != null && router != null) {
+        router.go(base);
+      }
       if (widget.resourceType == 'documents') {
         AppSweetAlert.info(
           context,
@@ -705,9 +793,28 @@ class _InstitutionWorkspaceScreenState
       return;
     }
 
+    // Sinkronkan URL browser ke /<resource>/create atau /<resource>/:id/edit
+    final basePath = _baseRoutePath;
+    final router = GoRouter.maybeOf(context);
+    if (syncUrl && basePath != null && router != null) {
+      final targetPath = existing == null
+          ? AppRoutes.workspaceCreatePath(basePath)
+          : (existing['id'] != null
+              ? AppRoutes.workspaceEditPath(basePath, existing['id'].toString())
+              : null);
+      if (targetPath != null) {
+        router.go(targetPath);
+        return;
+      }
+    }
+
+    _editorOpen = true;
     // If triggered from popup menu, wait for popup route to pop cleanly
     await Future.delayed(const Duration(milliseconds: 100));
-    if (!mounted) return;
+    if (!mounted) {
+      _editorOpen = false;
+      return;
+    }
 
     final saved = await showDialog<bool>(
       context: context,
@@ -724,6 +831,14 @@ class _InstitutionWorkspaceScreenState
         icon: _icons[widget.resourceType] ?? Icons.business,
       ),
     );
+    _editorOpen = false;
+
+    if (mounted && basePath != null && router != null) {
+      final currentLoc = GoRouterState.of(context).matchedLocation;
+      if (currentLoc != basePath && currentLoc.startsWith('$basePath/')) {
+        router.go(basePath);
+      }
+    }
 
     if (saved == true && mounted) {
       // Let the dialog exit transition finish completely before refreshing records and showing toast

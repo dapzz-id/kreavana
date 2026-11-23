@@ -741,30 +741,39 @@ class _MainNavigationState extends State<MainNavigation> {
 
   void _handleCreatorMenuEntry(CreatorSidebarMenuEntry entry) {
     if (entry.serviceKey != null) {
+      final router = GoRouter.maybeOf(context);
       if (entry.serviceKey!.startsWith('komunitas_')) {
+        if (router != null) {
+          router.push(AppRoutes.komunitasServicePath(entry.serviceKey!));
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => CommunityDashboardScreen(
+                user: _currentUser,
+                initialServiceKey: entry.serviceKey,
+                onUserUpdated: _onUserUpdated,
+                showSidebar: true,
+              ),
+            ),
+          );
+        }
+        return;
+      }
+      if (router != null) {
+        router.push(AppRoutes.layananKreatorPath(entry.serviceKey!));
+      } else {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => CommunityDashboardScreen(
+            builder: (_) => CreatorServiceScreen(
               user: _currentUser,
-              initialServiceKey: entry.serviceKey,
+              serviceKey: entry.serviceKey!,
               onUserUpdated: _onUserUpdated,
-              showSidebar: true,
             ),
           ),
         );
-        return;
       }
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => CreatorServiceScreen(
-            user: _currentUser,
-            serviceKey: entry.serviceKey!,
-            onUserUpdated: _onUserUpdated,
-          ),
-        ),
-      );
       return;
     }
     final index = switch (entry.route) {

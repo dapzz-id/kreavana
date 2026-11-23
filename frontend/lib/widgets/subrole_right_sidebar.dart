@@ -4,16 +4,6 @@ import '../app/app_animations.dart';
 import '../app/subrole_theme_engine.dart';
 import '../models/user_model.dart';
 import '../services/api_service.dart';
-import '../screens/buat_kebutuhan_screen.dart';
-import '../screens/explore_screen.dart';
-import '../screens/proyek_saya_screen.dart';
-import '../screens/wallet_screen.dart';
-import '../screens/laporan_screen.dart';
-import '../screens/institution_workspace_screen.dart';
-import '../screens/profile_screen.dart';
-import '../screens/agenda_screen.dart';
-import '../screens/kolaborasi_screen.dart';
-import '../screens/marketplace_karya_screen.dart';
 import 'package:go_router/go_router.dart';
 import '../services/app_router.dart';
 import '../services/profile_completeness_service.dart';
@@ -184,20 +174,7 @@ class SubRoleRightSidebar extends StatelessWidget {
                     );
                     return;
                   }
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ProfileScreen(
-                        user: user,
-                        onUserUpdated: onUserUpdated ?? (_) {},
-                        onLogout:
-                            onLogout ??
-                            () => Navigator.of(
-                              context,
-                            ).popUntil((r) => r.isFirst),
-                      ),
-                    ),
-                  );
+                  context.go(AppRoutes.profil);
                 },
                 style: TextButton.styleFrom(
                   foregroundColor: accentColor,
@@ -407,27 +384,13 @@ class SubRoleRightSidebar extends StatelessWidget {
           onTap: () => _guardAndExecute(
             context,
             actionName: 'mengakses paket tender LPSE',
-            action: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => InstitutionWorkspaceScreen(
-                  user: user,
-                  resourceType: 'tenders',
-                  onUserUpdated: onUserUpdated,
-                ),
-              ),
-            ),
+            action: () => context.go(AppRoutes.pengadaanVendor),
           ),
         ),
         _SidebarQuickAction(
           icon: Icons.person_search_outlined,
           label: 'Cari Vendor',
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ExploreScreen(user: user),
-            ),
-          ),
+          onTap: () => context.go(AppRoutes.explore),
         ),
         _SidebarQuickAction(
           icon: Icons.event_outlined,
@@ -435,12 +398,7 @@ class SubRoleRightSidebar extends StatelessWidget {
           onTap: () => _guardAndExecute(
             context,
             actionName: 'mengakses agenda kedinasan',
-            action: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => AgendaScreen(user: user, onUserUpdated: onUserUpdated),
-              ),
-            ),
+            action: () => context.go(AppRoutes.agenda),
           ),
         ),
         _SidebarQuickAction(
@@ -449,16 +407,7 @@ class SubRoleRightSidebar extends StatelessWidget {
           onTap: () => _guardAndExecute(
             context,
             actionName: 'mengakses realisasi anggaran DIPA',
-            action: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => InstitutionWorkspaceScreen(
-                  user: user,
-                  resourceType: 'budgets',
-                  onUserUpdated: onUserUpdated,
-                ),
-              ),
-            ),
+            action: () => context.go(AppRoutes.realisasiAnggaran),
           ),
         ),
         _SidebarQuickAction(
@@ -467,16 +416,7 @@ class SubRoleRightSidebar extends StatelessWidget {
           onTap: () => _guardAndExecute(
             context,
             actionName: 'mengakses monitoring dan evaluasi',
-            action: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => InstitutionWorkspaceScreen(
-                  user: user,
-                  resourceType: 'monitoring',
-                  onUserUpdated: onUserUpdated,
-                ),
-              ),
-            ),
+            action: () => context.go(AppRoutes.monitoringEvaluasi),
           ),
         ),
         _SidebarQuickAction(
@@ -485,16 +425,7 @@ class SubRoleRightSidebar extends StatelessWidget {
           onTap: () => _guardAndExecute(
             context,
             actionName: 'mengakses dokumen instansi & BAST',
-            action: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => InstitutionWorkspaceScreen(
-                  user: user,
-                  resourceType: 'documents',
-                  onUserUpdated: onUserUpdated,
-                ),
-              ),
-            ),
+            action: () => context.go(AppRoutes.dokumenInstitusi),
           ),
         ),
       ];
@@ -506,27 +437,13 @@ class SubRoleRightSidebar extends StatelessWidget {
           onTap: () => _guardAndExecute(
             context,
             actionName: 'mengakses pengadaan & tender RFP',
-            action: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => InstitutionWorkspaceScreen(
-                  user: user,
-                  resourceType: 'tenders',
-                  onUserUpdated: onUserUpdated,
-                ),
-              ),
-            ),
+            action: () => context.go(AppRoutes.pengadaanVendor),
           ),
         ),
         _SidebarQuickAction(
           icon: Icons.storefront_outlined,
           label: 'Cari Vendor B2B',
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => MarketplaceKaryaScreen(user: user, onUserUpdated: onUserUpdated),
-            ),
-          ),
+          onTap: () => context.go(AppRoutes.marketplaceKarya),
         ),
         _SidebarQuickAction(
           icon: Icons.business_center_outlined,
@@ -534,16 +451,7 @@ class SubRoleRightSidebar extends StatelessWidget {
           onTap: () => _guardAndExecute(
             context,
             actionName: 'mengakses mitra rekanan B2B',
-            action: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => InstitutionWorkspaceScreen(
-                  user: user,
-                  resourceType: 'partners',
-                  onUserUpdated: onUserUpdated,
-                ),
-              ),
-            ),
+            action: () => context.go(AppRoutes.mitraIndustri),
           ),
         ),
         _SidebarQuickAction(
@@ -552,16 +460,7 @@ class SubRoleRightSidebar extends StatelessWidget {
           onTap: () => _guardAndExecute(
             context,
             actionName: 'mengakses alokasi anggaran korporat',
-            action: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => InstitutionWorkspaceScreen(
-                  user: user,
-                  resourceType: 'budgets',
-                  onUserUpdated: onUserUpdated,
-                ),
-              ),
-            ),
+            action: () => context.go(AppRoutes.realisasiAnggaran),
           ),
         ),
         _SidebarQuickAction(
@@ -570,16 +469,7 @@ class SubRoleRightSidebar extends StatelessWidget {
           onTap: () => _guardAndExecute(
             context,
             actionName: 'mengakses otorisasi PO & MoU',
-            action: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => InstitutionWorkspaceScreen(
-                  user: user,
-                  resourceType: 'documents',
-                  onUserUpdated: onUserUpdated,
-                ),
-              ),
-            ),
+            action: () => context.go(AppRoutes.dokumenInstitusi),
           ),
         ),
         _SidebarQuickAction(
@@ -588,16 +478,7 @@ class SubRoleRightSidebar extends StatelessWidget {
           onTap: () => _guardAndExecute(
             context,
             actionName: 'mengakses laporan & audit B2B',
-            action: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => InstitutionWorkspaceScreen(
-                  user: user,
-                  resourceType: 'reports',
-                  onUserUpdated: onUserUpdated,
-                ),
-              ),
-            ),
+            action: () => context.go(AppRoutes.laporanKegiatan),
           ),
         ),
       ];
@@ -606,12 +487,7 @@ class SubRoleRightSidebar extends StatelessWidget {
         _SidebarQuickAction(
           icon: Icons.explore_outlined,
           label: 'Cari Peluang',
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ExploreScreen(user: user),
-            ),
-          ),
+          onTap: () => context.go(AppRoutes.explore),
         ),
         _SidebarQuickAction(
           icon: Icons.work_outline_rounded,
@@ -619,23 +495,13 @@ class SubRoleRightSidebar extends StatelessWidget {
           onTap: () => _guardAndExecute(
             context,
             actionName: 'mengakses daftar proyek aktif',
-            action: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ProyekSayaScreen(user: user, onUserUpdated: onUserUpdated),
-              ),
-            ),
+            action: () => context.go(AppRoutes.proyek),
           ),
         ),
         _SidebarQuickAction(
           icon: Icons.storefront_outlined,
           label: 'Jual Karya',
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => MarketplaceKaryaScreen(user: user, onUserUpdated: onUserUpdated),
-            ),
-          ),
+          onTap: () => context.go(AppRoutes.marketplaceKarya),
         ),
         _SidebarQuickAction(
           icon: Icons.calendar_month_outlined,
@@ -652,12 +518,7 @@ class SubRoleRightSidebar extends StatelessWidget {
           onTap: () => _guardAndExecute(
             context,
             actionName: 'mengakses dompet & penarikan dana',
-            action: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => WalletScreen(user: user, onUserUpdated: onUserUpdated ?? (_) {}),
-              ),
-            ),
+            action: () => context.go(AppRoutes.walletWithdraw),
           ),
         ),
         _SidebarQuickAction(
@@ -666,12 +527,7 @@ class SubRoleRightSidebar extends StatelessWidget {
           onTap: () => _guardAndExecute(
             context,
             actionName: 'mengakses ruang kolaborasi kreator',
-            action: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => KolaborasiScreen(user: user, onUserUpdated: onUserUpdated),
-              ),
-            ),
+            action: () => context.go(AppRoutes.kolaborasi),
           ),
         ),
       ];
@@ -684,23 +540,13 @@ class SubRoleRightSidebar extends StatelessWidget {
           onTap: () => _guardAndExecute(
             context,
             actionName: 'membuat kebutuhan proyek',
-            action: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => BuatKebutuhanScreen(user: user),
-              ),
-            ),
+            action: () => context.go(AppRoutes.proyekCreate),
           ),
         ),
         _SidebarQuickAction(
           icon: Icons.person_search_outlined,
           label: 'Cari Kreator',
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ExploreScreen(user: user),
-            ),
-          ),
+          onTap: () => context.go(AppRoutes.explore),
         ),
         _SidebarQuickAction(
           icon: Icons.folder_outlined,
@@ -708,12 +554,7 @@ class SubRoleRightSidebar extends StatelessWidget {
           onTap: () => _guardAndExecute(
             context,
             actionName: 'mengakses daftar proyek',
-            action: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ProyekSayaScreen(user: user, onUserUpdated: onUserUpdated),
-              ),
-            ),
+            action: () => context.go(AppRoutes.proyek),
           ),
         ),
         _SidebarQuickAction(
@@ -722,12 +563,7 @@ class SubRoleRightSidebar extends StatelessWidget {
           onTap: () => _guardAndExecute(
             context,
             actionName: 'mengakses dompet & pembayaran',
-            action: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => WalletScreen(user: user, onUserUpdated: onUserUpdated ?? (_) {}),
-              ),
-            ),
+            action: () => context.go(AppRoutes.wallet),
           ),
         ),
         _SidebarQuickAction(
@@ -736,12 +572,7 @@ class SubRoleRightSidebar extends StatelessWidget {
           onTap: () => _guardAndExecute(
             context,
             actionName: 'mengakses agenda dan jadwal proyek',
-            action: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => AgendaScreen(user: user, onUserUpdated: onUserUpdated),
-              ),
-            ),
+            action: () => context.go(AppRoutes.agenda),
           ),
         ),
         _SidebarQuickAction(
@@ -750,12 +581,7 @@ class SubRoleRightSidebar extends StatelessWidget {
           onTap: () => _guardAndExecute(
             context,
             actionName: 'melihat laporan transaksi & proyek',
-            action: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => LaporanScreen(user: user, onUserUpdated: onUserUpdated ?? (_) {}),
-              ),
-            ),
+            action: () => context.go(AppRoutes.laporanTransaksi),
           ),
         ),
       ];
@@ -958,12 +784,7 @@ class SubRoleRightSidebar extends StatelessWidget {
                 onTap: () => _guardAndExecute(
                   context,
                   actionName: 'melihat kalender agenda',
-                  action: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => AgendaScreen(user: user, onUserUpdated: onUserUpdated),
-                    ),
-                  ),
+                  action: () => context.go(AppRoutes.agenda),
                 ),
                 borderRadius: BorderRadius.circular(6),
                 child: Padding(

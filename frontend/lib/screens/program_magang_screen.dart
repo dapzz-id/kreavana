@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../models/opportunity_model.dart';
 import '../services/api_service.dart';
+import '../services/app_router.dart';
 import '../services/opportunity_service.dart';
 import '../services/user_store.dart';
 import '../widgets/app_breadcrumbs.dart';
@@ -338,17 +340,28 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
         _schoolTab == SchoolMagangTab.myApplications ||
         _schoolMyItems.any((item) => item.id != null && item.id == opp.id);
 
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ProgramMagangDetailScreen(
-          opportunity: opp,
-          user: _currentUser,
-          onUserUpdated: widget.onUserUpdated,
-          isAppliedPartnership: isApplied,
+    final router = GoRouter.maybeOf(context);
+    if (router != null && opp.id != null && opp.id!.isNotEmpty) {
+      await router.push(
+        AppRoutes.programMagangDetailPath(opp.id!),
+        extra: {
+          'opportunity': opp,
+          'isApplied': isApplied,
+        },
+      );
+    } else {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ProgramMagangDetailScreen(
+            opportunity: opp,
+            user: _currentUser,
+            onUserUpdated: widget.onUserUpdated,
+            isAppliedPartnership: isApplied,
+          ),
         ),
-      ),
-    );
+      );
+    }
     if (mounted) {
       _fetchRealtimeData(forceRefresh: true);
     }

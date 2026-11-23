@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'dart:io' show File;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
+import '../services/app_router.dart';
 import 'package:latlong2/latlong.dart';
 import '../app/theme.dart';
 import '../app/app_animations.dart';
@@ -668,12 +670,15 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
         ),
       );
       if (shouldVerify == true && mounted) {
-        final res = await Navigator.push<bool>(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ClientVerificationPage(user: widget.user),
-          ),
-        );
+        final router = GoRouter.maybeOf(context);
+        final res = router != null
+            ? await router.push<bool>(AppRoutes.verifikasiKlien)
+            : await Navigator.push<bool>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ClientVerificationPage(user: widget.user),
+                ),
+              );
         if (res == true) {
           _checkClientVerification();
         }
@@ -910,12 +915,15 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                             ),
                           ),
                           onPressed: () async {
-                            final res = await Navigator.push<bool>(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => ClientVerificationPage(user: widget.user),
-                              ),
-                            );
+                            final router = GoRouter.maybeOf(context);
+                            final res = router != null
+                                ? await router.push<bool>(AppRoutes.verifikasiKlien)
+                                : await Navigator.push<bool>(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => ClientVerificationPage(user: widget.user),
+                                    ),
+                                  );
                             if (res == true) {
                               _checkClientVerification();
                             }

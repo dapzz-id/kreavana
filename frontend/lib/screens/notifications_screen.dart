@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../app/theme.dart';
+import '../services/app_router.dart';
 import '../app/subrole_theme_engine.dart';
 import '../models/notification_model.dart';
 import '../models/user_model.dart';
@@ -330,15 +332,24 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     final oppId = (data['opportunity_id'] ?? (notif.type == 'opportunity' ? data['id'] : null))?.toString();
     final contractId = (data['contract_id'] ?? data['job_contract_id'] ?? (notif.type == 'contract' ? data['id'] : null))?.toString();
 
+    final router = GoRouter.maybeOf(context);
     if (notif.type == 'message' || notif.type == 'chat') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const DirectMessageScreen()),
-      );
+      if (router != null) {
+        router.go(AppRoutes.pesan);
+      } else {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const DirectMessageScreen()),
+        );
+      }
       return;
     }
 
     if (oppId != null && oppId.isNotEmpty) {
+      if (router != null) {
+        router.push(AppRoutes.proyekDetailPath(oppId));
+        return;
+      }
       final effectiveUser = widget.user ?? currentUserNotifier.value;
       OpportunityService.getOpportunityById(oppId).then((opp) {
         if (opp != null && mounted) {
@@ -369,16 +380,20 @@ class _NotificationsScreenState extends State<NotificationsScreen>
       return;
     }
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ProyekSayaScreen(
-          user: widget.user,
-          initialOpportunityId: oppId,
-          initialContractId: contractId,
+    if (router != null) {
+      router.go(AppRoutes.proyek);
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ProyekSayaScreen(
+            user: widget.user,
+            initialOpportunityId: oppId,
+            initialContractId: contractId,
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
 
   // ── EXECUTIVE HERO BANNER ──────────────────────────────────────────────────

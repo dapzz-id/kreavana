@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../app/theme.dart';
 import '../models/user_model.dart';
@@ -256,11 +257,13 @@ class CorporateVacancyItem {
 class CorporateLowonganScreen extends StatefulWidget {
   final UserModel? user;
   final ValueChanged<UserModel>? onUserUpdated;
+  final String? initialAction;
 
   const CorporateLowonganScreen({
     super.key,
     this.user,
     this.onUserUpdated,
+    this.initialAction,
   });
 
   @override
@@ -269,6 +272,8 @@ class CorporateLowonganScreen extends StatefulWidget {
 
 class _CorporateLowonganScreenState extends State<CorporateLowonganScreen> {
   bool _isLoading = false;
+  bool _dialogOpen = false;
+  bool _didHandleInitialAction = false;
   String _searchQuery = '';
   String _selectedFilter = 'Semua';
   final TextEditingController _searchController = TextEditingController();
@@ -445,6 +450,27 @@ class _CorporateLowonganScreenState extends State<CorporateLowonganScreen> {
   void initState() {
     super.initState();
     _fetchVacancies();
+    _maybeHandleInitialRouteAction();
+  }
+
+  @override
+  void didUpdateWidget(covariant CorporateLowonganScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialAction != widget.initialAction) {
+      _didHandleInitialAction = false;
+      _maybeHandleInitialRouteAction();
+    }
+  }
+
+  void _maybeHandleInitialRouteAction() {
+    if (_didHandleInitialAction || _dialogOpen || widget.initialAction != 'create') {
+      return;
+    }
+    _didHandleInitialAction = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _openBuatLowongan(syncUrl: false);
+    });
   }
 
   @override
@@ -525,7 +551,14 @@ class _CorporateLowonganScreenState extends State<CorporateLowonganScreen> {
   }
 
   // ── Actions ─────────────────────────────────────────────────────────────
-  Future<void> _openBuatLowongan() async {
+  Future<void> _openBuatLowongan({bool syncUrl = true}) async {
+    if (_dialogOpen) return;
+    final router = GoRouter.maybeOf(context);
+    if (syncUrl && router != null) {
+      router.go(AppRoutes.lowonganCorporateCreate);
+      return;
+    }
+    _dialogOpen = true;
     final newVacancy = await showDialog<CorporateVacancyItem>(
       context: context,
       barrierDismissible: false,
@@ -533,6 +566,14 @@ class _CorporateLowonganScreenState extends State<CorporateLowonganScreen> {
         user: _currentUser,
       ),
     );
+    _dialogOpen = false;
+
+    if (mounted && router != null) {
+      final loc = GoRouterState.of(context).matchedLocation;
+      if (loc != AppRoutes.lowonganCorporate) {
+        router.go(AppRoutes.lowonganCorporate);
+      }
+    }
 
     if (newVacancy != null && mounted) {
       setState(() {
@@ -549,27 +590,34 @@ class _CorporateLowonganScreenState extends State<CorporateLowonganScreen> {
     }
   }
 
-  void _openDetailLowongan(CorporateVacancyItem item) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        settings: RouteSettings(
-          name: '${AppRoutes.detailLowonganCorporate}?id=${item.id}',
+  Future<void> _openDetailLowongan(CorporateVacancyItem item) async {
+    final router = GoRouter.maybeOf(context);
+    if (router != null) {
+      await router.push(
+        AppRoutes.lowonganCorporateDetailPath(item.id),
+        extra: item,
+      );
+    } else {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          settings: RouteSettings(
+            name: AppRoutes.lowonganCorporateDetailPath(item.id),
+          ),
+          builder: (_) => CorporateVacancyDetailScreen(
+            item: item,
+            vacancyId: item.id,
+            user: _currentUser,
+            onUserUpdated: (u) {
+              currentUserNotifier.value = u;
+              widget.onUserUpdated?.call(u);
+              if (mounted) setState(() {});
+            },
+          ),
         ),
-        builder: (_) => CorporateVacancyDetailScreen(
-          item: item,
-          vacancyId: item.id,
-          user: _currentUser,
-          onUserUpdated: (u) {
-            currentUserNotifier.value = u;
-            widget.onUserUpdated?.call(u);
-            if (mounted) setState(() {});
-          },
-        ),
-      ),
-    ).then((_) {
-      if (mounted) setState(() {});
-    });
+      );
+    }
+    if (mounted) setState(() {});
   }
 
   // ── Build Method ────────────────────────────────────────────────────────

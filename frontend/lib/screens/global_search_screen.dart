@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../app/theme.dart';
+import '../services/app_router.dart';
 import '../models/user_model.dart';
 import '../models/opportunity_model.dart';
 import '../services/chat_service.dart';
@@ -678,35 +680,49 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
         trailing: ElevatedButton.icon(
           onPressed: () async {
             if (userId.isNotEmpty) {
+              final router = GoRouter.maybeOf(context);
               try {
                 final chatRes = await ChatService.startPersonalChat(userId);
                 final chatData = chatRes['data'];
                 final chatId = chatData != null ? chatData['id']?.toString() : null;
                 final chatMap = chatData != null ? Map<String, dynamic>.from(chatData) : null;
                 if (mounted) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => DirectMessageScreen(
-                        currentUser: widget.user,
-                        chatId: chatId,
-                        initialChat: chatMap,
-                        targetUserId: userId,
+                  if (router != null && chatId != null && chatId.isNotEmpty) {
+                    router.push(
+                      AppRoutes.pesanChatPath(chatId),
+                      extra: {'initialChat': chatMap, 'targetUserId': userId},
+                    );
+                  } else if (router != null) {
+                    router.push(AppRoutes.pesanUserPath(userId));
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => DirectMessageScreen(
+                          currentUser: widget.user,
+                          chatId: chatId,
+                          initialChat: chatMap,
+                          targetUserId: userId,
+                        ),
                       ),
-                    ),
-                  );
+                    );
+                  }
                 }
               } catch (_) {
                 if (mounted) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => DirectMessageScreen(
-                        currentUser: widget.user,
-                        targetUserId: userId,
+                  if (router != null) {
+                    router.push(AppRoutes.pesanUserPath(userId));
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => DirectMessageScreen(
+                          currentUser: widget.user,
+                          targetUserId: userId,
+                        ),
                       ),
-                    ),
-                  );
+                    );
+                  }
                 }
               }
             }
@@ -728,16 +744,21 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
           ),
         ),
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ProfileScreen(
-                user: UserModel.fromJson(user),
-                onUserUpdated: (_) {},
-                onLogout: () {},
+          final router = GoRouter.maybeOf(context);
+          if (router != null && userId.isNotEmpty) {
+            router.push(AppRoutes.publicProfilePath(userId));
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ProfileScreen(
+                  user: UserModel.fromJson(user),
+                  onUserUpdated: (_) {},
+                  onLogout: () {},
+                ),
               ),
-            ),
-          );
+            );
+          }
         },
       ),
     );
