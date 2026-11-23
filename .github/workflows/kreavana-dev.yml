@@ -29,6 +29,7 @@ concurrency:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   # ============================================================
@@ -48,31 +49,100 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          fetch-depth: 2
+          fetch-depth: 20
 
       - name: Detect Frontend Changes
         id: changes
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_BUILD_FLUTTER: ${{ inputs.build_flutter }}
+          BEFORE_SHA: ${{ github.event.before }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPO: ${{ github.repository }}
+          BRANCH_NAME: ${{ github.ref_name }}
+          WORKFLOW_NAME: ${{ github.workflow }}
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            if [ "${{ inputs.build_flutter }}" = "false" ]; then
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            if [ "${INPUT_BUILD_FLUTTER:-true}" = "false" ]; then
               echo "build_flutter=false" >> "$GITHUB_OUTPUT"
               echo "Manual dispatch: Flutter Web build skipped."
             else
               echo "build_flutter=true" >> "$GITHUB_OUTPUT"
               echo "Manual dispatch: Flutter Web build enabled."
             fi
+            exit 0
+          fi
+
+          BASE_REF=""
+          if [ -n "${BEFORE_SHA:-}" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ] && git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null; then
+            BASE_REF="$BEFORE_SHA"
           elif git rev-parse HEAD~1 >/dev/null 2>&1; then
-            if git diff --name-only HEAD~1 HEAD | grep -q '^frontend/'; then
-              echo "build_flutter=true" >> "$GITHUB_OUTPUT"
-              echo "Frontend changes detected -> will trigger Flutter Web job."
-            else
-              echo "build_flutter=false" >> "$GITHUB_OUTPUT"
-              echo "No frontend changes -> Flutter Web job will be skipped."
-            fi
-          else
+            BASE_REF="HEAD~1"
+          fi
+
+          if [ -z "$BASE_REF" ]; then
             echo "build_flutter=true" >> "$GITHUB_OUTPUT"
-            echo "Fallback -> will trigger Flutter Web job."
+            echo "Fallback (no base commit) -> will trigger Flutter Web job."
+            exit 0
+          fi
+
+          if git diff --name-only "$BASE_REF" HEAD | grep -qE '^(frontend/|\.github/workflows/kreavana-dev\.yml$)'; then
+            echo "build_flutter=true" >> "$GITHUB_OUTPUT"
+            echo "Frontend or workflow changes detected ($BASE_REF..HEAD) -> will trigger Flutter Web job."
+            exit 0
+          fi
+
+          # Auto-recover if the most recent non-skipped Build & Deploy Flutter Web job failed
+          SHOULD_RETRY=$(python3 -c '
+          import json, os, urllib.parse, urllib.request
+          token = os.environ.get("GITHUB_TOKEN", "")
+          repo = os.environ.get("GITHUB_REPO", "")
+          branch = urllib.parse.quote(os.environ.get("BRANCH_NAME", "main"), safe="")
+          wf = os.environ.get("WORKFLOW_NAME", "")
+          if not token or not repo:
+              print("false")
+              raise SystemExit(0)
+          headers = {
+              "Accept": "application/vnd.github+json",
+              "Authorization": f"Bearer {token}",
+              "X-GitHub-Api-Version": "2022-11-28",
+          }
+          try:
+              req = urllib.request.Request(
+                  f"https://api.github.com/repos/{repo}/actions/runs?branch={branch}&event=push&status=completed&per_page=8",
+                  headers=headers,
+              )
+              with urllib.request.urlopen(req, timeout=8) as r:
+                  runs = json.loads(r.read().decode("utf-8")).get("workflow_runs", [])
+              for run in runs:
+                  if wf and run.get("name") != wf:
+                      continue
+                  jobs_url = run.get("jobs_url")
+                  if not jobs_url:
+                      continue
+                  req2 = urllib.request.Request(f"{jobs_url}?per_page=20", headers=headers)
+                  with urllib.request.urlopen(req2, timeout=8) as r2:
+                      jobs = json.loads(r2.read().decode("utf-8")).get("jobs", [])
+                  flutter_job = next((j for j in jobs if j.get("name") == "Build & Deploy Flutter Web"), None)
+                  if not flutter_job:
+                      continue
+                  conc = flutter_job.get("conclusion")
+                  if conc == "skipped":
+                      continue
+                  print("true" if conc in ("failure", "cancelled", "timed_out") else "false")
+                  raise SystemExit(0)
+              print("false")
+          except Exception:
+              print("false")
+          ' 2>/dev/null || echo "false")
+
+          if [ "$SHOULD_RETRY" = "true" ]; then
+            echo "build_flutter=true" >> "$GITHUB_OUTPUT"
+            echo "Previous Flutter Web build did not succeed -> auto-triggering Flutter Web job."
+          else
+            echo "build_flutter=false" >> "$GITHUB_OUTPUT"
+            echo "No frontend changes ($BASE_REF..HEAD) and previous Flutter build succeeded -> Flutter Web job skipped."
           fi
 
       - name: Select Flutter Runner (Auto)
