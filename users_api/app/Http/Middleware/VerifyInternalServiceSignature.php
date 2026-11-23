@@ -13,7 +13,7 @@ class VerifyInternalServiceSignature
 {
     /**
      * Handle incoming Machine-to-Machine (S2S) requests from trusted internal services (e.g. backend).
-     * Unlike VerifyClientApp, cryptographic HMAC signature and timestamp are strictly mandatory here.
+     * Cryptographic HMAC-SHA256 signature and anti-replay timestamp are strictly mandatory (fail-closed).
      */
     public function handle(Request $request, Closure $next): Response
     {
@@ -28,28 +28,16 @@ class VerifyInternalServiceSignature
             ], 401);
         }
 
-        if (abs(time() - (int) $timestamp) > 300) {
+        if (!ctype_digit((string) $timestamp) || abs(time() - (int) $timestamp) > 300) {
             return response()->json([
                 'status' => false,
-                'message' => 'S2S request timestamp expired or clock drift exceeded (max 300s).',
+                'message' => 'S2S request timestamp invalid, expired, or clock drift exceeded (max 300s).',
             ], 401);
         }
 
         $app = ClientApp::where('client_id', $clientId)->where('is_active', true)->first();
 
-        if (!$app && $clientId === 'kreavana_app') {
-            $app = ClientApp::firstOrCreate(
-                ['client_id' => 'kreavana_app'],
-                [
-                    'client_name' => 'Kreavana Creative Ecosystem (Web & Mobile)',
-                    'client_secret' => hash('sha256', env('DEFAULT_CLIENT_SECRET', 'kreavana_ecosystem_secret_key_2026')),
-                    'allowed_scopes' => ['openid', 'profile', 'email', 'phone', 'kyc'],
-                    'is_active' => true,
-                ]
-            );
-        }
-
-        if (!$app) {
+        if (!$app || empty($app->client_secret)) {
             return response()->json([
                 'status' => false,
                 'message' => 'Unauthorized or inactive Client App ID for internal service calls.',
@@ -62,7 +50,7 @@ class VerifyInternalServiceSignature
         }
 
         $expectedSig = hash_hmac('sha256', $clientId . '.' . $timestamp . '.' . $rawBody, $app->client_secret);
-        $isValid = hash_equals($expectedSig, $signature);
+        $isValid = hash_equals($expectedSig, (string) $signature);
 
         if (!$isValid && !empty($rawBody)) {
             $decodedRaw = json_decode($rawBody, true);
@@ -72,13 +60,17 @@ class VerifyInternalServiceSignature
                     $clientId . '.' . $timestamp . '.' . json_encode($decodedRaw, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
                     $app->client_secret
                 );
-                $isValid = hash_equals($decodedSig, $signature);
+                $isValid = hash_equals($decodedSig, (string) $signature);
             }
         }
 
         if (!$isValid && !empty($request->all())) {
-            $altSig = hash_hmac('sha256', $clientId . '.' . $timestamp . '.' . json_encode($request->all(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $app->client_secret);
-            $isValid = hash_equals($altSig, $signature);
+            $altSig = hash_hmac(
+                'sha256',
+                $clientId . '.' . $timestamp . '.' . json_encode($request->all(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+                $app->client_secret
+            );
+            $isValid = hash_equals($altSig, (string) $signature);
         }
 
         if (!$isValid) {

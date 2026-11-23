@@ -20,6 +20,14 @@ class SecurityHeaders
         $response->headers->set('Permissions-Policy', 'geolocation=(), microphone=(self), camera=(self)');
         $response->headers->remove('X-Powered-By');
 
+        if ($request->is('api/*') && !$response->headers->has('Content-Security-Policy')) {
+            $response->headers->set('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'");
+        }
+
+        if ($request->isSecure() && !app()->environment(['local', 'testing'])) {
+            $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+        }
+
         return $response;
     }
 }

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\ClientApp;
 use App\Models\User;
 use App\Models\UserCredential;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -13,11 +14,26 @@ class InternalProfileSyncTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function signedHeaders(array $payload, ?string $secretOverride = null): array
+    private string $clientSecret = 'testing_users_api_s2s_hmac_secret_64chars_not_for_production_0001';
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        ClientApp::create([
+            'client_id' => 'kreavana_app',
+            'client_name' => 'Kreavana Test App',
+            'client_secret' => $this->clientSecret,
+            'allowed_scopes' => ['openid', 'profile', 'email', 'phone', 'kyc'],
+            'is_active' => true,
+        ]);
+    }
+
+    private function signedHeaders(array $payload, ?string $secretOverride = null, ?int $timestampOverride = null): array
     {
         $clientId = 'kreavana_app';
-        $secret = $secretOverride ?? hash('sha256', 'kreavana_ecosystem_secret_key_2026');
-        $timestamp = (string) time();
+        $secret = $secretOverride ?? $this->clientSecret;
+        $timestamp = (string) ($timestampOverride ?? time());
         $rawBody = !empty($payload) ? json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : '';
         $signature = hash_hmac('sha256', $clientId . '.' . $timestamp . '.' . $rawBody, $secret);
 
@@ -84,20 +100,32 @@ class InternalProfileSyncTest extends TestCase
             ->assertJsonPath('data.user.phone', '081234567890');
 
         // Login with old username must now fail
+        $oldLoginPayload = [
+            'identifier' => 'institution_demo',
+            'password' => 'password123',
+        ];
+        $this->flushHeaders();
+        $this->withHeaders($this->signedHeaders($oldLoginPayload))
+            ->postJson('/api/v1/auth/login', $oldLoginPayload)
+            ->assertStatus(401);
+
+        // Unsigned login request must be rejected (fail-closed HMAC)
+        $newLoginPayload = [
+            'identifier' => 'SMK_TELESANDI',
+            'password' => 'password123',
+        ];
         $this->flushHeaders();
         $this->withHeaders(['X-Client-Id' => 'kreavana_app'])
-            ->postJson('/api/v1/auth/login', [
-                'identifier' => 'institution_demo',
-                'password' => 'password123',
-            ])->assertStatus(401);
+            ->postJson('/api/v1/auth/login', $newLoginPayload)
+            ->assertStatus(401);
 
         // Login with new username (both lowercase & uppercase) must succeed and return phone
         $this->flushHeaders();
-        $this->withHeaders(['X-Client-Id' => 'kreavana_app'])
-            ->postJson('/api/v1/auth/login', [
-                'identifier' => 'SMK_TELESANDI',
-                'password' => 'password123',
-            ])->assertOk()
+        $this->withHeaders($this->signedHeaders($newLoginPayload))
+            ->postJson('/api/v1/auth/login', $newLoginPayload)
+            ->assertOk()
+            ->assertHeader('X-Content-Type-Options', 'nosniff')
+            ->assertHeader('X-Frame-Options', 'DENY')
             ->assertJsonPath('data.user.username', 'smk_telesandi')
             ->assertJsonPath('data.user.email', 'pic@smktelesandi.sch.id')
             ->assertJsonPath('data.user.phone', '081234567890');

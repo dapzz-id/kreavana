@@ -35,11 +35,11 @@ class VerifyInternalServiceSignature
             ], 403);
         }
 
-        // Anti-replay check: clock drift max 300 seconds (5 minutes)
-        if (abs(time() - (int) $timestamp) > 300) {
+        // Anti-replay check: strictly numeric UNIX epoch with max 300s clock drift
+        if (!ctype_digit((string) $timestamp) || abs(time() - (int) $timestamp) > 300) {
             return response()->json([
                 'status' => false,
-                'message' => 'S2S request timestamp expired or clock drift exceeded (max 300s).',
+                'message' => 'S2S request timestamp invalid, expired, or clock drift exceeded (max 300s).',
             ], 401);
         }
 
@@ -49,6 +49,13 @@ class VerifyInternalServiceSignature
         }
 
         $secret = UsersApiClient::getClientSecret();
+        if ($secret === '') {
+            Log::error('VerifyInternalServiceSignature: USERS_API_CLIENT_SECRET is not configured.');
+            return response()->json([
+                'status' => false,
+                'message' => 'Internal service authentication is not configured.',
+            ], 503);
+        }
         $expectedSig = hash_hmac('sha256', $clientId . '.' . $timestamp . '.' . $rawBody, $secret);
 
         $isValid = hash_equals($expectedSig, $signature);

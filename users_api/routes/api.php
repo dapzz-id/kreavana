@@ -30,8 +30,8 @@ Route::get('health', function () {
 // V1 API Endpoints
 Route::prefix('v1')->middleware(['client.app'])->group(function () {
 
-    // Public Auth
-    Route::prefix('auth')->group(function () {
+    // Public Auth (defense-in-depth rate limiting)
+    Route::prefix('auth')->middleware(['throttle:30,1'])->group(function () {
         Route::post('register', [AuthController::class, 'register']);
         Route::post('login', [AuthController::class, 'login']);
         Route::post('refresh', [AuthController::class, 'refresh']);

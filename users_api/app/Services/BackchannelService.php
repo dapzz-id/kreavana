@@ -47,9 +47,17 @@ class BackchannelService
         $baseUrl = rtrim((string) env('KREAVANA_BACKEND_URL', 'https://dev.kreavana.com'), '/');
         $url = $baseUrl . $path;
 
-        $clientId = 'kreavana_app';
-        $clientApp = ClientApp::where('client_id', $clientId)->first();
-        $secret = $clientApp?->client_secret ?? hash('sha256', 'kreavana_ecosystem_secret_key_2026');
+        $clientId = env('DEFAULT_CLIENT_ID', 'kreavana_app');
+        $clientApp = ClientApp::where('client_id', $clientId)->where('is_active', true)->first();
+        $secret = trim((string) ($clientApp?->client_secret ?? env('USERS_API_CLIENT_SECRET', '')));
+
+        if ($secret === '') {
+            Log::error('BackchannelService::dispatchToKreavana aborted: client_secret is not configured.', [
+                'client_id' => $clientId,
+                'url' => $url,
+            ]);
+            return;
+        }
 
         $timestamp = (string) time();
         $correlationId = (string) Str::uuid();
@@ -57,16 +65,24 @@ class BackchannelService
         $signature = hash_hmac('sha256', $clientId . '.' . $timestamp . '.' . $rawPayload, $secret);
 
         try {
-            Http::withHeaders([
+            $request = Http::withHeaders([
                 'Accept' => 'application/json',
                 'X-Client-Id' => $clientId,
                 'X-Timestamp' => $timestamp,
                 'X-Correlation-Id' => $correlationId,
                 'X-Signature' => $signature,
-            ])
-            ->timeout(5)
-            ->withoutVerifying() // Allows internal/dev environments without CA cert errors
-            ->post($url, $payload);
+            ])->timeout(5);
+
+            $verifySsl = env('KREAVANA_BACKEND_VERIFY_SSL');
+            $shouldVerify = $verifySsl !== null
+                ? filter_var($verifySsl, FILTER_VALIDATE_BOOLEAN)
+                : app()->environment('production');
+
+            if (!$shouldVerify) {
+                $request = $request->withoutVerifying();
+            }
+
+            $request->post($url, $payload);
         } catch (\Throwable $e) {
             // Log but do not block primary IAM transaction
             Log::warning('BackchannelService::dispatchToKreavana failed: ' . $e->getMessage(), [

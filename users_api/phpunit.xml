@@ -23,6 +23,6 @@
         <env name="DB_URL" value=""/>
         <env name="JWT_SECRET" value="testing_users_api_jwt_secret_key_must_be_32chars"/>
         <env name="DEFAULT_CLIENT_ID" value="kreavana_app"/>
-        <env name="DEFAULT_CLIENT_SECRET" value="kreavana_ecosystem_secret_key_2026"/>
+        <env name="USERS_API_CLIENT_SECRET" value="testing_users_api_s2s_hmac_secret_64chars_not_for_production_0001"/>
     </php>
 </phpunit>

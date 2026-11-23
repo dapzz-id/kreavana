@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\ClientApp;
 use App\Models\User;
 use App\Models\UserCredential;
 use App\Models\UserSession;
@@ -15,11 +16,26 @@ class PasswordResetAndEmailVerificationTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function signedHeaders(array $payload, ?string $secretOverride = null): array
+    private string $clientSecret = 'testing_users_api_s2s_hmac_secret_64chars_not_for_production_0001';
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        ClientApp::create([
+            'client_id' => 'kreavana_app',
+            'client_name' => 'Kreavana Test App',
+            'client_secret' => $this->clientSecret,
+            'allowed_scopes' => ['openid', 'profile', 'email', 'phone', 'kyc'],
+            'is_active' => true,
+        ]);
+    }
+
+    private function signedHeaders(array $payload, ?string $secretOverride = null, ?int $timestampOverride = null): array
     {
         $clientId = 'kreavana_app';
-        $secret = $secretOverride ?? hash('sha256', env('DEFAULT_CLIENT_SECRET', 'kreavana_ecosystem_secret_key_2026'));
-        $timestamp = (string) time();
+        $secret = $secretOverride ?? $this->clientSecret;
+        $timestamp = (string) ($timestampOverride ?? time());
         $rawBody = !empty($payload) ? json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : '';
         $signature = hash_hmac('sha256', $clientId . '.' . $timestamp . '.' . $rawBody, $secret);
 
@@ -34,24 +50,39 @@ class PasswordResetAndEmailVerificationTest extends TestCase
 
     public function test_unverified_user_login_is_blocked_until_internal_verify_email_runs(): void
     {
-        $registerRes = $this->withHeaders(['X-Client-Id' => 'kreavana_app'])
-            ->postJson('/api/v1/auth/register', [
-                'username' => 'emailtestuser',
-                'email' => 'emailtest@example.com',
-                'password' => 'Password123!',
-                'full_name' => 'Email Test User',
-            ]);
+        $registerPayload = [
+            'username' => 'emailtestuser',
+            'email' => 'emailtest@example.com',
+            'password' => 'Password123!',
+            'full_name' => 'Email Test User',
+        ];
+
+        // Unsigned register must be rejected (fail-closed HMAC)
+        $this->withHeaders(['X-Client-Id' => 'kreavana_app'])
+            ->postJson('/api/v1/auth/register', $registerPayload)
+            ->assertStatus(401);
+
+        // Expired timestamp (>300s) must be rejected
+        $this->flushHeaders();
+        $this->withHeaders($this->signedHeaders($registerPayload, null, time() - 600))
+            ->postJson('/api/v1/auth/register', $registerPayload)
+            ->assertStatus(401);
+
+        $this->flushHeaders();
+        $registerRes = $this->withHeaders($this->signedHeaders($registerPayload))
+            ->postJson('/api/v1/auth/register', $registerPayload);
 
         $registerRes->assertStatus(201)
             ->assertJsonPath('data.user.is_email_verified', false);
 
         // Login before email verification returns 403 email_not_verified
+        $loginPayload = [
+            'identifier' => 'emailtestuser',
+            'password' => 'Password123!',
+        ];
         $this->flushHeaders();
-        $this->withHeaders(['X-Client-Id' => 'kreavana_app'])
-            ->postJson('/api/v1/auth/login', [
-                'identifier' => 'emailtestuser',
-                'password' => 'Password123!',
-            ])
+        $this->withHeaders($this->signedHeaders($loginPayload))
+            ->postJson('/api/v1/auth/login', $loginPayload)
             ->assertStatus(403)
             ->assertJsonPath('error_code', 'email_not_verified')
             ->assertJsonPath('data.email', 'emailtest@example.com');
@@ -71,11 +102,8 @@ class PasswordResetAndEmailVerificationTest extends TestCase
 
         // Subsequent login succeeds
         $this->flushHeaders();
-        $this->withHeaders(['X-Client-Id' => 'kreavana_app'])
-            ->postJson('/api/v1/auth/login', [
-                'identifier' => 'emailtestuser',
-                'password' => 'Password123!',
-            ])
+        $this->withHeaders($this->signedHeaders($loginPayload))
+            ->postJson('/api/v1/auth/login', $loginPayload)
             ->assertOk()
             ->assertJsonPath('data.user.is_email_verified', true);
     }
@@ -149,19 +177,21 @@ class PasswordResetAndEmailVerificationTest extends TestCase
         $this->assertTrue((bool) UserSession::where('user_id', $user->id)->first()->is_revoked);
 
         // Old password fails; new password succeeds
+        $oldLogin = [
+            'identifier' => 'resetuser',
+            'password' => 'OldPassword123!',
+        ];
         $this->flushHeaders();
-        $this->withHeaders(['X-Client-Id' => 'kreavana_app'])
-            ->postJson('/api/v1/auth/login', [
-                'identifier' => 'resetuser',
-                'password' => 'OldPassword123!',
-            ])->assertStatus(401);
+        $this->withHeaders($this->signedHeaders($oldLogin))
+            ->postJson('/api/v1/auth/login', $oldLogin)->assertStatus(401);
 
+        $newLogin = [
+            'identifier' => 'resetuser',
+            'password' => 'NewPassword123!',
+        ];
         $this->flushHeaders();
-        $this->withHeaders(['X-Client-Id' => 'kreavana_app'])
-            ->postJson('/api/v1/auth/login', [
-                'identifier' => 'resetuser',
-                'password' => 'NewPassword123!',
-            ])->assertOk();
+        $this->withHeaders($this->signedHeaders($newLogin))
+            ->postJson('/api/v1/auth/login', $newLogin)->assertOk();
     }
 
     public function test_internal_set_password_syncs_new_credential_hash(): void
@@ -189,11 +219,12 @@ class PasswordResetAndEmailVerificationTest extends TestCase
             ->postJson('/api/internal/v1/users/set-password', $payload)
             ->assertOk();
 
+        $syncedLogin = [
+            'identifier' => 'googleuser@example.com',
+            'password' => 'SyncedTemp99!',
+        ];
         $this->flushHeaders();
-        $this->withHeaders(['X-Client-Id' => 'kreavana_app'])
-            ->postJson('/api/v1/auth/login', [
-                'identifier' => 'googleuser@example.com',
-                'password' => 'SyncedTemp99!',
-            ])->assertOk();
+        $this->withHeaders($this->signedHeaders($syncedLogin))
+            ->postJson('/api/v1/auth/login', $syncedLogin)->assertOk();
     }
 }

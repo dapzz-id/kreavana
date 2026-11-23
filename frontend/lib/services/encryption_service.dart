@@ -17,7 +17,12 @@ class EncryptionService {
   factory EncryptionService() => _instance;
   EncryptionService._internal();
 
-  final _secureStorage = const FlutterSecureStorage();
+  final _secureStorage = const FlutterSecureStorage(
+    aOptions: AndroidOptions(),
+    iOptions: IOSOptions(
+      accessibility: KeychainAccessibility.first_unlock_this_device,
+    ),
+  );
 
   // Storage Keys
   static const String _privateKeyStorageKey = 'e2ee_private_key';
@@ -204,7 +209,8 @@ Map<String, String> _generateRSAKeyPairIsolate(dynamic _) {
   final seeds = List<int>.generate(32, (_) => random.nextInt(256));
   secureRandom.seed(crypto.KeyParameter(Uint8List.fromList(seeds)));
 
-  final bitLength = kIsWeb ? 1024 : 2048;
+  // Enforce minimum NIST/OWASP ASVS RSA-2048 on both Web and Mobile
+  const bitLength = 2048;
   final keyGen = RSAKeyGenerator()
     ..init(
       crypto.ParametersWithRandom(

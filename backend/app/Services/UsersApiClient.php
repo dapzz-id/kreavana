@@ -34,11 +34,11 @@ class UsersApiClient
     }
 
     /**
-     * Get the configured Client Secret for this application.
+     * Get the configured Client Secret for this application (must come from .env, never hardcoded).
      */
     public static function getClientSecret(): string
     {
-        return (string) config('services.users_api.client_secret', hash('sha256', 'kreavana_ecosystem_secret_key_2026'));
+        return trim((string) config('services.users_api.client_secret', ''));
     }
 
     /**
@@ -70,6 +70,9 @@ class UsersApiClient
     {
         $clientId = self::getClientId();
         $secret = self::getClientSecret();
+        if ($secret === '') {
+            throw new \RuntimeException('USERS_API_CLIENT_SECRET is not configured.');
+        }
         $timestamp = (string) time();
         $traceId = $correlationId ?: (string) \Illuminate\Support\Str::uuid();
         $rawPayload = !empty($payload) ? json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : '';

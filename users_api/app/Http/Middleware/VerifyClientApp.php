@@ -13,78 +13,77 @@ class VerifyClientApp
 {
     /**
      * Handle an incoming request. Ensures the requesting app is registered in Universal Identity
-     * and strictly verifies cryptographic HMAC signatures for Machine-to-Machine (S2S) requests.
+     * and strictly enforces fail-closed HMAC-SHA256 signatures with anti-replay timestamps.
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $clientId = $request->header('X-Client-Id') ?? $request->input('client_id');
+        $clientId = $request->header('X-Client-Id');
+        $timestamp = $request->header('X-Timestamp');
+        $signature = $request->header('X-Signature');
 
-        if (!$clientId) {
+        if (!$clientId || !$timestamp || !$signature) {
             return response()->json([
                 'status' => false,
-                'message' => 'Missing X-Client-Id header in request.',
+                'message' => 'Missing required S2S authentication headers (X-Client-Id, X-Timestamp, X-Signature).',
+            ], 401);
+        }
+
+        // Anti-replay protection: strictly numeric UNIX epoch with max 300s clock drift
+        if (!ctype_digit((string) $timestamp) || abs(time() - (int) $timestamp) > 300) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Request timestamp invalid, expired, or clock drift exceeded (max 300s).',
             ], 401);
         }
 
         $app = ClientApp::where('client_id', $clientId)->where('is_active', true)->first();
 
-        // Safe auto-initialization for default kreavana_app if database seeder hasn't populated client_apps yet
-        if (!$app && $clientId === 'kreavana_app') {
-            $app = ClientApp::firstOrCreate(
-                ['client_id' => 'kreavana_app'],
-                [
-                    'client_name' => 'Kreavana Creative Ecosystem (Web & Mobile)',
-                    'client_secret' => hash('sha256', 'kreavana_ecosystem_secret_key_2026'),
-                    'allowed_scopes' => ['openid', 'profile', 'email', 'phone', 'kyc'],
-                    'is_active' => true,
-                ]
-            );
-        }
-
-        if (!$app) {
+        if (!$app || empty($app->client_secret)) {
             return response()->json([
                 'status' => false,
                 'message' => 'Invalid or inactive Client App ID.',
             ], 403);
         }
 
-        // Service-to-Service Cryptographic HMAC Verification
-        $signature = $request->header('X-Signature');
-        $timestamp = $request->header('X-Timestamp');
+        $rawBody = $request->getContent();
+        if (empty($rawBody) && !empty($request->all())) {
+            $rawBody = json_encode($request->all(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        }
 
-        if ($signature && $timestamp) {
-            // Anti-replay protection: clock drift max 300 seconds (5 minutes)
-            if (abs(time() - (int) $timestamp) > 300) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Request timestamp expired or clock drift exceeded (max 300s).',
-                ], 401);
+        $expectedSig = hash_hmac('sha256', $clientId . '.' . $timestamp . '.' . $rawBody, $app->client_secret);
+        $isValid = hash_equals($expectedSig, (string) $signature);
+
+        if (!$isValid && !empty($rawBody)) {
+            $decodedRaw = json_decode($rawBody, true);
+            if (is_array($decodedRaw)) {
+                $decodedSig = hash_hmac(
+                    'sha256',
+                    $clientId . '.' . $timestamp . '.' . json_encode($decodedRaw, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+                    $app->client_secret
+                );
+                $isValid = hash_equals($decodedSig, (string) $signature);
             }
+        }
 
-            $rawBody = $request->getContent();
-            if (empty($rawBody) && !empty($request->all())) {
-                $rawBody = json_encode($request->all(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-            }
+        if (!$isValid && !empty($request->all())) {
+            $altSig = hash_hmac(
+                'sha256',
+                $clientId . '.' . $timestamp . '.' . json_encode($request->all(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+                $app->client_secret
+            );
+            $isValid = hash_equals($altSig, (string) $signature);
+        }
 
-            $expectedSig = hash_hmac('sha256', $clientId . '.' . $timestamp . '.' . $rawBody, $app->client_secret);
-            $isValid = hash_equals($expectedSig, $signature);
+        if (!$isValid) {
+            Log::warning("VerifyClientApp: Invalid S2S signature from client app {$clientId}", [
+                'ip' => $request->ip(),
+                'timestamp' => $timestamp,
+            ]);
 
-            if (!$isValid && !empty($request->all())) {
-                $altSig = hash_hmac('sha256', $clientId . '.' . $timestamp . '.' . json_encode($request->all(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $app->client_secret);
-                $isValid = hash_equals($altSig, $signature);
-            }
-
-            if (!$isValid) {
-                Log::warning("VerifyClientApp: Invalid S2S signature from client app {$clientId}", [
-                    'ip' => $request->ip(),
-                    'timestamp' => $timestamp,
-                ]);
-
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Invalid service-to-service cryptographic signature.',
-                ], 403);
-            }
+            return response()->json([
+                'status' => false,
+                'message' => 'Invalid service-to-service cryptographic signature.',
+            ], 403);
         }
 
         // Attach distributed tracing correlation ID

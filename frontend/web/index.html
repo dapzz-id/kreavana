@@ -18,6 +18,7 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
   <!-- Google Sign-In Client ID (Wajib untuk Flutter Web) -->
   <meta name="google-signin-client_id" content="1093327579845-jot3d6acgcoq744bnnj3ch6j3nu74gth.apps.googleusercontent.com">
   <meta name="description" content="Kreavana menghubungkan kreator berbakat dengan klien, dan vendor untuk kolaborasi proyek kreatif terbaik.">
@@ -50,13 +51,9 @@
   <!-- Google Identity Services (required for Google Sign-In on web) -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-  <!-- Google OAuth Client ID for web. Ganti YOUR_CLIENT_ID dengan Client ID dari Google Cloud Console. -->
-  <!-- Type: Web application, bukan Android/iOS -->
-  <meta name="google-signin-client_id" content="YOUR_CLIENT_ID.apps.googleusercontent.com">
-
   <title>Kreavana — Platform Kolaborasi Proyek & Kreator Kreatif</title>
   <link rel="manifest" href="manifest.json">
-  <script src="https://js.pusher.com/8.0/pusher.min.js"></script>
+  <script src="https://js.pusher.com/8.0/pusher.min.js" integrity="sha384-iWiFe+Ww57tz83ld78RvLxLwvRDO30Rf1uBXgU7sIso+FZR4fa/vWI8vmGrVYATL" crossorigin="anonymous"></script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

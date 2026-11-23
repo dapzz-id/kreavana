@@ -15,6 +15,8 @@ return Application::configure(basePath: dirname(__DIR__))
         __DIR__.'/../app/Console/Commands',
     ])
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+
         $middleware->alias([
             'client.app' => \App\Http\Middleware\VerifyClientApp::class,
             'auth.jwt' => \App\Http\Middleware\AuthenticateJwt::class,
