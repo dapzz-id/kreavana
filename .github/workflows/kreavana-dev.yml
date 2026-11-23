@@ -196,11 +196,61 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Ensure jq is available on Windows runner
+        if: runner.os == 'Windows'
+        run: |
+          set -euo pipefail
+          if command -v jq >/dev/null 2>&1; then
+            echo "jq already available at: $(command -v jq)"
+            jq --version
+            exit 0
+          fi
+
+          JQ_VERSION="1.7.1"
+          JQ_SHA256="7451fbbf37feffb9bf262bd97c54f0da558c63f0748e64152dd87b0a07b6d6ab"
+          TOOL_ROOT="${RUNNER_TOOL_CACHE:-${RUNNER_TEMP:-/tmp}}"
+          if command -v cygpath >/dev/null 2>&1; then
+            TOOL_ROOT=$(cygpath -u "$TOOL_ROOT")
+          fi
+          JQ_DIR="$TOOL_ROOT/jq/$JQ_VERSION/x64"
+          mkdir -p "$JQ_DIR"
+
+          NEED_DOWNLOAD=true
+          if [ -f "$JQ_DIR/jq.exe" ]; then
+            EXISTING_SHA256=$(sha256sum "$JQ_DIR/jq.exe" | awk '{print $1}')
+            if [ "$EXISTING_SHA256" = "$JQ_SHA256" ]; then
+              NEED_DOWNLOAD=false
+            fi
+          fi
+
+          if [ "$NEED_DOWNLOAD" = true ]; then
+            echo "Downloading portable jq.exe ($JQ_VERSION) for Windows runner..."
+            TMP_JQ="$JQ_DIR/jq.exe.tmp.$$"
+            curl -fsSL --retry 3 \
+              "https://github.com/jqlang/jq/releases/download/jq-${JQ_VERSION}/jq-windows-amd64.exe" \
+              -o "$TMP_JQ"
+            ACTUAL_SHA256=$(sha256sum "$TMP_JQ" | awk '{print $1}')
+            if [ "$ACTUAL_SHA256" != "$JQ_SHA256" ]; then
+              rm -f "$TMP_JQ"
+              echo "ERROR: jq SHA-256 mismatch (got $ACTUAL_SHA256, expected $JQ_SHA256)"
+              exit 1
+            fi
+            mv -f "$TMP_JQ" "$JQ_DIR/jq.exe"
+            chmod +x "$JQ_DIR/jq.exe"
+          fi
+
+          if command -v cygpath >/dev/null 2>&1; then
+            cygpath -w "$JQ_DIR" >> "$GITHUB_PATH"
+          else
+            echo "$JQ_DIR" >> "$GITHUB_PATH"
+          fi
+          "$JQ_DIR/jq.exe" --version
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
-          cache: true
+          cache: ${{ runner.os == 'Linux' }}
 
       - name: Flutter version
         run: flutter --version
