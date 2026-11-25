@@ -114,7 +114,7 @@ class OpportunityController extends Controller
             'deadline' => 'nullable|date',
             'budget_range' => 'nullable|string|max:100',
             'status' => 'nullable|string|in:open,closed,in_progress,cancelled',
-            'requirements' => 'nullable|array',
+            'requirements' => 'nullable|array|list|max:50',
             'requirements.*.sub_role_slug' => 'required_with:requirements|string|max:50',
             'requirements.*.quantity' => 'nullable|integer|min:0|max:50',
             'requirements.*.notes' => 'nullable|string|max:255',
@@ -374,12 +374,14 @@ class OpportunityController extends Controller
     {
         $user = Auth::guard('api')->user();
 
-        $request->validate([
-            'signature' => 'required|string',
+        $validated = $request->validate([
+            'signature' => 'required|string|max:2000000',
+            'application_id' => 'nullable|string|max:100',
+            'sign_all' => 'nullable|boolean',
         ]);
 
         try {
-            $opp = $this->opportunityService->signContract($id, $user->id, $request->all());
+            $opp = $this->opportunityService->signContract($id, $user->id, $validated);
             return $this->successResponse('Tanda tangan elektronik dynamic berhasil disimpan.', $opp);
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
             return $this->errorResponse($e->getMessage(), $e->getStatusCode());
@@ -461,7 +463,7 @@ class OpportunityController extends Controller
     {
         $user = Auth::guard('api')->user();
         $validated = $request->validate([
-            'documents' => 'required|array',
+            'documents' => 'required|array|list|max:30',
             'documents.*.title' => 'required|string|max:150',
             'documents.*.url' => 'required|string|max:500',
             'documents.*.notes' => 'nullable|string|max:500',

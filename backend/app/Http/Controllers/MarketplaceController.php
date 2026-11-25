@@ -147,7 +147,7 @@ class MarketplaceController extends Controller
             'delivery_type' => 'sometimes|in:digital_download,service',
             'duration_info' => 'nullable|string|max:100',
             'price' => 'required_if:type,paid|numeric|min:0',
-            'media' => 'nullable|array|max:5',
+            'media' => 'nullable|array|list|max:5',
             'media.*' => 'image|mimes:jpeg,png,jpg,webp|max:5120', // max 5MB
         ]);
 

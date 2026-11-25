@@ -67,7 +67,7 @@ class StoreOpportunityRequest extends FormRequest
             'meeting_lng' => 'nullable|numeric',
             'meeting_notes' => 'nullable|string',
             'poster' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
-            'requirements' => 'nullable|array',
+            'requirements' => 'nullable|array|list|max:50',
             'requirements.*.sub_role_slug' => 'required_with:requirements|string|max:50',
             'requirements.*.quantity' => 'nullable|integer|min:0|max:50',
             'requirements.*.notes' => 'nullable|string|max:255',

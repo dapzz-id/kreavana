@@ -15,6 +15,18 @@ return Application::configure(basePath: dirname(__DIR__))
         __DIR__.'/../app/Console/Commands',
     ])
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->trustHosts(at: fn () => array_values(array_filter(array_merge(
+            [
+                '^(.+\.)?kreavana\.com$',
+                '^(localhost|127\.0\.0\.1|\[::1\])$',
+            ],
+            array_map(
+                static fn (string $h) => '^(.+\.)?' . preg_quote(trim($h)) . '$',
+                array_filter(explode(',', (string) env('TRUSTED_HOSTS', '')))
+            )
+        ))));
+
+        $middleware->prepend(\App\Http\Middleware\EnforceJsonSecurity::class);
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
 
         $middleware->alias([

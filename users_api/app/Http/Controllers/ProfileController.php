@@ -299,10 +299,14 @@ class ProfileController
             'label' => 'required|string|max:50',
             'recipient_name' => 'required|string|max:100',
             'phone_number' => 'required|string|max:30',
-            'street_address' => 'required|string',
+            'street_address' => 'required|string|max:500',
+            'district' => 'nullable|string|max:100',
             'city' => 'required|string|max:100',
             'state' => 'required|string|max:100',
             'postal_code' => 'required|string|max:20',
+            'country' => 'nullable|string|max:100',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
             'is_default' => 'nullable|boolean',
         ]);
 
@@ -314,11 +318,13 @@ class ProfileController
             ], 422);
         }
 
-        if ($request->is_default) {
+        $validated = $validator->validated();
+
+        if (!empty($validated['is_default'])) {
             $user->addresses()->update(['is_default' => false]);
         }
 
-        $address = $user->addresses()->create($request->all());
+        $address = $user->addresses()->create($validated);
 
         return response()->json([
             'status' => true,

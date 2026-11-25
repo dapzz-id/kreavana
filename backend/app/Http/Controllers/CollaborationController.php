@@ -123,31 +123,31 @@ class CollaborationController extends Controller
             ], 403);
         }
 
-        $request->validate([
+        $validated = $request->validate([
             'project_title'    => 'required|string|max:200',
-            'description'      => 'sometimes|string|max:2000',
-            'project_location' => 'sometimes|string|max:200',
-            'start_date'       => 'sometimes|date',
-            'end_date'         => 'sometimes|date|after_or_equal:start_date',
-            'budget_min'       => 'sometimes|numeric|min:0',
-            'budget_max'       => 'sometimes|numeric|min:0|gte:budget_min',
-            'notes'            => 'sometimes|string|max:1000',
-            'invitees'         => 'sometimes|array',
+            'description'      => 'sometimes|nullable|string|max:2000',
+            'project_location' => 'sometimes|nullable|string|max:200',
+            'start_date'       => 'sometimes|nullable|date',
+            'end_date'         => 'sometimes|nullable|date|after_or_equal:start_date',
+            'budget_min'       => 'sometimes|nullable|numeric|min:0',
+            'budget_max'       => 'sometimes|nullable|numeric|min:0|gte:budget_min',
+            'notes'            => 'sometimes|nullable|string|max:1000',
+            'invitees'         => 'sometimes|array|list|max:50',
             'invitees.*.user_id'   => 'required|uuid|exists:users,id',
-            'invitees.*.role'      => 'sometimes|string|max:100',
+            'invitees.*.role'      => 'sometimes|nullable|string|max:100',
         ]);
 
-        return DB::transaction(function () use ($request) {
+        return DB::transaction(function () use ($validated) {
             $collaboration = Collaboration::create([
                 'requester_id'     => Auth::id(),
-                'project_title'    => $request->project_title,
-                'description'      => $request->description,
-                'project_location' => $request->project_location,
-                'start_date'       => $request->start_date,
-                'end_date'         => $request->end_date,
-                'budget_min'       => $request->budget_min,
-                'budget_max'       => $request->budget_max,
-                'notes'            => $request->notes,
+                'project_title'    => $validated['project_title'],
+                'description'      => $validated['description'] ?? null,
+                'project_location' => $validated['project_location'] ?? null,
+                'start_date'       => $validated['start_date'] ?? null,
+                'end_date'         => $validated['end_date'] ?? null,
+                'budget_min'       => $validated['budget_min'] ?? null,
+                'budget_max'       => $validated['budget_max'] ?? null,
+                'notes'            => $validated['notes'] ?? null,
                 'status'           => 'pending',
             ]);
 
@@ -161,11 +161,14 @@ class CollaborationController extends Controller
                     'responded_at'     => now(),
                 ],
             ];
-            foreach ($request->input('invitees', []) as $inv) {
-                if ($inv['user_id'] !== Auth::id()) {
+            $seenUserIds = [(string) Auth::id() => true];
+            foreach ($validated['invitees'] ?? [] as $inv) {
+                $uid = (string) $inv['user_id'];
+                if (!isset($seenUserIds[$uid])) {
+                    $seenUserIds[$uid] = true;
                     $members[] = [
                         'collaboration_id' => $collaboration->id,
-                        'user_id'          => $inv['user_id'],
+                        'user_id'          => $uid,
                         'role'             => $inv['role'] ?? 'Team Member',
                         'status'           => 'invited',
                     ];

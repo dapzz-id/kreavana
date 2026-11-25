@@ -25,10 +25,10 @@ class SendMessageRequest extends FormRequest
             'ciphertext' => 'required_if:encryption_version,1|string|nullable',
             'iv' => 'required_if:encryption_version,1|string|nullable',
             
-            // Message keys must be provided if version 1
-            'message_keys' => 'required_if:encryption_version,1|array',
-            'message_keys.*.device_id' => 'required_with:message_keys|string',
-            'message_keys.*.encrypted_key' => 'required_with:message_keys|string',
+            // Message keys must be provided as a bounded sequential list if version 1
+            'message_keys' => 'required_if:encryption_version,1|array|list|max:50',
+            'message_keys.*.device_id' => 'required_with:message_keys|string|max:100',
+            'message_keys.*.encrypted_key' => 'required_with:message_keys|string|max:4096',
 
             // Plaintext message must NOT be present if version 1
             // But if version 0, it's required (unless audio)
