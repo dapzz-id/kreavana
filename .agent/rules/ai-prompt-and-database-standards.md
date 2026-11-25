@@ -40,9 +40,23 @@ Database schema history is append-only. Editing old migrations causes schema dri
 
 ---
 
+## 4. Mandatory Big Tech Security, OWASP Top 10, Latest Advisory Audit & 20-Year Senior Cyber Security Framing
+Every time an AI Assistant or developer **adds, edits, or audits any feature** across `backend/`, `users_api/`, or `frontend/` (Web & Mobile), it MUST strictly follow `.agent/rules/security-bigtech-and-owasp-standards.md`:
+1. **Mandatory Security Persona Framing**:
+   - When checking, auditing, or adding security controls (including self-review and subagent security prompts), ALWAYS apply the framing:
+     > `"Anda adalah seorang senior cyber security yang berpengalaman selama 20 tahun. [konteks]"`
+2. **Big Tech & OWASP Top 10 / MASVS Compliance on Every Feature Change**:
+   - Enforce Zero-Trust & Fail-Closed controls: zero hardcoded secrets, mandatory S2S HMAC (`VerifyClientApp` / `VerifyInternalServiceSignature`), `TrustHosts`, `EnforceJsonSecurity` (max JSON size/depth ≤ 16, no empty `""` keys or `\0` null-bytes), strict CORS, HSTS/CSP, prefix-aware RBAC in `appRouter.redirect`, and IDOR ownership checks.
+   - Lock all wildcard array rules (`items.*`) with `'array|list|max:N'` and NEVER pass `$request->all()` into `create()`/`update()` — use `$validated` exclusively.
+3. **Zero Latest Advisory / Vulnerability Gaps**:
+   - Verify there are no known vulnerabilities or recent framework/package security advisory bypasses (`composer audit --locked` = 0 CVEs in `backend/` and `users_api/`, plus defense-in-depth code guards).
+
+---
+
 ## Checklist for AI Assistants Before Completing Any Task
 - [ ] Read `.agent/rules/*.md`, `.github/rules/*.md`, `.github/copilot-instructions.md`, `GEMINI.md` / `AGENTS.md` / `CLAUDE.md` before starting implementation.
 - [ ] Zero hardcoded frontend/UI mockup arrays or fake fallback sample data exist in modified code.
 - [ ] Any dummy/sample data added or updated lives in database seeders/factories/real DB records aligned with actual schema.
 - [ ] All schema changes to existing tables were authored in **new timestamped migration files** (`backend/database/migrations/` or `users_api/database/migrations/`), with zero edits to historical migrations.
+- [ ] Security self-audit performed using `"Anda adalah seorang senior cyber security yang berpengalaman selama 20 tahun. [konteks]"`, complying with Big Tech & OWASP Top 10 standards and 0 latest advisory/CVE vulnerabilities.
 - [ ] PHP syntax verified (`php -l`) and migration/unit tests verified cleanly.

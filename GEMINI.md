@@ -83,6 +83,15 @@ Dilarang keras melemahkan atau menghapus lapisan keamanan yang telah dibangun. S
   Harus tetap aktif dan diproteksi oleh `VerifyInternalServiceSignature`.
 - Setiap token revocation harus terintegrasi dengan `JtiService::revoke($jti)` dan middleware `CheckUserSuspended`.
 
+### 5. Standar OWASP Top 10, Advisory Terbaru, & Framing Wajib Senior Cyber Security (20 Tahun)
+- **Wajib Sesuai Standar Big Tech & OWASP Top 10 di Setiap Penambahan/Edit Fitur**:
+  - Setiap penambahan atau perubahan fitur di `backend/`, `users_api/`, maupun `frontend/` (Web & Mobile) wajib memenuhi `.agent/rules/security-bigtech-and-owasp-standards.md`: bebas secret hardcoded, `EnforceJsonSecurity` & `TrustHosts` tetap aktif, seluruh validasi wildcard `.*` wajib memakai `array|list|max:N`, dilarang memakai `$request->all()` pada mutasi DB (wajib `$validated`), dan wajib memiliki proteksi IDOR + RBAC berbasis prefix.
+- **Bebas Celah Advisory & Vulnerabilities Terbaru**:
+  - Wajib memastikan tidak ada kerentanan dari CVE atau security advisory terbaru (`composer audit --locked` = `0 CVE` pada `backend/` & `users_api/`, tanpa pola kode rentan bypass).
+- **Kalimat/Framing Wajib Saat Mengecek & Menambahkan Standar Keamanan**:
+  - Setiap kali mengecek, mengaudit, mendelegasikan review ke sub-agen, atau menambahkan standar keamanan, **WAJIB menggunakan kalimat pembuka**:
+    > `"Anda adalah seorang senior cyber security yang berpengalaman selama 20 tahun. [konteks]"`
+
 ---
 
 ## 🗄️ ATURAN 5: KEPATUHAN ATURAN PROMPT AI, DATA BERBASIS DATABASE (TANPA MOCKUP), MIGRASI BARU, & ROUTING RBAC
@@ -114,4 +123,5 @@ Sebelum mengakhiri sesi pengerjaan, Gemini / Antigravity wajib memverifikasi:
 - [ ] Tidak ada mekanisme fallback auth lokal yang merusak prinsip *Fail-Closed*.
 - [ ] Header keamanan HMAC (`X-Client-Id`, `X-Timestamp`, `X-Signature`, `X-Correlation-Id`) tetap aktif pada `UsersApiClient`.
 - [ ] Perubahan saldo dompet selalu melalui `wallet_transactions` yang sah (`ledger_hash`), dengan saldo default akun baru `0.00`.
+- [ ] Setiap penambahan/edit fitur telah dicek memakai framing `"Anda adalah seorang senior cyber security yang berpengalaman selama 20 tahun. [konteks]"`, memenuhi standar Big Tech & OWASP Top 10, serta bebas celah advisory/vulnerabilities terbaru (`0 CVE`).
 - [ ] Syntax PHP lolos `php -l` (dan pengujian / analyzer relevan terverifikasi) tanpa error.

@@ -46,9 +46,23 @@ Riwayat migrasi database bersifat *append-only* (hanya bertambah maju). Mengedit
 
 ---
 
+## 4. Standar Keamanan Big Tech, OWASP Top 10, Audit Advisory Terbaru, & Framing Senior Cyber Security 20 Tahun
+
+Setiap kali menambah, mengedit, atau mengaudit fitur di `backend/`, `users_api/`, maupun `frontend/` (Web & Mobile), wajib mematuhi `.github/rules/security-bigtech-and-owasp-standards.md`:
+1. **Framing Wajib Saat Mengecek / Menambahkan Standar Keamanan**:
+   - Gunakan selalu instruksi peran:
+     > `"Anda adalah seorang senior cyber security yang berpengalaman selama 20 tahun. [konteks]"`
+2. **Wajib Standar Big Tech Company & OWASP Top 10 / MASVS**:
+   - Tanpa secret hardcoded, S2S HMAC *Fail-Closed*, `TrustHosts` & `EnforceJsonSecurity` aktif (tolak JSON nesting > 16, key `""`, null-byte `\0`), validasi wildcard `.*` wajib memakai `array|list|max:N`, mutasi DB wajib memakai `$validated` (dilarang `$request->all()`), serta RBAC berbasis prefix di `appRouter.redirect` & pencegahan IDOR di server.
+3. **Bebas Celah Advisory & Vulnerabilities Terbaru**:
+   - Pastikan tidak ada celah dari security advisory maupun CVE terbaru (`composer audit --locked` di `backend/` dan `users_api/` wajib 0 CVE).
+
+---
+
 ## ✅ Checklist Kepatuhan AI Sebelum Mengakhiri Tugas
 - [ ] Sudah membaca file aturan di `GEMINI.md`, `AGENTS.md`, `CLAUDE.md`, `.agent/rules/*.md`, `.github/rules/*.md`, dan `.github/copilot-instructions.md` sebelum mulai bekerja.
 - [ ] Tidak ada array mockup atau dummy data hardcoded di frontend/UI atau controller sebagai pengganti query database.
 - [ ] Seluruh data dummy yang dibuat bersumber dari dan tersimpan di database (via Seeder/Factory/DB sesuai skema asli).
 - [ ] Semua perubahan pada tabel database yang sudah ada dibuat melalui **file migrasi baru** (`php artisan make:migration`), tanpa menyentuh file migrasi lama.
+- [ ] Audit keamanan fitur baru/edit telah dilakukan dengan perspektif `"Anda adalah seorang senior cyber security yang berpengalaman selama 20 tahun. [konteks]"`, sesuai standar Big Tech, OWASP Top 10, dan bebas advisory/vulnerabilities terbaru.
 - [ ] Seluruh file PHP lolos `php -l` dan pengujian/migrasi relevan terverifikasi.

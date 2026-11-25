@@ -60,3 +60,17 @@ Lihat detail lengkap di `.agent/rules/ai-prompt-and-database-standards.md` atau 
    - Dilarang mengedit, mengubah, atau menghapus file migrasi lama di `backend/database/migrations/` atau `users_api/database/migrations/`.
    - Setiap perubahan pada tabel database yang sudah ada (tambah/ubah/hapus kolom, enum, index, atau foreign key) **WAJIB membuat file migrasi baru** (`php artisan make:migration <nama_deskriptif>`) serta memperbarui Model/Seeder terkait dan mengecek syntax dengan `php -l`.
 
+---
+
+## 🛡️ Mandatory Rules: Standar Keamanan Big Tech, OWASP Top 10, & Audit Advisory Terbaru
+
+Lihat detail lengkap di `.agent/rules/security-bigtech-and-owasp-standards.md` atau `.github/rules/security-bigtech-and-owasp-standards.md`.
+
+1. **Wajib Standar Big Tech Company & OWASP Top 10 / MASVS di Setiap Tambah/Edit Fitur**:
+   - Seluruh penambahan atau perubahan fitur di `backend/`, `users_api/`, dan `frontend/` (Web & Mobile) wajib memenuhi standar Big Tech & OWASP Top 10: tanpa secret hardcoded, S2S HMAC *Fail-Closed*, `EnforceJsonSecurity` & `TrustHosts` aktif, validasi array wildcard `.*` wajib memakai `array|list|max:N`, mutasi DB wajib eksklusif memakai `$validated` (dilarang `$request->all()`), serta proteksi IDOR & RBAC berbasis prefix.
+2. **Wajib Bebas Celah Advisory & Vulnerabilities Terbaru**:
+   - Pastikan tidak ada celah dari security advisory maupun CVE terbaru (`composer audit --locked` pada `backend/` & `users_api/` wajib 0 CVE).
+3. **Kalimat/Framing Wajib Saat Mengecek atau Menambahkan Standar Keamanan**:
+   - Setiap kali mengecek, mengaudit, atau menambahkan standar keamanan, gunakan kalimat:
+     > `"Anda adalah seorang senior cyber security yang berpengalaman selama 20 tahun. [konteks]"`
+

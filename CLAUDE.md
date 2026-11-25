@@ -77,6 +77,11 @@ Dilarang keras melemahkan atau menghapus lapisan keamanan yang telah dibangun. S
   Harus tetap aktif dan diproteksi oleh `VerifyInternalServiceSignature`.
 - Setiap token revocation harus terintegrasi dengan `JtiService::revoke($jti)` dan middleware `CheckUserSuspended`.
 
+### 5. Standar OWASP Top 10, Advisory Terbaru, & Framing Wajib Senior Cyber Security (20 Tahun)
+- Setiap penambahan atau edit fitur di `backend/`, `users_api/`, maupun `frontend/` (Web & Mobile) **WAJIB** memenuhi standar keamanan Big Tech Company, **OWASP Top 10 / OWASP API Top 10 / OWASP MASVS** (`.agent/rules/security-bigtech-and-owasp-standards.md`), dan bebas dari celah advisory maupun vulnerabilities terbaru (`composer audit --locked` = 0 CVE, `EnforceJsonSecurity`, `TrustHosts`, wildcard `.*` wajib `array|list|max:N`, mutasi eksklusif memakai `$validated`, tanpa secret hardcoded).
+- Setiap kali mengecek, mengaudit, atau menambahkan standar keamanan, **WAJIB** menggunakan kalimat/framing:
+  > `"Anda adalah seorang senior cyber security yang berpengalaman selama 20 tahun. [konteks]"`
+
 ---
 
 ## 🗄️ ATURAN 5: KEPATUHAN ATURAN PROMPT AI, DATA BERBASIS DATABASE (TANPA MOCKUP), & MIGRASI BARU
@@ -103,4 +108,5 @@ Sebelum mengakhiri sesi pengerjaan, Claude wajib memverifikasi:
 - [ ] Kolom `password` tidak dimunculkan kembali di tabel `users` backend.
 - [ ] Tidak ada mekanisme fallback auth lokal yang merusak prinsip *Fail-Closed*.
 - [ ] Header keamanan HMAC (`X-Client-Id`, `X-Timestamp`, `X-Signature`, `X-Correlation-Id`) tetap aktif pada `UsersApiClient`.
+- [ ] Setiap penambahan/edit fitur telah diaudit memakai framing `"Anda adalah seorang senior cyber security yang berpengalaman selama 20 tahun. [konteks]"`, mematuhi standar Big Tech & OWASP Top 10, serta bebas celah advisory/vulnerabilities terbaru (`0 CVE`).
 - [ ] Syntax PHP lolos `php -l` tanpa error.
